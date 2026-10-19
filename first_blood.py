@@ -2,6 +2,8 @@
 
 Uso: python first_blood.py
 """
+import math
+
 import pandas as pd
 
 from solo_deaths import build_deaths_table
@@ -19,7 +21,7 @@ def first_blood_table(deaths):
     first["abriu_venceu"] = ~first["venceu_round"]
     first["antes_do_plant"] = first["segundos_plant"].isna() | (first["segundos"] < first["segundos_plant"])
     first["faixa"] = pd.cut(first["segundos"], TIME_BINS, labels=TIME_LABELS)
-    return first[["match_id", "arquivo", "mapa", "round", "segundos", "faixa", "lado_abriu", "time_abriu", "vitima", "trocada", "antes_do_plant", "abriu_venceu", "venceu_partida"]]
+    return first[["match_id", "arquivo", "mapa", "round", "segundos", "faixa", "lado_abriu", "time_abriu", "vitima", "vitima_x", "vitima_y", "killer_x", "killer_y", "trocada", "antes_do_plant", "abriu_venceu", "venceu_partida"]]
 
 
 def win_rate_by_time(first):
@@ -33,8 +35,50 @@ def who_opens_by_time(first):
     return opened_by_attack.groupby(first["faixa"], observed=True).agg(["size", "mean"]).rename(columns={"size": "rounds", "mean": "ataque_abriu"}).round(3)
 
 
+def wilson_interval(successes, total, z=1.96):
+    """Intervalo de 95% de uma proporção, que se comporta bem com poucas amostras."""
+    if total == 0:
+        return math.nan, math.nan
+    proportion = successes / total
+    denominator = 1 + z * z / total
+    centre = (proportion + z * z / (2 * total)) / denominator
+    half_width = z * math.sqrt(proportion * (1 - proportion) / total + z * z / (4 * total * total)) / denominator
+    return centre - half_width, centre + half_width
+
+
+def difference_interval(proportion_a, total_a, proportion_b, total_b, z=1.96):
+    """Intervalo de 95% da diferença entre duas proporções, aproximação normal."""
+    if total_a == 0 or total_b == 0:
+        return math.nan, math.nan
+    half_width = z * math.sqrt(proportion_a * (1 - proportion_a) / total_a + proportion_b * (1 - proportion_b) / total_b)
+    return proportion_a - proportion_b - half_width, proportion_a - proportion_b + half_width
+
+
 def summary_by_map(first):
-    return first.groupby("mapa").agg(rounds=("round", "size"), mediana_segundos=("segundos", "median"), ataque_abriu=("lado_abriu", lambda sides: (sides == "ataque").mean()), abriu_venceu=("abriu_venceu", "mean")).round(3).sort_values("mediana_segundos")
+    """Por mapa: quanto o ataque abre, quanto vence e quanto a abertura do ataque pesa (vitória se abre menos vitória se a defesa abre)."""
+    rows = []
+    for map_name, group in first.groupby("mapa"):
+        attack_opened = group["lado_abriu"] == "ataque"
+        attack_won = attack_opened == group["abriu_venceu"]
+        opened_count, total = int(attack_opened.sum()), len(group)
+        win_if_attack_opens = attack_won[attack_opened].mean()
+        win_if_defense_opens = attack_won[~attack_opened].mean()
+        open_low, open_high = wilson_interval(opened_count, total)
+        impact_low, impact_high = difference_interval(win_if_attack_opens, opened_count, win_if_defense_opens, total - opened_count)
+        rows.append({
+            "mapa": map_name,
+            "rounds": total,
+            "mediana_segundos": group["segundos"].median(),
+            "ataque_abriu": attack_opened.mean(),
+            "ataque_abriu_ic95": f"{open_low:.2f} a {open_high:.2f}",
+            "ataque_vence": attack_won.mean(),
+            "ataque_vence_se_abre": win_if_attack_opens,
+            "ataque_vence_se_defesa_abre": win_if_defense_opens,
+            "impacto_da_abertura": win_if_attack_opens - win_if_defense_opens,
+            "impacto_ic95_baixo": impact_low,
+            "impacto_ic95_alto": impact_high,
+        })
+    return pd.DataFrame(rows).sort_values("rounds", ascending=False).set_index("mapa").round(3)
 
 
 def plant_summary(first):

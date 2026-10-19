@@ -40,6 +40,7 @@ def death_rows(match, match_file):
             victim_team = team_by_puuid[kill["victim"]]
             victim_won_round = round_result["winningTeam"] == victim_team
             victim_role = round_result["winningTeamRole"] if victim_won_round else OPPOSITE_SIDE[round_result["winningTeamRole"]]
+            killer_location = next((alive["location"] for alive in kill["locations"] if alive["puuid"] == kill["actor"]), {"x": math.nan, "y": math.nan})
             ally_distances = [distance(kill["victim_location"], alive["location"]) for alive in kill["locations"] if team_by_puuid[alive["puuid"]] == victim_team]
             enemy_distances = [distance(kill["victim_location"], alive["location"]) for alive in kill["locations"] if team_by_puuid[alive["puuid"]] != victim_team]
             rows.append({
@@ -51,6 +52,10 @@ def death_rows(match, match_file):
                 "segundos_plant": round_result["plantRoundTime"] / 1000 if round_result["bombPlanter"] else math.nan,
                 "ordem_da_morte": death_order,
                 "vitima": kill["victim"],
+                "vitima_x": kill["victim_location"]["x"],
+                "vitima_y": kill["victim_location"]["y"],
+                "killer_x": killer_location["x"],
+                "killer_y": killer_location["y"],
                 "time_vitima": victim_team,
                 "lado": SIDE_LABELS[victim_role],
                 "aliados_vivos": len(ally_distances),

@@ -74,6 +74,21 @@ def draw_round_map(map_meta, events, event_index, selected_puuid, team_by_puuid,
     return figure
 
 
+def draw_points(map_meta, series):
+    """Pontos sobre o minimapa. series é uma lista de (rótulo, cor, [(x, y), ...]) em coordenadas de jogo."""
+    image = Image.open(minimap_file(map_meta))
+    width, height = image.size
+    figure, axes = plt.subplots(figsize=(7, 7))
+    axes.imshow(image)
+    for label, color, points in series:
+        fractions = [game_to_image_fraction(x, y, map_meta) for x, y in points]
+        axes.scatter([fx * width for fx, _ in fractions], [fy * height for _, fy in fractions], s=18, c=color, alpha=0.7, linewidths=0, label=f"{label} ({len(points)})")
+    axes.legend(loc="lower right", fontsize=8)
+    axes.axis("off")
+    figure.tight_layout()
+    return figure
+
+
 def draw_player(axes, pixels, color, marker, name, is_selected):
     pixel_x, pixel_y = pixels
     axes.scatter([pixel_x], [pixel_y], s=200 if is_selected else 80, c=color, marker=marker, edgecolors="white", linewidths=2 if is_selected else 0.5, zorder=5)

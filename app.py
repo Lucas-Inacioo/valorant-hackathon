@@ -11,7 +11,7 @@ import streamlit as st
 
 from explore_fields import DEFAULT_DATA_DIR, collect_field_stats, find_match_files, load_match, split_irrelevant_fields, summarize_fields
 from maps import load_maps_by_url
-from round_map import describe_event, draw_round_map, round_events
+from round_map import describe_event, draw_points, draw_round_map, round_events
 from first_blood import first_blood_table, plant_summary, summary_by_map, who_opens_by_time, win_rate_by_time
 from solo_deaths import SOLO_DISTANCE, build_deaths_table, distance_bands, first_death_summary, summary_by_distance_band, summary_by_round_outcome, with_solo_flag
 
@@ -125,6 +125,16 @@ def quantile_band_chart(per_round):
     return (wide_band + narrow_band + median_line).properties(height=320)
 
 
+def opening_impact_chart(by_map):
+    """Barra do impacto da abertura do ataque por mapa, com o intervalo de 95% como traço."""
+    data = by_map.reset_index()
+    base = alt.Chart(data).encode(y=alt.Y("mapa:N", sort=None, title=None))
+    tooltip = ["mapa", "rounds", "ataque_vence_se_abre", "ataque_vence_se_defesa_abre", "impacto_da_abertura", "impacto_ic95_baixo", "impacto_ic95_alto"]
+    bars = base.mark_bar(color=ATTACK_COLOR).encode(x=alt.X("impacto_da_abertura:Q", title="vitória do ataque se abre menos se a defesa abre"), tooltip=tooltip)
+    intervals = base.mark_rule(color="#4a4a4a", strokeWidth=2).encode(x="impacto_ic95_baixo:Q", x2="impacto_ic95_alto:Q", tooltip=tooltip)
+    return (bars + intervals).properties(height=30 * len(data))
+
+
 def first_blood_per_round_table(match_first_blood):
     columns = {"round": "round", "segundos": "primeira morte (s)", "time_abriu": "quem abriu", "lado_abriu": "lado", "trocada": "trocada", "antes_do_plant": "antes do plant", "abriu_venceu": "quem abriu venceu"}
     return match_first_blood[list(columns)].rename(columns=columns).round(1)
@@ -233,9 +243,30 @@ with first_blood_tab:
     st.subheader("Antes ou depois do plant")
     st.dataframe(plant_summary(first_blood).rename(index={True: "antes do plant", False: "depois do plant"}, level="antes_do_plant"), use_container_width=False)
 
-    st.subheader("Por mapa")
+    st.subheader("Por mapa: onde a abertura do ataque mais pesa")
+    st.caption("Ordenado por rounds. Impacto da abertura é a vitória do ataque quando ele abre menos a vitória do ataque quando a defesa abre. Intervalos de 95%: Wilson para a taxa de abertura, aproximação normal para a diferença.")
     map_name_by_internal = dict(zip(matches["mapa_interno"], matches["mapa"]))
-    st.dataframe(summary_by_map(first_blood).rename(index=map_name_by_internal), use_container_width=False)
+    by_map = summary_by_map(first_blood).rename(index=map_name_by_internal)
+    st.dataframe(by_map, use_container_width=False)
+    st.altair_chart(opening_impact_chart(by_map), use_container_width=True)
+
+    st.subheader("Onde o ataque faz a primeira kill")
+    internal_by_name = {name: internal for internal, name in map_name_by_internal.items()}
+    chosen_map_name = st.selectbox("Mapa", list(by_map.index))
+    chosen_internal = internal_by_name[chosen_map_name]
+    chosen_map_meta = maps_by_url().get(f"/Game/Maps/{chosen_internal}/{chosen_internal}")
+    attack_openings = first_blood[(first_blood["mapa"] == chosen_internal) & (first_blood["lado_abriu"] == "ataque")]
+    if chosen_map_meta is None:
+        st.info("Sem metadado de mapa para este mapId.")
+    else:
+        st.caption("Cada ponto é onde o defensor morreu na primeira kill do round feita pelo ataque. Azul quando o ataque venceu o round, laranja quando perdeu.")
+        won = attack_openings[attack_openings["abriu_venceu"]]
+        lost = attack_openings[~attack_openings["abriu_venceu"]]
+        map_column, _ = st.columns([3, 2])
+        map_column.pyplot(draw_points(chosen_map_meta, [
+            ("ataque venceu o round", WON_COLOR, list(zip(won["vitima_x"], won["vitima_y"]))),
+            ("ataque perdeu o round", LOST_COLOR, list(zip(lost["vitima_x"], lost["vitima_y"]))),
+        ]))
 
     st.subheader("Ao longo da partida: tempo da primeira morte por round")
     per_round = first_blood[first_blood["round"] <= 24].groupby("round")["segundos"].agg(
