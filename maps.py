@@ -33,3 +33,16 @@ def game_to_image_fraction(game_x, game_y, map_meta):
     image_x = game_y * map_meta["xMultiplier"] + map_meta["xScalarToAdd"]
     image_y = game_x * map_meta["yMultiplier"] + map_meta["yScalarToAdd"]
     return image_x, image_y
+
+
+def callout_name(callout):
+    return f'{callout["superRegionName"]} {callout["regionName"]}'
+
+
+def nearest_callout(game_x, game_y, map_meta):
+    """Nome da região (callout) mais próxima do ponto, por distância em coordenadas de jogo."""
+    callouts = map_meta.get("callouts") or []
+    if not callouts:
+        return "?"
+    closest = min(callouts, key=lambda callout: (callout["location"]["x"] - game_x) ** 2 + (callout["location"]["y"] - game_y) ** 2)
+    return callout_name(closest)

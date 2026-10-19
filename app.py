@@ -10,9 +10,9 @@ import pandas as pd
 import streamlit as st
 
 from explore_fields import DEFAULT_DATA_DIR, collect_field_stats, find_match_files, load_match, split_irrelevant_fields, summarize_fields
-from maps import load_maps_by_url
-from round_map import describe_event, draw_points, draw_round_map, round_events
-from first_blood import first_blood_table, plant_summary, summary_by_map, who_opens_by_time, win_rate_by_time
+from maps import callout_name, load_maps_by_url, nearest_callout
+from round_map import describe_event, draw_callout_summary, draw_points, draw_round_map, round_events
+from first_blood import first_blood_table, plant_summary, summary_by_map, who_opens_by_time, wilson_interval, win_rate_by_time
 from solo_deaths import SOLO_DISTANCE, build_deaths_table, distance_bands, first_death_summary, summary_by_distance_band, summary_by_round_outcome, with_solo_flag
 
 st.set_page_config(page_title="VALORANT Hackathon", layout="wide")
@@ -133,6 +133,17 @@ def opening_impact_chart(by_map):
     bars = base.mark_bar(color=ATTACK_COLOR).encode(x=alt.X("impacto_da_abertura:Q", title="diferença entre taxa de vitória quando ataque abre e quando defesa abre"), tooltip=tooltip)
     intervals = base.mark_rule(color="#4a4a4a", strokeWidth=2).encode(x="impacto_ic95_baixo:Q", x2="impacto_ic95_alto:Q", tooltip=tooltip)
     return (bars + intervals).properties(height=30 * len(data))
+
+
+def openings_by_callout(attack_openings, map_meta):
+    """Aberturas do ataque agrupadas pela região (callout) mais próxima de onde o defensor morreu."""
+    callouts = attack_openings.assign(callout=[nearest_callout(x, y, map_meta) for x, y in zip(attack_openings["vitima_x"], attack_openings["vitima_y"])])
+    by_callout = callouts.groupby("callout").agg(aberturas=("round", "size"), ataque_venceu=("abriu_venceu", "mean"))
+    by_callout["ic95"] = ["{:.2f} a {:.2f}".format(*wilson_interval(round(rate * count), count)) for rate, count in zip(by_callout["ataque_venceu"], by_callout["aberturas"])]
+    location_by_name = {callout_name(callout): (callout["location"]["x"], callout["location"]["y"]) for callout in map_meta["callouts"]}
+    by_callout["x"] = [location_by_name[name][0] for name in by_callout.index]
+    by_callout["y"] = [location_by_name[name][1] for name in by_callout.index]
+    return by_callout.sort_values("aberturas", ascending=False).round(3)
 
 
 def first_blood_per_round_table(match_first_blood):
@@ -259,14 +270,21 @@ with first_blood_tab:
     if chosen_map_meta is None:
         st.info("Sem metadado de mapa para este mapId.")
     else:
-        st.caption("Cada ponto é onde o defensor morreu na primeira kill do round feita pelo ataque. Azul quando o ataque venceu o round, laranja quando perdeu.")
-        won = attack_openings[attack_openings["abriu_venceu"]]
-        lost = attack_openings[~attack_openings["abriu_venceu"]]
-        map_column, _ = st.columns([3, 2])
-        map_column.pyplot(draw_points(chosen_map_meta, [
-            ("ataque venceu o round", WON_COLOR, list(zip(won["vitima_x"], won["vitima_y"]))),
-            ("ataque perdeu o round", LOST_COLOR, list(zip(lost["vitima_x"], lost["vitima_y"]))),
-        ]))
+        by_callout = openings_by_callout(attack_openings, chosen_map_meta)
+        map_average = attack_openings["abriu_venceu"].mean()
+        st.caption(f"Cada abertura do ataque é atribuída à região (callout) mais próxima de onde o defensor morreu. Tamanho: número de aberturas. Cor: vitória do ataque ao abrir ali, centrada na média do mapa ({map_average:.0%}).")
+        show_every_kill = st.checkbox("Mostrar cada kill em vez das regiões")
+        map_column, table_column = st.columns([3, 2])
+        if show_every_kill:
+            won = attack_openings[attack_openings["abriu_venceu"]]
+            lost = attack_openings[~attack_openings["abriu_venceu"]]
+            map_column.pyplot(draw_points(chosen_map_meta, [
+                ("ataque venceu o round", WON_COLOR, list(zip(won["vitima_x"], won["vitima_y"]))),
+                ("ataque perdeu o round", LOST_COLOR, list(zip(lost["vitima_x"], lost["vitima_y"]))),
+            ]))
+        else:
+            map_column.pyplot(draw_callout_summary(chosen_map_meta, by_callout, map_average))
+        table_column.dataframe(by_callout[["aberturas", "ataque_venceu", "ic95"]], use_container_width=True)
 
     st.subheader("Ao longo da partida: tempo da primeira morte por round")
     per_round = first_blood[first_blood["round"] <= 24].groupby("round")["segundos"].agg(
