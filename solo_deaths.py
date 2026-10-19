@@ -15,6 +15,8 @@ SOLO_DISTANCE = 1000
 TRADE_WINDOW_MS = 5000
 DISTANCE_BANDS = [0, 500, 1000, 1500, 2000, 3000, float("inf")]
 DISTANCE_BAND_LABELS = ["0-500", "500-1000", "1000-1500", "1500-2000", "2000-3000", "3000+"]
+SIDE_LABELS = {"Attacker": "ataque", "Defender": "defesa"}
+OPPOSITE_SIDE = {"Attacker": "Defender", "Defender": "Attacker"}
 
 
 def distance(location_a, location_b):
@@ -36,6 +38,8 @@ def death_rows(match, match_file):
         kills = [event for event in round_events(round_result) if event["kind"] == "kill"]
         for death_order, kill in enumerate(kills, start=1):
             victim_team = team_by_puuid[kill["victim"]]
+            victim_won_round = round_result["winningTeam"] == victim_team
+            victim_role = round_result["winningTeamRole"] if victim_won_round else OPPOSITE_SIDE[round_result["winningTeamRole"]]
             ally_distances = [distance(kill["victim_location"], alive["location"]) for alive in kill["locations"] if team_by_puuid[alive["puuid"]] == victim_team]
             enemy_distances = [distance(kill["victim_location"], alive["location"]) for alive in kill["locations"] if team_by_puuid[alive["puuid"]] != victim_team]
             rows.append({
@@ -47,13 +51,14 @@ def death_rows(match, match_file):
                 "ordem_da_morte": death_order,
                 "vitima": kill["victim"],
                 "time_vitima": victim_team,
+                "lado": SIDE_LABELS[victim_role],
                 "aliados_vivos": len(ally_distances),
                 "inimigos_vivos": len(enemy_distances),
                 "dist_aliado_mais_proximo": min(ally_distances, default=math.nan),
                 "dist_media_aliados": sum(ally_distances) / len(ally_distances) if ally_distances else math.nan,
                 "dist_inimigo_mais_proximo": min(enemy_distances, default=math.nan),
                 "trocada": was_traded(kill, kills[death_order:]),
-                "venceu_round": round_result["winningTeam"] == victim_team,
+                "venceu_round": victim_won_round,
                 "venceu_partida": won_by_team[victim_team],
             })
     return rows
@@ -73,8 +78,8 @@ def with_solo_flag(deaths, solo_distance):
     return deaths_with_allies
 
 
-def summary_by_round_outcome(deaths_with_allies):
-    return deaths_with_allies.groupby("venceu_round").agg(
+def summary_by_round_outcome(deaths_with_allies, group_columns=()):
+    return deaths_with_allies.groupby([*group_columns, "venceu_round"]).agg(
         mortes=("vitima", "size"),
         dist_aliado_media=("dist_aliado_mais_proximo", "mean"),
         dist_aliado_mediana=("dist_aliado_mais_proximo", "median"),
@@ -88,19 +93,19 @@ def distance_bands(deaths_with_allies):
     return pd.cut(deaths_with_allies["dist_aliado_mais_proximo"], DISTANCE_BANDS, labels=DISTANCE_BAND_LABELS)
 
 
-def summary_by_distance_band(deaths_with_allies):
+def summary_by_distance_band(deaths_with_allies, group_columns=()):
     """Por faixa de distância ao aliado mais próximo: quantas mortes, quantas trocadas e quantas em rounds vencidos."""
-    return deaths_with_allies.groupby(distance_bands(deaths_with_allies), observed=True).agg(
+    return deaths_with_allies.groupby([*group_columns, distance_bands(deaths_with_allies)], observed=True).agg(
         mortes=("vitima", "size"),
         fracao_trocadas=("trocada", "mean"),
         venceu_round=("venceu_round", "mean"),
     ).round(3)
 
 
-def first_death_summary(deaths_with_allies):
+def first_death_summary(deaths_with_allies, group_columns=()):
     """Primeira morte do round, isolada ou não e trocada ou não: quanto o time da vítima ainda venceu o round."""
     first_deaths = deaths_with_allies[deaths_with_allies["ordem_da_morte"] == 1]
-    return first_deaths.groupby(["isolada", "trocada"]).agg(rounds=("vitima", "size"), vitoria_da_vitima=("venceu_round", "mean")).round(3)
+    return first_deaths.groupby([*group_columns, "isolada", "trocada"]).agg(rounds=("vitima", "size"), vitoria_da_vitima=("venceu_round", "mean")).round(3)
 
 
 def main():
@@ -108,12 +113,12 @@ def main():
     deaths = build_deaths_table()
     deaths_with_allies = with_solo_flag(deaths, solo_distance)
     print(f"Mortes: {len(deaths)}, com aliado vivo: {len(deaths_with_allies)}, limite de isolamento: {solo_distance:.0f} unidades\n")
-    print("Por resultado do round da vítima (venceu_round):")
-    print(summary_by_round_outcome(deaths_with_allies).to_string(), "\n")
-    print("Por faixa de distância ao aliado mais próximo:")
-    print(summary_by_distance_band(deaths_with_allies).to_string(), "\n")
-    print("Primeira morte do round (isolada x trocada):")
-    print(first_death_summary(deaths_with_allies).to_string())
+    print("Por lado e resultado do round da vítima:")
+    print(summary_by_round_outcome(deaths_with_allies, ["lado"]).to_string(), "\n")
+    print("Por lado e faixa de distância ao aliado mais próximo:")
+    print(summary_by_distance_band(deaths_with_allies, ["lado"]).to_string(), "\n")
+    print("Primeira morte do round por lado (isolada x trocada):")
+    print(first_death_summary(deaths_with_allies, ["lado"]).to_string())
 
 
 if __name__ == "__main__":
