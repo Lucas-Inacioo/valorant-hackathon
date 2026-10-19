@@ -8,7 +8,7 @@ Arquivos encontrados: 336
   Dados .Json/Univavá/Classificatória 4: 62
   Dados .Json/Univavá/Fase de Grupos: 69
 
-Campos encontrados: 104
+Campos encontrados: 104, relevantes: 91
 
 coaches
   tipos: list (156)
@@ -25,20 +25,10 @@ coaches[].teamId
   ocorrências: 217 | valores distintos: 2
   mais frequentes: 'Red': 112, 'Blue': 105
 
-matchInfo.customGameName
-  tipos: str (336)
-  ocorrências: 336 | valores distintos: 1
-  mais frequentes: '': 336
-
 matchInfo.gameLengthMillis
   tipos: int (336)
   ocorrências: 336 | valores distintos: 336
   mais frequentes: 2244526: 1, 1239633: 1, 1442143: 1, 2327918: 1, 1837069: 1
-
-matchInfo.gameMode
-  tipos: str (336)
-  ocorrências: 336 | valores distintos: 1
-  mais frequentes: '/Game/GameModes/Bomb/BombGameMode.BombGameMode_C': 336
 
 matchInfo.gameStartMillis
   tipos: int (336)
@@ -50,16 +40,6 @@ matchInfo.gameVersion
   ocorrências: 336 | valores distintos: 8
   mais frequentes: 'release-13.05-shipping-11-5350494': 109, 'release-13.00-shipping-32-4990475': 55, 'release-13.02-shipping-17-5277781': 43, 'release-13.01-shipping-11-5090349': 39, 'release-12.10-shipping-18-4791598': 29
 
-matchInfo.isCompleted
-  tipos: bool (336)
-  ocorrências: 336 | valores distintos: 1
-  mais frequentes: True: 336
-
-matchInfo.isRanked
-  tipos: bool (336)
-  ocorrências: 336 | valores distintos: 1
-  mais frequentes: False: 336
-
 matchInfo.mapId
   tipos: str (336)
   ocorrências: 336 | valores distintos: 10
@@ -69,26 +49,6 @@ matchInfo.matchId
   tipos: str (336)
   ocorrências: 336 | valores distintos: 336
   mais frequentes: '917660a3-a85f-43c7-9fbc-c914333f642f': 1, '5cab49f8-fb1b-410a-b337-385fb2bffb11': 1, 'e63826e5-85e5-480a-ad59-537cd7ab2a69': 1, '5d399e50-66b6-4837-87d4-438ff6765e94': 1, '02e4c729-6b8e-4341-bf35-6678ffad6dad': 1
-
-matchInfo.premierMatchInfo
-  tipos: dict (336)
-  ocorrências: 336 | valores distintos: 1
-  mais frequentes: '{}': 336
-
-matchInfo.provisioningFlowId
-  tipos: str (336)
-  ocorrências: 336 | valores distintos: 1
-  mais frequentes: 'CustomGame': 336
-
-matchInfo.queueId
-  tipos: str (336)
-  ocorrências: 336 | valores distintos: 1
-  mais frequentes: '': 336
-
-matchInfo.region
-  tipos: str (336)
-  ocorrências: 336 | valores distintos: 1
-  mais frequentes: 'br': 336
 
 matchInfo.seasonId
   tipos: str (336)
@@ -104,11 +64,6 @@ players[].characterId
   tipos: str (3360), NoneType (22)
   ocorrências: 3382 | valores distintos: 29
   mais frequentes: '8e253930-4c05-31dd-1b6c-968525494517': 588, '320b2a48-4d9b-a075-30f1-1f93a9b638fa': 391, 'eb93336a-449b-9c1b-0a54-a891f7921d69': 389, 'add6443a-41bd-e414-f6ad-e58d267f4e95': 329, 'bb2a4828-46eb-8cd1-e765-15848195d751': 211
-
-players[].competitiveTier
-  tipos: int (3382)
-  ocorrências: 3382 | valores distintos: 1
-  mais frequentes: 0: 3382
 
 players[].gameName
   tipos: str (3382)
@@ -299,26 +254,6 @@ roundResults[].plantSite
   tipos: str (6618)
   ocorrências: 6618 | valores distintos: 4
   mais frequentes: 'A': 2040, '': 1965, 'B': 1603, 'C': 1010
-
-roundResults[].playerStats[].ability.ability1Effects
-  tipos: NoneType (66180)
-  ocorrências: 66180 | valores distintos: 1
-  mais frequentes: None: 66180
-
-roundResults[].playerStats[].ability.ability2Effects
-  tipos: NoneType (66180)
-  ocorrências: 66180 | valores distintos: 1
-  mais frequentes: None: 66180
-
-roundResults[].playerStats[].ability.grenadeEffects
-  tipos: NoneType (66180)
-  ocorrências: 66180 | valores distintos: 1
-  mais frequentes: None: 66180
-
-roundResults[].playerStats[].ability.ultimateEffects
-  tipos: NoneType (66180)
-  ocorrências: 66180 | valores distintos: 1
-  mais frequentes: None: 66180
 
 roundResults[].playerStats[].damage
   tipos: list (20305)
@@ -529,4 +464,71 @@ teams[].won
   tipos: bool (672)
   ocorrências: 672 | valores distintos: 2
   mais frequentes: False: 336, True: 336
+
+Campos irrelevantes (um único valor em toda a base, sem subcampos): 13
+
+matchInfo.customGameName
+  tipos: str (336)
+  ocorrências: 336 | valores distintos: 1
+  mais frequentes: '': 336
+
+matchInfo.gameMode
+  tipos: str (336)
+  ocorrências: 336 | valores distintos: 1
+  mais frequentes: '/Game/GameModes/Bomb/BombGameMode.BombGameMode_C': 336
+
+matchInfo.isCompleted
+  tipos: bool (336)
+  ocorrências: 336 | valores distintos: 1
+  mais frequentes: True: 336
+
+matchInfo.isRanked
+  tipos: bool (336)
+  ocorrências: 336 | valores distintos: 1
+  mais frequentes: False: 336
+
+matchInfo.premierMatchInfo
+  tipos: dict (336)
+  ocorrências: 336 | valores distintos: 1
+  mais frequentes: '{}': 336
+
+matchInfo.provisioningFlowId
+  tipos: str (336)
+  ocorrências: 336 | valores distintos: 1
+  mais frequentes: 'CustomGame': 336
+
+matchInfo.queueId
+  tipos: str (336)
+  ocorrências: 336 | valores distintos: 1
+  mais frequentes: '': 336
+
+matchInfo.region
+  tipos: str (336)
+  ocorrências: 336 | valores distintos: 1
+  mais frequentes: 'br': 336
+
+players[].competitiveTier
+  tipos: int (3382)
+  ocorrências: 3382 | valores distintos: 1
+  mais frequentes: 0: 3382
+
+roundResults[].playerStats[].ability.ability1Effects
+  tipos: NoneType (66180)
+  ocorrências: 66180 | valores distintos: 1
+  mais frequentes: None: 66180
+
+roundResults[].playerStats[].ability.ability2Effects
+  tipos: NoneType (66180)
+  ocorrências: 66180 | valores distintos: 1
+  mais frequentes: None: 66180
+
+roundResults[].playerStats[].ability.grenadeEffects
+  tipos: NoneType (66180)
+  ocorrências: 66180 | valores distintos: 1
+  mais frequentes: None: 66180
+
+roundResults[].playerStats[].ability.ultimateEffects
+  tipos: NoneType (66180)
+  ocorrências: 66180 | valores distintos: 1
+  mais frequentes: None: 66180
 

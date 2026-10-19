@@ -8,7 +8,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from explore_fields import DEFAULT_DATA_DIR, collect_field_stats, find_match_files, load_match, summarize_fields
+from explore_fields import DEFAULT_DATA_DIR, collect_field_stats, find_match_files, load_match, split_irrelevant_fields, summarize_fields
 
 st.set_page_config(page_title="VALORANT Hackathon", layout="wide")
 
@@ -80,9 +80,10 @@ def build_tables():
 
 
 @st.cache_data
-def build_field_table():
+def build_field_tables():
     types_by_field, values_by_field = collect_field_stats(find_match_files(DEFAULT_DATA_DIR))
-    return pd.DataFrame(summarize_fields(types_by_field, values_by_field))
+    relevant_rows, irrelevant_rows = split_irrelevant_fields(summarize_fields(types_by_field, values_by_field))
+    return pd.DataFrame(relevant_rows), pd.DataFrame(irrelevant_rows)
 
 
 def players_summary(players):
@@ -122,9 +123,13 @@ with players_tab:
     st.dataframe(players_summary(selected_players), hide_index=True)
 
 with fields_tab:
-    field_table = build_field_table()
+    relevant_fields, irrelevant_fields = build_field_tables()
     field_filter = st.text_input("Filtrar campo")
-    st.dataframe(field_table[field_table["campo"].str.contains(field_filter, regex=False)], hide_index=True)
+    st.dataframe(relevant_fields[relevant_fields["campo"].str.contains(field_filter, regex=False)], hide_index=True)
+    with st.container(border=True):
+        st.subheader("Dados irrelevantes")
+        st.caption("Campos com um único valor em toda a base e sem subcampos. Não diferenciam partida, jogador nem round.")
+        st.dataframe(irrelevant_fields.drop(columns=["distintos"]).rename(columns={"mais_frequentes": "valor"}), hide_index=True)
 
 with match_tab:
     chosen_file = st.selectbox("Partida", selected_matches["arquivo"].tolist())

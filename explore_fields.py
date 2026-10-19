@@ -65,6 +65,19 @@ def summarize_fields(types_by_field, values_by_field):
     return field_rows
 
 
+def has_child_fields(field_path, all_field_paths):
+    return any(other.startswith((f"{field_path}.", f"{field_path}[]")) for other in all_field_paths)
+
+
+def split_irrelevant_fields(field_rows):
+    """Campo irrelevante tem um único valor em toda a base e nenhum subcampo, então não diferencia nada."""
+    all_field_paths = [row["campo"] for row in field_rows]
+    irrelevant_paths = {row["campo"] for row in field_rows if row["distintos"] == 1 and not has_child_fields(row["campo"], all_field_paths)}
+    relevant_rows = [row for row in field_rows if row["campo"] not in irrelevant_paths]
+    irrelevant_rows = [row for row in field_rows if row["campo"] in irrelevant_paths]
+    return relevant_rows, irrelevant_rows
+
+
 def print_files_summary(match_files, data_dir):
     files_by_folder = Counter(str(match_file.parent.relative_to(data_dir)) for match_file in match_files)
     print(f"Arquivos encontrados: {len(match_files)}")
@@ -73,8 +86,7 @@ def print_files_summary(match_files, data_dir):
     print()
 
 
-def print_field_report(field_rows):
-    print(f"Campos encontrados: {len(field_rows)}\n")
+def print_field_rows(field_rows):
     for row in field_rows:
         print(row["campo"])
         print(f"  tipos: {row['tipos']}")
@@ -83,18 +95,27 @@ def print_field_report(field_rows):
         print()
 
 
-def check_walk_fields():
+def print_field_report(relevant_rows, irrelevant_rows):
+    print(f"Campos encontrados: {len(relevant_rows) + len(irrelevant_rows)}, relevantes: {len(relevant_rows)}\n")
+    print_field_rows(relevant_rows)
+    print(f"Campos irrelevantes (um único valor em toda a base, sem subcampos): {len(irrelevant_rows)}\n")
+    print_field_rows(irrelevant_rows)
+
+
+def run_self_checks():
     sample = {"a": [1, {"b": 2}], "c": {}, "d": []}
     assert list(walk_fields(sample)) == [("a[]", 1), ("a[].b", 2), ("c", {}), ("d", [])]
+    rows = [{"campo": "a", "distintos": 1}, {"campo": "a[].b", "distintos": 1}, {"campo": "c", "distintos": 2}, {"campo": "d", "distintos": 1}]
+    assert [row["campo"] for row in split_irrelevant_fields(rows)[1]] == ["a[].b", "d"]
 
 
 def main():
-    check_walk_fields()
+    run_self_checks()
     data_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_DATA_DIR
     match_files = find_match_files(data_dir)
     print_files_summary(match_files, data_dir)
     types_by_field, values_by_field = collect_field_stats(match_files)
-    print_field_report(summarize_fields(types_by_field, values_by_field))
+    print_field_report(*split_irrelevant_fields(summarize_fields(types_by_field, values_by_field)))
 
 
 if __name__ == "__main__":
