@@ -5,6 +5,7 @@ Uso: streamlit run app.py
 from datetime import datetime, timezone
 from pathlib import Path
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -112,6 +113,16 @@ def deaths_table():
 @st.cache_data
 def first_blood_rows():
     return first_blood_table(deaths_table())
+
+
+def quantile_band_chart(per_round):
+    """Mediana por round com bandas p25 a p75 e p10 a p90: a distribuição é assimétrica, então quantis dizem mais que o desvio padrão."""
+    base = alt.Chart(per_round.reset_index()).encode(x=alt.X("round:O", title="round"))
+    tooltip = ["round", "rounds", "p10", "p25", "mediana", "p75", "p90", "media", "desvio_padrao"]
+    wide_band = base.mark_area(opacity=0.15, color="#7f7f7f").encode(y=alt.Y("p10:Q", title="segundos"), y2="p90:Q", tooltip=tooltip)
+    narrow_band = base.mark_area(opacity=0.3, color="#7f7f7f").encode(y="p25:Q", y2="p75:Q", tooltip=tooltip)
+    median_line = base.mark_line(color="#4a4a4a", point=True).encode(y="mediana:Q", tooltip=tooltip)
+    return (wide_band + narrow_band + median_line).properties(height=320)
 
 
 def first_blood_per_round_table(match_first_blood):
@@ -227,9 +238,13 @@ with first_blood_tab:
     st.dataframe(summary_by_map(first_blood).rename(index=map_name_by_internal), use_container_width=False)
 
     st.subheader("Ao longo da partida: tempo da primeira morte por round")
-    per_round = first_blood[first_blood["round"] <= 24].groupby("round")["segundos"].agg(rounds="size", p25=lambda seconds: seconds.quantile(0.25), mediana="median", p75=lambda seconds: seconds.quantile(0.75)).round(1)
-    median_column, count_column = st.columns(2)
-    median_column.line_chart(per_round["mediana"], color=["#7f7f7f"], y_label="mediana (s)")
+    per_round = first_blood[first_blood["round"] <= 24].groupby("round")["segundos"].agg(
+        rounds="size", p10=lambda seconds: seconds.quantile(0.10), p25=lambda seconds: seconds.quantile(0.25), mediana="median",
+        p75=lambda seconds: seconds.quantile(0.75), p90=lambda seconds: seconds.quantile(0.90), media="mean", desvio_padrao="std",
+    ).round(1)
+    st.caption("Linha: mediana. Banda escura: p25 a p75. Banda clara: p10 a p90. A distribuição é assimétrica à direita, por isso quantis em vez de média e desvio padrão, que estão na tabela.")
+    band_column, count_column = st.columns([3, 2])
+    band_column.altair_chart(quantile_band_chart(per_round), use_container_width=True)
     count_column.bar_chart(per_round["rounds"], color=["#7f7f7f"], y_label="rounds na base")
     with st.expander("Números por round"):
         st.dataframe(per_round, use_container_width=False)
