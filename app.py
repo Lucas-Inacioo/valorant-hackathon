@@ -11,8 +11,16 @@ import streamlit as st
 from explore_fields import DEFAULT_DATA_DIR, collect_field_stats, find_match_files, load_match, split_irrelevant_fields, summarize_fields
 from maps import load_maps_by_url
 from round_map import describe_event, draw_round_map, round_events
+from solo_deaths import SOLO_DISTANCE, build_deaths_table, distance_bands, first_death_summary, summary_by_distance_band, summary_by_round_outcome, with_solo_flag
 
 st.set_page_config(page_title="VALORANT Hackathon", layout="wide")
+
+# Paleta fixa das duas séries de resultado, validada para daltonismo com o validador do skill de dataviz
+LOST_COLOR = "#ff7f0e"
+WON_COLOR = "#1f77b4"
+TRADE_COLOR = "#2ca02c"
+ROUND_OUTCOME_LABELS = {False: "perdeu o round", True: "venceu o round"}
+MATCH_OUTCOME_LABELS = {False: "perdeu a partida", True: "venceu a partida"}
 
 
 def match_row(match_file, match):
@@ -52,7 +60,7 @@ def player_row(match_id, player):
 def round_row(match_id, round_result):
     return {
         "match_id": match_id,
-        "round": round_result["roundNum"],
+        "round": round_result["roundNum"] + 1,
         "resultado": round_result["roundResult"],
         "time_vencedor": round_result["winningTeam"],
         "lado_vencedor": round_result["winningTeamRole"],
@@ -93,6 +101,21 @@ def maps_by_url():
     return load_maps_by_url()
 
 
+@st.cache_data
+def deaths_table():
+    return build_deaths_table()
+
+
+def deaths_per_round_table(match_deaths, round_results):
+    """Por round da partida: vencedor e, para cada time, mortes, isoladas e trocadas."""
+    per_round = match_deaths.groupby(["round", "time_vitima"]).agg(mortes=("vitima", "size"), isoladas=("isolada", "sum"), trocadas=("trocada", "sum"))
+    per_round = per_round.unstack("time_vitima").fillna(0).astype(int)
+    per_round.columns = [f"{team} {stat}" for stat, team in per_round.columns]
+    winner_by_round = {round_result["roundNum"] + 1: round_result["winningTeam"] for round_result in round_results}
+    per_round.insert(0, "vencedor", per_round.index.map(winner_by_round))
+    return per_round.reset_index()
+
+
 def players_summary(players):
     summary = players.groupby("puuid").agg(
         jogador=("jogador", "last"), partidas=("match_id", "nunique"), kills=("kills", "sum"),
@@ -112,7 +135,7 @@ selected_ids = set(selected_matches["match_id"])
 selected_players = players[players["match_id"].isin(selected_ids)]
 selected_rounds = rounds[rounds["match_id"].isin(selected_ids)]
 
-overview_tab, players_tab, fields_tab, match_tab = st.tabs(["Visão geral", "Jogadores", "Campos", "Partida"])
+overview_tab, players_tab, deaths_tab, fields_tab, match_tab = st.tabs(["Visão geral", "Jogadores", "Mortes isoladas", "Campos", "Partida"])
 
 with overview_tab:
     matches_col, players_col, rounds_col = st.columns(3)
@@ -128,6 +151,34 @@ with overview_tab:
 
 with players_tab:
     st.dataframe(players_summary(selected_players), hide_index=True)
+
+with deaths_tab:
+    st.markdown("Para cada morte, a distância da vítima ao aliado vivo mais próximo naquele instante. Isolada quando passa do limite. Trocada quando o killer morre em até 5 s.")
+    solo_distance = st.slider("Limite de isolamento (unidades de jogo, ~100 por metro)", 500, 3000, SOLO_DISTANCE, step=250)
+    selected_deaths = deaths_table()[deaths_table()["match_id"].isin(selected_ids)]
+    deaths_with_allies = with_solo_flag(selected_deaths, solo_distance)
+    st.caption(f"{len(selected_deaths)} mortes, {len(deaths_with_allies)} com algum aliado vivo (só essas têm distância).")
+
+    st.subheader("Por resultado do round da vítima")
+    st.dataframe(summary_by_round_outcome(deaths_with_allies).rename(index=ROUND_OUTCOME_LABELS), use_container_width=False)
+
+    st.subheader("Onde as mortes acontecem: distância ao aliado mais próximo")
+    distribution = pd.crosstab(distance_bands(deaths_with_allies), deaths_with_allies["venceu_round"], normalize="columns").rename(columns=ROUND_OUTCOME_LABELS)
+    st.bar_chart(distribution, color=[LOST_COLOR, WON_COLOR], stack=False, y_label="fração das mortes")
+
+    st.subheader("Por faixa de distância: chance de trade e de vencer o round")
+    st.bar_chart(summary_by_distance_band(deaths_with_allies)[["fracao_trocadas", "venceu_round"]], color=[TRADE_COLOR, WON_COLOR], stack=False, y_label="fração")
+
+    st.subheader("Primeira morte do round: o que decide é o trade")
+    first_deaths = first_death_summary(deaths_with_allies).reset_index()
+    first_deaths["isolada"] = first_deaths["isolada"].map({False: "acompanhada", True: "isolada"})
+    first_deaths["trocada"] = first_deaths["trocada"].map({False: "não trocada", True: "trocada"})
+    st.dataframe(first_deaths, hide_index=True, use_container_width=False)
+
+    st.subheader("Ao longo da partida: fração de mortes isoladas por round")
+    regular_rounds = deaths_with_allies[deaths_with_allies["round"] <= 24]
+    trend = regular_rounds.groupby(["round", "venceu_partida"])["isolada"].mean().unstack().rename(columns=MATCH_OUTCOME_LABELS)
+    st.line_chart(trend, color=[LOST_COLOR, WON_COLOR], y_label="fração isolada")
 
 with fields_tab:
     relevant_fields, irrelevant_fields = build_field_tables()
@@ -163,6 +214,10 @@ with match_tab:
         st.caption(describe_event(events[event_index], name_by_puuid, round_result))
         map_column, _ = st.columns([4, 1])
         map_column.pyplot(draw_round_map(map_meta, events, event_index, selected_puuid, team_by_puuid, name_by_puuid))
+
+    st.subheader("Mortes isoladas e trades por round")
+    match_deaths = with_solo_flag(deaths_table()[deaths_table()["match_id"] == chosen_match["match_id"]], SOLO_DISTANCE)
+    st.dataframe(deaths_per_round_table(match_deaths, match["roundResults"]), hide_index=True)
 
     st.subheader("Jogadores")
     match_players = players[players["match_id"] == chosen_match["match_id"]].drop(columns=["match_id", "puuid"])

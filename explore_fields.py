@@ -12,7 +12,8 @@ TOP_VALUES_SHOWN = 5
 
 
 def find_match_files(data_dir):
-    return sorted(data_dir.rglob("*.json"))
+    # data/maps/ guarda metadados de mapa, não partidas
+    return sorted(path for path in data_dir.rglob("*.json") if "maps" not in path.parts)
 
 
 def load_match(match_file):
