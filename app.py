@@ -121,7 +121,7 @@ def prediction_tables():
     matches = load_matches()
     features = team_features(deaths_table(), matches)
     pairs = match_pairs(matches, features)
-    chance_median, chance_95 = permutation_ceiling(pairs)
+    chance_95, chance_median = permutation_ceiling(pairs)
     return {
         "dentro": in_match_accuracy(pairs),
         "acaso": (chance_median, chance_95),
