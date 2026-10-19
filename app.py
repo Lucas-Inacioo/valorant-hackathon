@@ -9,6 +9,8 @@ import pandas as pd
 import streamlit as st
 
 from explore_fields import DEFAULT_DATA_DIR, collect_field_stats, find_match_files, load_match, split_irrelevant_fields, summarize_fields
+from maps import load_maps_by_url
+from round_map import describe_event, draw_round_map, round_events
 
 st.set_page_config(page_title="VALORANT Hackathon", layout="wide")
 
@@ -86,6 +88,11 @@ def build_field_tables():
     return pd.DataFrame(relevant_rows), pd.DataFrame(irrelevant_rows)
 
 
+@st.cache_data
+def maps_by_url():
+    return load_maps_by_url()
+
+
 def players_summary(players):
     summary = players.groupby("puuid").agg(
         jogador=("jogador", "last"), partidas=("match_id", "nunique"), kills=("kills", "sum"),
@@ -134,11 +141,33 @@ with fields_tab:
 with match_tab:
     chosen_file = st.selectbox("Partida", selected_matches["arquivo"].tolist())
     chosen_match = selected_matches[selected_matches["arquivo"] == chosen_file].iloc[0]
+    match = load_match(Path(chosen_match["caminho"]))
     st.write(f'{chosen_match["torneio"]} · {chosen_match["mapa"]} · Blue {chosen_match["rounds_blue"]} x {chosen_match["rounds_red"]} Red')
+
+    st.subheader("Mapa do round")
+    name_by_puuid = {player["puuid"]: f'{player["gameName"]}#{player["tagLine"]}' for player in match["players"]}
+    team_by_puuid = {player["puuid"]: player["teamId"] for player in match["players"]}
+    player_column, round_column = st.columns(2)
+    playing_puuids = [player["puuid"] for player in match["players"] if not player["isObserver"]]
+    selected_puuid = player_column.selectbox("Jogador", playing_puuids, format_func=lambda puuid: f"{name_by_puuid[puuid]} ({team_by_puuid[puuid]})")
+    round_index = round_column.selectbox("Round", range(len(match["roundResults"])), format_func=lambda index: f"Round {index + 1}")
+    round_result = match["roundResults"][round_index]
+    events = round_events(round_result)
+    map_meta = maps_by_url().get(match["matchInfo"]["mapId"])
+    if map_meta is None:
+        st.info("Sem metadado de mapa para este mapId.")
+    elif not events:
+        st.info("Este round não tem kill, plant nem defuse, então não há posição registrada.")
+    else:
+        event_index = st.slider("Momento", 0, len(events) - 1, 0, format="evento %d") if len(events) > 1 else 0
+        st.caption(describe_event(events[event_index], name_by_puuid, round_result))
+        map_column, _ = st.columns([4, 1])
+        map_column.pyplot(draw_round_map(map_meta, events, event_index, selected_puuid, team_by_puuid, name_by_puuid))
+
     st.subheader("Jogadores")
     match_players = players[players["match_id"] == chosen_match["match_id"]].drop(columns=["match_id", "puuid"])
     st.dataframe(match_players.sort_values(["time", "score"], ascending=[True, False]), hide_index=True)
     st.subheader("Rounds")
     st.dataframe(rounds[rounds["match_id"] == chosen_match["match_id"]].drop(columns=["match_id"]), hide_index=True)
     with st.expander("matchInfo bruto"):
-        st.json(load_match(Path(chosen_match["caminho"]))["matchInfo"])
+        st.json(match["matchInfo"])
