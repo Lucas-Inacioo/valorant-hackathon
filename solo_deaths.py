@@ -207,6 +207,19 @@ def context_summary(deaths_with_allies, group_columns=()):
     return deaths_with_allies.groupby([*group_columns, "contexto"]).agg(mortes=("vitima", "size"), trocada=("trocada", "mean"), venceu_round=("venceu_round", "mean")).round(3)
 
 
+def win_rate_by_situation(deaths_with_allies, flag_column, min_deaths=60, min_each_group=15):
+    """Por lado e situação (aliados x inimigos vivos): vitória do round sem e com a condição. Separa a vantagem numérica do efeito."""
+    rows = []
+    for (side, allies, enemies), cell in deaths_with_allies.groupby(["lado", "aliados_vivos", "inimigos_vivos"]):
+        with_flag, without_flag = cell[cell[flag_column]], cell[~cell[flag_column]]
+        if len(cell) < min_deaths or len(with_flag) < min_each_group or len(without_flag) < min_each_group:
+            continue
+        rows.append({"lado": side, "situacao": f"{allies}v{enemies}", "mortes": len(cell), "sem": without_flag["venceu_round"].mean(), "com": with_flag["venceu_round"].mean()})
+    table = pd.DataFrame(rows)
+    table["diferenca"] = table["com"] - table["sem"]
+    return table.round(2)
+
+
 def territory_summary(deaths_with_allies, group_columns=()):
     return deaths_with_allies.groupby([*group_columns, "territorio"]).agg(mortes=("vitima", "size"), trocada=("trocada", "mean"), venceu_round=("venceu_round", "mean")).round(3)
 

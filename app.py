@@ -13,7 +13,7 @@ from explore_fields import DEFAULT_DATA_DIR, collect_field_stats, find_match_fil
 from maps import callout_name, load_maps_by_url, nearest_callout
 from round_map import describe_event, draw_callout_summary, draw_points, draw_round_map, round_events
 from first_blood import first_blood_table, plant_summary, summary_by_map, who_opens_by_time, wilson_interval, win_rate_by_time
-from solo_deaths import SOLO_DISTANCE, build_deaths_table, context_summary, distance_bands, first_death_summary, summary_by_distance_band, summary_by_round_outcome, territory_summary, with_solo_flag
+from solo_deaths import SOLO_DISTANCE, build_deaths_table, context_summary, distance_bands, first_death_summary, summary_by_distance_band, summary_by_round_outcome, territory_summary, win_rate_by_situation, with_solo_flag
 
 st.set_page_config(page_title="VALORANT Hackathon", layout="wide")
 
@@ -188,7 +188,7 @@ selected_ids = set(selected_matches["match_id"])
 selected_players = players[players["match_id"].isin(selected_ids)]
 selected_rounds = rounds[rounds["match_id"].isin(selected_ids)]
 
-overview_tab, players_tab, deaths_tab, first_blood_tab, fields_tab, match_tab = st.tabs(["Visão geral", "Jogadores", "Mortes isoladas", "Primeira morte", "Campos", "Partida"])
+overview_tab, players_tab, deaths_tab, first_blood_tab, fields_tab, match_tab, conclusions_tab = st.tabs(["Visão geral", "Jogadores", "Mortes isoladas", "Primeira morte", "Campos", "Partida", "Conclusões"])
 
 with overview_tab:
     matches_col, players_col, rounds_col = st.columns(3)
@@ -221,6 +221,15 @@ with deaths_tab:
     context_column.dataframe(context_summary(deaths_with_allies, ["lado"]), use_container_width=False)
     territory_column.markdown("**Pelo território da região.** Próprio quando 65% ou mais das posições vivas ali nos primeiros 20 s dos rounds são do lado da vítima, do adversário quando 35% ou menos, disputado no meio.")
     territory_column.dataframe(territory_summary(deaths_with_allies, ["lado"]), use_container_width=False)
+
+    st.subheader("Controlando pelos vivos: vitória do round por situação, sem e com a condição")
+    st.caption("Situação é aliados x inimigos vivos na hora da morte. Comparar dentro da mesma situação separa o efeito da condição do efeito de estar em vantagem numérica. Só situações com 60 mortes ou mais.")
+    trade_column, proximity_column = st.columns(2)
+    trade_column.markdown("**Morte trocada**")
+    trade_column.dataframe(win_rate_by_situation(deaths_with_allies, "trocada"), hide_index=True, use_container_width=False)
+    deaths_with_allies["aliado_perto"] = ~deaths_with_allies["isolada"]
+    proximity_column.markdown("**Aliado perto (não isolada)**")
+    proximity_column.dataframe(win_rate_by_situation(deaths_with_allies, "aliado_perto"), hide_index=True, use_container_width=False)
 
     st.subheader("Por lado e resultado do round da vítima")
     st.dataframe(summary_by_round_outcome(deaths_with_allies, ["lado"]).rename(index=ROUND_OUTCOME_LABELS, level="venceu_round"), use_container_width=False)
@@ -357,3 +366,6 @@ with match_tab:
     st.dataframe(rounds[rounds["match_id"] == chosen_match["match_id"]].drop(columns=["match_id"]), hide_index=True)
     with st.expander("matchInfo bruto"):
         st.json(match["matchInfo"])
+
+with conclusions_tab:
+    st.markdown((Path(__file__).parent / "CONCLUSOES.md").read_text(encoding="utf-8"))
