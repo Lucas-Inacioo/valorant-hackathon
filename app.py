@@ -222,7 +222,8 @@ with first_blood_tab:
     st.dataframe(plant_summary(first_blood).rename(index={True: "antes do plant", False: "depois do plant"}, level="antes_do_plant"), use_container_width=False)
 
     st.subheader("Por mapa")
-    st.dataframe(summary_by_map(first_blood), use_container_width=False)
+    map_name_by_internal = dict(zip(matches["mapa_interno"], matches["mapa"]))
+    st.dataframe(summary_by_map(first_blood).rename(index=map_name_by_internal), use_container_width=False)
 
     st.subheader("Ao longo da partida: mediana do tempo da primeira morte por round")
     st.line_chart(first_blood[first_blood["round"] <= 24].groupby("round")["segundos"].median(), color=["#7f7f7f"], y_label="segundos")
