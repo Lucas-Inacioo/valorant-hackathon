@@ -48,6 +48,7 @@ def death_rows(match, match_file):
                 "mapa": match_info["mapId"].rsplit("/", 1)[-1],
                 "round": round_result["roundNum"] + 1,
                 "segundos": kill["time_ms"] / 1000,
+                "segundos_plant": round_result["plantRoundTime"] / 1000 if round_result["bombPlanter"] else math.nan,
                 "ordem_da_morte": death_order,
                 "vitima": kill["victim"],
                 "time_vitima": victim_team,

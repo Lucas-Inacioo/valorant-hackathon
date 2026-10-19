@@ -11,6 +11,7 @@ import streamlit as st
 from explore_fields import DEFAULT_DATA_DIR, collect_field_stats, find_match_files, load_match, split_irrelevant_fields, summarize_fields
 from maps import load_maps_by_url
 from round_map import describe_event, draw_round_map, round_events
+from first_blood import first_blood_table, plant_summary, summary_by_map, who_opens_by_time, win_rate_by_time
 from solo_deaths import SOLO_DISTANCE, build_deaths_table, distance_bands, first_death_summary, summary_by_distance_band, summary_by_round_outcome, with_solo_flag
 
 st.set_page_config(page_title="VALORANT Hackathon", layout="wide")
@@ -19,6 +20,8 @@ st.set_page_config(page_title="VALORANT Hackathon", layout="wide")
 LOST_COLOR = "#ff7f0e"
 WON_COLOR = "#1f77b4"
 TRADE_COLOR = "#2ca02c"
+ATTACK_COLOR = "#c0392b"
+DEFENSE_COLOR = "#2a9d8f"
 ROUND_OUTCOME_LABELS = {False: "perdeu o round", True: "venceu o round"}
 MATCH_OUTCOME_LABELS = {False: "perdeu a partida", True: "venceu a partida"}
 
@@ -106,6 +109,16 @@ def deaths_table():
     return build_deaths_table()
 
 
+@st.cache_data
+def first_blood_rows():
+    return first_blood_table(deaths_table())
+
+
+def first_blood_per_round_table(match_first_blood):
+    columns = {"round": "round", "segundos": "primeira morte (s)", "time_abriu": "quem abriu", "lado_abriu": "lado", "trocada": "trocada", "antes_do_plant": "antes do plant", "abriu_venceu": "quem abriu venceu"}
+    return match_first_blood[list(columns)].rename(columns=columns).round(1)
+
+
 def deaths_per_round_table(match_deaths, round_results):
     """Por round da partida: vencedor e, para cada time, mortes, isoladas e trocadas."""
     per_round = match_deaths.groupby(["round", "time_vitima"]).agg(mortes=("vitima", "size"), isoladas=("isolada", "sum"), trocadas=("trocada", "sum"))
@@ -143,7 +156,7 @@ selected_ids = set(selected_matches["match_id"])
 selected_players = players[players["match_id"].isin(selected_ids)]
 selected_rounds = rounds[rounds["match_id"].isin(selected_ids)]
 
-overview_tab, players_tab, deaths_tab, fields_tab, match_tab = st.tabs(["Visão geral", "Jogadores", "Mortes isoladas", "Campos", "Partida"])
+overview_tab, players_tab, deaths_tab, first_blood_tab, fields_tab, match_tab = st.tabs(["Visão geral", "Jogadores", "Mortes isoladas", "Primeira morte", "Campos", "Partida"])
 
 with overview_tab:
     matches_col, players_col, rounds_col = st.columns(3)
@@ -188,6 +201,32 @@ with deaths_tab:
         trend = regular_rounds.groupby(["round", "venceu_partida"])["isolada"].mean().unstack().rename(columns=MATCH_OUTCOME_LABELS)
         side_column.line_chart(trend, color=[LOST_COLOR, WON_COLOR], y_label="fração isolada")
 
+with first_blood_tab:
+    st.markdown("Uma linha por round: quando aconteceu a primeira morte, qual lado abriu o placar e se o time que abriu venceu o round. O tempo conta a partir do round live, sem a fase de compra.")
+    first_blood = first_blood_rows()[first_blood_rows()["match_id"].isin(selected_ids)]
+    rounds_col, median_col, opener_col = st.columns(3)
+    rounds_col.metric("Rounds com morte", len(first_blood))
+    median_col.metric("Mediana da primeira morte", f'{first_blood["segundos"].median():.1f} s')
+    opener_col.metric("Quem abre vence o round", f'{first_blood["abriu_venceu"].mean():.1%}')
+
+    st.subheader("Quando a primeira morte acontece, por lado de quem abriu")
+    opened_counts = pd.crosstab(first_blood["faixa"], first_blood["lado_abriu"])
+    st.bar_chart(opened_counts, color=[ATTACK_COLOR, DEFENSE_COLOR], stack=False, y_label="rounds")
+
+    st.subheader("Quem abre vence? Por lado e faixa de tempo")
+    win_rate = win_rate_by_time(first_blood)["abriu_venceu"].unstack("lado_abriu")
+    st.bar_chart(win_rate, color=[ATTACK_COLOR, DEFENSE_COLOR], stack=False, y_label="fração de rounds vencidos por quem abriu")
+    st.dataframe(win_rate_by_time(first_blood), use_container_width=False)
+
+    st.subheader("Antes ou depois do plant")
+    st.dataframe(plant_summary(first_blood).rename(index={True: "antes do plant", False: "depois do plant"}, level="antes_do_plant"), use_container_width=False)
+
+    st.subheader("Por mapa")
+    st.dataframe(summary_by_map(first_blood), use_container_width=False)
+
+    st.subheader("Ao longo da partida: mediana do tempo da primeira morte por round")
+    st.line_chart(first_blood[first_blood["round"] <= 24].groupby("round")["segundos"].median(), color=["#7f7f7f"], y_label="segundos")
+
 with fields_tab:
     relevant_fields, irrelevant_fields = build_field_tables()
     field_filter = st.text_input("Filtrar campo")
@@ -222,6 +261,9 @@ with match_tab:
         st.caption(describe_event(events[event_index], name_by_puuid, round_result))
         map_column, _ = st.columns([4, 1])
         map_column.pyplot(draw_round_map(map_meta, events, event_index, selected_puuid, team_by_puuid, name_by_puuid))
+
+    st.subheader("Primeira morte por round")
+    st.dataframe(first_blood_per_round_table(first_blood_rows()[first_blood_rows()["match_id"] == chosen_match["match_id"]]), hide_index=True)
 
     st.subheader("Mortes isoladas e trades por round")
     match_deaths = with_solo_flag(deaths_table()[deaths_table()["match_id"] == chosen_match["match_id"]], SOLO_DISTANCE)
