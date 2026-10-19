@@ -11,6 +11,7 @@ import streamlit as st
 
 from explore_fields import DEFAULT_DATA_DIR, collect_field_stats, find_match_files, load_match, split_irrelevant_fields, summarize_fields
 from maps import callout_name, load_maps_by_url, nearest_callout
+from predict import forecast_accuracy, in_match_accuracy, load_matches, match_pairs, permutation_ceiling, team_features, tournament_ranking
 from round_map import describe_event, draw_callout_summary, draw_points, draw_round_map, round_events
 from first_blood import first_blood_table, plant_summary, summary_by_map, who_opens_by_time, wilson_interval, win_rate_by_time
 from solo_deaths import SOLO_DISTANCE, build_deaths_table, context_summary, distance_bands, first_death_summary, summary_by_distance_band, summary_by_round_outcome, territory_summary, win_rate_by_situation, with_solo_flag
@@ -115,6 +116,21 @@ def first_blood_rows():
     return first_blood_table(deaths_table())
 
 
+@st.cache_data
+def prediction_tables():
+    matches = load_matches()
+    features = team_features(deaths_table(), matches)
+    pairs = match_pairs(matches, features)
+    chance_median, chance_95 = permutation_ceiling(pairs)
+    return {
+        "dentro": in_match_accuracy(pairs),
+        "acaso": (chance_median, chance_95),
+        "outras": forecast_accuracy(matches, features, only_previous=False),
+        "anteriores": forecast_accuracy(matches, features, only_previous=True),
+        "rankings": tournament_ranking(matches, features),
+    }
+
+
 def quantile_band_chart(per_round):
     """Mediana por round com bandas p25 a p75 e p10 a p90: a distribuição é assimétrica, então quantis dizem mais que o desvio padrão."""
     base = alt.Chart(per_round.reset_index()).encode(x=alt.X("round:O", title="round"))
@@ -188,7 +204,7 @@ selected_ids = set(selected_matches["match_id"])
 selected_players = players[players["match_id"].isin(selected_ids)]
 selected_rounds = rounds[rounds["match_id"].isin(selected_ids)]
 
-overview_tab, players_tab, deaths_tab, first_blood_tab, fields_tab, match_tab, conclusions_tab = st.tabs(["Visão geral", "Jogadores", "Mortes isoladas", "Primeira morte", "Campos", "Partida", "Conclusões"])
+overview_tab, players_tab, deaths_tab, first_blood_tab, fields_tab, match_tab, prediction_tab, conclusions_tab = st.tabs(["Visão geral", "Jogadores", "Mortes isoladas", "Primeira morte", "Campos", "Partida", "Previsão", "Conclusões"])
 
 with overview_tab:
     matches_col, players_col, rounds_col = st.columns(3)
@@ -366,6 +382,24 @@ with match_tab:
     st.dataframe(rounds[rounds["match_id"] == chosen_match["match_id"]].drop(columns=["match_id"]), hide_index=True)
     with st.expander("matchInfo bruto"):
         st.json(match["matchInfo"])
+
+with prediction_tab:
+    st.markdown("As métricas das conclusões, sem nenhum resultado dentro delas, explicam e preveem partidas? O lado de cada round vem de quem planta a spike na metade, não há contagem de rounds, placar nem ordem, e o rótulo é só o vencedor da partida. Times vêm do nome do arquivo. Esta aba ignora o filtro de torneios.")
+    prediction = prediction_tables()
+    chance_median, chance_95 = prediction["acaso"]
+    st.subheader("1. Dentro da partida, rounds embaralhados")
+    st.caption(f"O time com a métrica melhor na própria partida venceu? Acaso com rótulos embaralhados: mediana {chance_median:.1%}, percentil 95 {chance_95:.1%}.")
+    st.dataframe(prediction["dentro"], hide_index=True, use_container_width=False)
+    st.subheader("2. Previsão com o perfil do time nas outras partidas do campeonato")
+    st.caption("Pelo menos duas outras partidas para cada time. A última linha é a base de comparação: a taxa de vitória do time nas outras partidas.")
+    st.dataframe(prediction["outras"], hide_index=True, use_container_width=False)
+    st.subheader("3. Previsão só com partidas anteriores no tempo")
+    st.dataframe(prediction["anteriores"], hide_index=True, use_container_width=False)
+    st.subheader("4. Ranking por campeonato: perfil combinado contra taxa de vitória")
+    st.caption("Times com 3 ou mais partidas. Perfil é a soma padronizada das métricas com o sinal de cada uma. Spearman é a correlação de postos entre perfil e taxa de vitória.")
+    for tournament_column, (tournament, table) in zip(st.columns(2) + st.columns(2), prediction["rankings"].items()):
+        tournament_column.markdown(f"**{tournament}** (Spearman {table['spearman'].iloc[0]})")
+        tournament_column.dataframe(table.drop(columns=["spearman"]), use_container_width=True)
 
 with conclusions_tab:
     st.markdown((Path(__file__).parent / "CONCLUSOES.md").read_text(encoding="utf-8"))

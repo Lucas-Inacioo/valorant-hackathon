@@ -35,6 +35,17 @@ Base: 336 partidas, 6.618 rounds, 46.753 mortes, 413 jogadores. Toda taxa vem s�
 - As distâncias somem. Defesa em situação equilibrada, por faixa de distância ao aliado: 41%, 44%, 46%, 43%, 40%, 35%. Ataque em situação equilibrada, por distância ao inimigo: entre 70% e 75% em toda faixa.
 - Leitura: as distâncias eram proxy de quantos estavam vivos. Proximidade importa só porque permite o trade (44% de troca a até 500 unidades, 9% acima de 3000).
 
+## 6. As métricas explicam a partida, mas preveem pouco
+
+Protocolo sem vazamento (predict.py): nenhuma métrica usa resultado. O lado de cada round vem do time que planta a spike na metade (bate 100% com winningTeamRole), não há contagem de rounds, placar nem ordem, e o rótulo é só teams[].won. Os times são identificados pelo nome do arquivo.
+
+- Dentro da partida, com os rounds embaralhados: o time com mais trocas venceu 79% das partidas, o que abriu mais venceu 76%, e os dois juntos acertam 82%. O acaso, com rótulos embaralhados, chega a 54% no percentil 95. Isolamento sozinho acerta 47%, ou seja, nada.
+- Previsão de verdade, com o perfil de cada time calculado só nas outras partidas dele no campeonato (pelo menos duas para cada lado): a combinada acerta entre 61% e 64% de 297 partidas, contra 56% de simplesmente olhar a taxa de vitória do time nas outras partidas.
+- Só com partidas anteriores no tempo: 62% a 63% de 213 partidas, e aí a taxa de vitória anterior chega a 65%. As métricas não superam o histórico de resultados.
+- Ranking por campeonato (perfil combinado contra taxa de vitória, times com 3 ou mais partidas): Spearman 0,23 no Rush Esquenta, 0,50 no Esquenta 2, 0,97 no Inclusivo e 0,69 no Univavá. O time com 100% de vitórias fica em primeiro no perfil em dois dos quatro campeonatos.
+- Leitura: abertura e troca descrevem o resultado quase por construção, por isso explicam tão bem. Mas a capacidade de abrir e trocar flutua de partida para partida, e com 2 a 9 partidas por time no campeonato o perfil prevê em torno de 62%. Serve como diagnóstico do que aconteceu, não como oráculo.
+- Cuidado nos nomes: ceub_octopus e ceub_octopus_vulgaris aparecem como times distintos no Univavá, e há variações do tipo inatel, inatel_gray, inatel_dois.
+
 ## Para investigar como ferramenta para jogadores
 
 - Mortes não trocadas por jogador, separando primeira morte do round, flanco e pós-plant.
