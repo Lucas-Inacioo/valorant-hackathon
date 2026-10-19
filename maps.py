@@ -46,3 +46,12 @@ def nearest_callout(game_x, game_y, map_meta):
         return "?"
     closest = min(callouts, key=lambda callout: (callout["location"]["x"] - game_x) ** 2 + (callout["location"]["y"] - game_y) ** 2)
     return callout_name(closest)
+
+
+def super_region(game_x, game_y, map_meta):
+    """Só a parte grande do callout (A, B, C, Mid...), para saber em que área cada aliado está."""
+    callouts = map_meta.get("callouts") or []
+    if not callouts:
+        return "?"
+    closest = min(callouts, key=lambda callout: (callout["location"]["x"] - game_x) ** 2 + (callout["location"]["y"] - game_y) ** 2)
+    return closest["superRegionName"]

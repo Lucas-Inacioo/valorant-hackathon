@@ -13,7 +13,7 @@ from explore_fields import DEFAULT_DATA_DIR, collect_field_stats, find_match_fil
 from maps import callout_name, load_maps_by_url, nearest_callout
 from round_map import describe_event, draw_callout_summary, draw_points, draw_round_map, round_events
 from first_blood import first_blood_table, plant_summary, summary_by_map, who_opens_by_time, wilson_interval, win_rate_by_time
-from solo_deaths import SOLO_DISTANCE, build_deaths_table, distance_bands, first_death_summary, summary_by_distance_band, summary_by_round_outcome, with_solo_flag
+from solo_deaths import SOLO_DISTANCE, build_deaths_table, context_summary, distance_bands, first_death_summary, summary_by_distance_band, summary_by_round_outcome, territory_summary, with_solo_flag
 
 st.set_page_config(page_title="VALORANT Hackathon", layout="wide")
 
@@ -208,9 +208,19 @@ with players_tab:
 with deaths_tab:
     st.markdown("Para cada morte, a distância da vítima ao aliado vivo mais próximo naquele instante. Isolada quando passa do limite. Trocada quando o killer morre em até 5 s. Tudo dividido pelo lado da vítima no round.")
     solo_distance = st.slider("Limite de isolamento (unidades de jogo, ~100 por metro)", 500, 3000, SOLO_DISTANCE, step=250)
+    phase = st.radio("Fase do round", ["todas", "pré-plant", "pós-plant"], horizontal=True, help="Depois do plant a lógica de rotação inverte, a defesa precisa retomar o site.")
     selected_deaths = deaths_table()[deaths_table()["match_id"].isin(selected_ids)]
+    if phase != "todas":
+        selected_deaths = selected_deaths[selected_deaths["fase"] == phase]
     deaths_with_allies = with_solo_flag(selected_deaths, solo_distance)
     st.caption(f"{len(selected_deaths)} mortes, {len(deaths_with_allies)} com algum aliado vivo (só essas têm distância).")
+
+    st.subheader("Contexto da morte: onde estavam os aliados e em que território")
+    context_column, territory_column = st.columns(2)
+    context_column.markdown("**Pela posição dos aliados vivos.** Em grupo: algum aliado dentro do limite. Flanco: nenhum perto e todos na mesma área do mapa. Isolado: nenhum perto e aliados espalhados.")
+    context_column.dataframe(context_summary(deaths_with_allies, ["lado"]), use_container_width=False)
+    territory_column.markdown("**Pelo território da região.** Próprio quando 65% ou mais das posições vivas ali nos primeiros 20 s dos rounds são do lado da vítima, do adversário quando 35% ou menos, disputado no meio.")
+    territory_column.dataframe(territory_summary(deaths_with_allies, ["lado"]), use_container_width=False)
 
     st.subheader("Por lado e resultado do round da vítima")
     st.dataframe(summary_by_round_outcome(deaths_with_allies, ["lado"]).rename(index=ROUND_OUTCOME_LABELS, level="venceu_round"), use_container_width=False)
@@ -266,13 +276,13 @@ with first_blood_tab:
     chosen_map_name = st.selectbox("Mapa", list(by_map.index))
     chosen_internal = internal_by_name[chosen_map_name]
     chosen_map_meta = maps_by_url().get(f"/Game/Maps/{chosen_internal}/{chosen_internal}")
-    attack_openings = first_blood[(first_blood["mapa"] == chosen_internal) & (first_blood["lado_abriu"] == "ataque")]
+    attack_openings = first_blood[(first_blood["mapa"] == chosen_internal) & (first_blood["lado_abriu"] == "ataque") & first_blood["antes_do_plant"]]
     if chosen_map_meta is None:
         st.info("Sem metadado de mapa para este mapId.")
     else:
         by_callout = openings_by_callout(attack_openings, chosen_map_meta)
         map_average = attack_openings["abriu_venceu"].mean()
-        st.caption(f"Cada abertura do ataque é atribuída à região (callout) mais próxima de onde o defensor morreu. Tamanho: número de aberturas. Cor: vitória do ataque ao abrir ali, centrada na média do mapa ({map_average:.0%}).")
+        st.caption(f"Só aberturas antes do plant. Cada uma é atribuída à região (callout) mais próxima de onde o defensor morreu. Tamanho: número de aberturas. Cor: vitória do ataque ao abrir ali, centrada na média do mapa ({map_average:.0%}).")
         show_every_kill = st.checkbox("Mostrar cada kill em vez das regiões")
         map_column, table_column = st.columns([3, 2])
         if show_every_kill:

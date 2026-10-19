@@ -7,7 +7,10 @@ import sys
 
 import pandas as pd
 
+from collections import Counter
+
 from explore_fields import DEFAULT_DATA_DIR, find_match_files, load_match
+from maps import load_maps_by_url, nearest_callout, super_region
 from round_map import round_events
 
 # ponytail: assume 100 unidades por metro (Unreal usa cm), confirmar a escala antes de citar metros
@@ -17,6 +20,9 @@ DISTANCE_BANDS = [0, 500, 1000, 1500, 2000, 3000, float("inf")]
 DISTANCE_BAND_LABELS = ["0-500", "500-1000", "1000-1500", "1500-2000", "2000-3000", "3000+"]
 SIDE_LABELS = {"Attacker": "ataque", "Defender": "defesa"}
 OPPOSITE_SIDE = {"Attacker": "Defender", "Defender": "Attacker"}
+# Posições vivas nos primeiros 20 s do round definem o território normal de cada lado por região
+EARLY_ROUND_MS = 20000
+OWN_TERRITORY_MIN_SHARE = 0.65
 
 
 def distance(location_a, location_b):
@@ -28,7 +34,18 @@ def was_traded(kill, later_kills):
     return any(later["victim"] == kill["actor"] and later["time_ms"] - kill["time_ms"] <= TRADE_WINDOW_MS for later in later_kills)
 
 
-def death_rows(match, match_file):
+def allies_context(victim_location, ally_locations, ally_regions, solo_distance=SOLO_DISTANCE):
+    """Pela posição dos aliados vivos: em grupo (alguém perto), flanco (time junto em outro lugar) ou isolado (time espalhado)."""
+    if not ally_locations:
+        return "último vivo"
+    if min(distance(victim_location, location) for location in ally_locations) <= solo_distance:
+        return "em grupo"
+    if len(set(ally_regions)) == 1:
+        return "flanco"
+    return "isolado"
+
+
+def death_rows(match, match_file, map_meta=None):
     """Uma linha por morte com as distâncias aos aliados e inimigos vivos no instante da kill."""
     team_by_puuid = {player["puuid"]: player["teamId"] for player in match["players"]}
     won_by_team = {team["teamId"]: team["won"] for team in match["teams"]}
@@ -41,8 +58,11 @@ def death_rows(match, match_file):
             victim_won_round = round_result["winningTeam"] == victim_team
             victim_role = round_result["winningTeamRole"] if victim_won_round else OPPOSITE_SIDE[round_result["winningTeamRole"]]
             killer_location = next((alive["location"] for alive in kill["locations"] if alive["puuid"] == kill["actor"]), {"x": math.nan, "y": math.nan})
-            ally_distances = [distance(kill["victim_location"], alive["location"]) for alive in kill["locations"] if team_by_puuid[alive["puuid"]] == victim_team]
+            ally_locations = [alive["location"] for alive in kill["locations"] if team_by_puuid[alive["puuid"]] == victim_team]
+            ally_distances = [distance(kill["victim_location"], location) for location in ally_locations]
             enemy_distances = [distance(kill["victim_location"], alive["location"]) for alive in kill["locations"] if team_by_puuid[alive["puuid"]] != victim_team]
+            ally_regions = [super_region(location["x"], location["y"], map_meta) for location in ally_locations] if map_meta else []
+            planted_before = bool(round_result["bombPlanter"]) and kill["time_ms"] >= round_result["plantRoundTime"]
             rows.append({
                 "match_id": match_info["matchId"],
                 "arquivo": match_file.name,
@@ -50,6 +70,7 @@ def death_rows(match, match_file):
                 "round": round_result["roundNum"] + 1,
                 "segundos": kill["time_ms"] / 1000,
                 "segundos_plant": round_result["plantRoundTime"] / 1000 if round_result["bombPlanter"] else math.nan,
+                "fase": "pós-plant" if planted_before else "pré-plant",
                 "ordem_da_morte": death_order,
                 "vitima": kill["victim"],
                 "vitima_x": kill["victim_location"]["x"],
@@ -57,6 +78,8 @@ def death_rows(match, match_file):
                 "killer_x": killer_location["x"],
                 "killer_y": killer_location["y"],
                 "time_vitima": victim_team,
+                "regiao": nearest_callout(kill["victim_location"]["x"], kill["victim_location"]["y"], map_meta) if map_meta else "?",
+                "contexto": allies_context(kill["victim_location"], ally_locations, ally_regions),
                 "lado": SIDE_LABELS[victim_role],
                 "aliados_vivos": len(ally_distances),
                 "inimigos_vivos": len(enemy_distances),
@@ -70,11 +93,61 @@ def death_rows(match, match_file):
     return rows
 
 
+def early_positions(match, map_meta, round_result):
+    """Posições vivas nos primeiros segundos do round: (região, lado) por jogador em cada snapshot de kill."""
+    team_by_puuid = {player["puuid"]: player["teamId"] for player in match["players"]}
+    attacking_team = round_result["winningTeam"] if round_result["winningTeamRole"] == "Attacker" else OPPOSITE_TEAM[round_result["winningTeam"]]
+    for event in round_events(round_result):
+        if event["kind"] != "kill" or event["time_ms"] > EARLY_ROUND_MS:
+            continue
+        for alive in event["locations"]:
+            side = "ataque" if team_by_puuid[alive["puuid"]] == attacking_team else "defesa"
+            yield nearest_callout(alive["location"]["x"], alive["location"]["y"], map_meta), side
+
+
+OPPOSITE_TEAM = {"Blue": "Red", "Red": "Blue"}
+
+
+def defender_share_by_region(matches_with_meta):
+    """Por mapa e região, fração de defensores entre as posições vivas do começo do round."""
+    counts = Counter()
+    for match, map_meta in matches_with_meta:
+        map_name = match["matchInfo"]["mapId"].rsplit("/", 1)[-1]
+        for round_result in match["roundResults"]:
+            for region, side in early_positions(match, map_meta, round_result):
+                counts[(map_name, region, side)] += 1
+    rows = {}
+    for (map_name, region, side), count in counts.items():
+        rows.setdefault((map_name, region), {"ataque": 0, "defesa": 0})[side] += count
+    return {key: sides["defesa"] / (sides["ataque"] + sides["defesa"]) for key, sides in rows.items()}
+
+
 def build_deaths_table(data_dir=DEFAULT_DATA_DIR):
-    rows = []
+    maps_by_url = load_maps_by_url()
+    matches_with_meta = []
     for match_file in find_match_files(data_dir):
-        rows += death_rows(load_match(match_file), match_file)
-    return pd.DataFrame(rows)
+        match = load_match(match_file)
+        matches_with_meta.append((match, match_file, maps_by_url.get(match["matchInfo"]["mapId"])))
+    rows = []
+    for match, match_file, map_meta in matches_with_meta:
+        rows += death_rows(match, match_file, map_meta)
+    deaths = pd.DataFrame(rows)
+    defender_share = defender_share_by_region([(match, map_meta) for match, _, map_meta in matches_with_meta if map_meta])
+    deaths["territorio_defesa"] = [defender_share.get((map_name, region), math.nan) for map_name, region in zip(deaths["mapa"], deaths["regiao"])]
+    own_side_share = deaths["territorio_defesa"].where(deaths["lado"] == "defesa", 1 - deaths["territorio_defesa"])
+    deaths["territorio"] = own_side_share.map(territory_label)
+    return deaths
+
+
+def territory_label(own_side_share):
+    """Território próprio, disputado ou do adversário, pela fração do próprio lado entre as posições do começo do round."""
+    if math.isnan(own_side_share):
+        return "?"
+    if own_side_share >= OWN_TERRITORY_MIN_SHARE:
+        return "próprio"
+    if own_side_share <= 1 - OWN_TERRITORY_MIN_SHARE:
+        return "do adversário"
+    return "disputado"
 
 
 def with_solo_flag(deaths, solo_distance):
@@ -124,7 +197,18 @@ def main():
     print("Por lado e faixa de distância ao aliado mais próximo:")
     print(summary_by_distance_band(deaths_with_allies, ["lado"]).to_string(), "\n")
     print("Primeira morte do round por lado (isolada x trocada):")
-    print(first_death_summary(deaths_with_allies, ["lado"]).to_string())
+    print(first_death_summary(deaths_with_allies, ["lado"]).to_string(), "\n")
+    print("Contexto pela posição dos aliados, por lado e fase:")
+    print(context_summary(deaths_with_allies, ["lado", "fase"]).to_string())
+
+
+def context_summary(deaths_with_allies, group_columns=()):
+    """Por contexto (em grupo, flanco, isolado): mortes, trocadas e rounds vencidos."""
+    return deaths_with_allies.groupby([*group_columns, "contexto"]).agg(mortes=("vitima", "size"), trocada=("trocada", "mean"), venceu_round=("venceu_round", "mean")).round(3)
+
+
+def territory_summary(deaths_with_allies, group_columns=()):
+    return deaths_with_allies.groupby([*group_columns, "territorio"]).agg(mortes=("vitima", "size"), trocada=("trocada", "mean"), venceu_round=("venceu_round", "mean")).round(3)
 
 
 if __name__ == "__main__":
