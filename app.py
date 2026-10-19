@@ -130,7 +130,7 @@ def opening_impact_chart(by_map):
     data = by_map.reset_index()
     base = alt.Chart(data).encode(y=alt.Y("mapa:N", sort=None, title=None))
     tooltip = ["mapa", "rounds", "ataque_vence_se_abre", "ataque_vence_se_defesa_abre", "impacto_da_abertura", "impacto_ic95_baixo", "impacto_ic95_alto"]
-    bars = base.mark_bar(color=ATTACK_COLOR).encode(x=alt.X("impacto_da_abertura:Q", title="vitória do ataque se abre menos se a defesa abre"), tooltip=tooltip)
+    bars = base.mark_bar(color=ATTACK_COLOR).encode(x=alt.X("impacto_da_abertura:Q", title="diferença entre taxa de vitória quando ataque abre e quando defesa abre"), tooltip=tooltip)
     intervals = base.mark_rule(color="#4a4a4a", strokeWidth=2).encode(x="impacto_ic95_baixo:Q", x2="impacto_ic95_alto:Q", tooltip=tooltip)
     return (bars + intervals).properties(height=30 * len(data))
 
