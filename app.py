@@ -9,6 +9,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+from economy import after_previous_round, after_streak, build_rounds_table, close_match_ids, pistol_by_side, second_round_cycle, versus_full_buy, win_rate_by_loadout, win_rate_matrix
 from explore_fields import DEFAULT_DATA_DIR, collect_field_stats, find_match_files, load_match, split_irrelevant_fields, summarize_fields
 from maps import callout_name, load_maps_by_url, nearest_callout
 from predict import forecast_accuracy, in_match_accuracy, load_matches, match_pairs, permutation_ceiling, team_features, tournament_ranking
@@ -117,6 +118,11 @@ def first_blood_rows():
 
 
 @st.cache_data
+def rounds_table():
+    return build_rounds_table()
+
+
+@st.cache_data
 def prediction_tables():
     matches = load_matches()
     features = team_features(deaths_table(), matches)
@@ -204,7 +210,7 @@ selected_ids = set(selected_matches["match_id"])
 selected_players = players[players["match_id"].isin(selected_ids)]
 selected_rounds = rounds[rounds["match_id"].isin(selected_ids)]
 
-overview_tab, players_tab, deaths_tab, first_blood_tab, fields_tab, match_tab, prediction_tab, conclusions_tab = st.tabs(["Visão geral", "Jogadores", "Mortes isoladas", "Primeira morte", "Campos", "Partida", "Previsão", "Conclusões"])
+overview_tab, players_tab, deaths_tab, first_blood_tab, economy_tab, fields_tab, match_tab, prediction_tab, conclusions_tab = st.tabs(["Visão geral", "Jogadores", "Mortes isoladas", "Primeira morte", "Economia", "Campos", "Partida", "Previsão", "Conclusões"])
 
 with overview_tab:
     matches_col, players_col, rounds_col = st.columns(3)
@@ -332,6 +338,51 @@ with first_blood_tab:
     count_column.bar_chart(per_round["rounds"], color=["#7f7f7f"], y_label="rounds na base")
     with st.expander("Números por round"):
         st.dataframe(per_round, use_container_width=False)
+
+with economy_tab:
+    st.markdown("Por round e por time: soma do loadout dos cinco jogadores, resultado e cerimônia. Rounds normais excluem pistol (1 e 13) e o segundo round (2 e 14). Vitória esperada pelo dinheiro é a taxa de vitória da faixa de diferença de loadout; o que sobra acima dela é o que não é dinheiro.")
+    all_rounds = rounds_table()
+    selected_rounds = all_rounds[all_rounds["match_id"].isin(selected_ids)]
+    close_rounds = selected_rounds[selected_rounds["match_id"].isin(close_match_ids(selected_rounds))]
+
+    st.subheader("1. Quanto o loadout compra de vitória")
+    own_table, difference_table = win_rate_by_loadout(selected_rounds)
+    st.bar_chart(difference_table["vitoria"], color=[WON_COLOR], y_label="vitória do round", x_label="loadout do time menos o do adversário")
+    full_buy_column, own_column = st.columns(2)
+    full_buy_column.markdown("**Contra compra cheia (20k+), rounds normais.** Ganho por 1k a mais é a diferença de vitória para a faixa anterior dividida pela diferença de loadout médio.")
+    full_buy_column.dataframe(versus_full_buy(selected_rounds), use_container_width=False)
+    own_column.markdown("**Por faixa de loadout do time, todos os rounds.** Lê-se com cuidado: 8-12k é quase sempre force contra compra cheia.")
+    own_column.dataframe(own_table, use_container_width=False)
+    rates, counts = win_rate_matrix(selected_rounds)
+    rates_column, counts_column = st.columns(2)
+    rates_column.markdown("**Vitória por loadout do time (linhas) e do adversário (colunas)**")
+    rates_column.dataframe(rates, use_container_width=False)
+    counts_column.markdown("**Rounds em cada célula**")
+    counts_column.dataframe(counts, use_container_width=False)
+
+    st.subheader("2. O round seguinte: perder abala?")
+    st.caption("Round fácil perdido é derrota num round em que o adversário fez clutch ou thrifty. Acima do esperado é a vitória real menos a esperada pelo dinheiro do round seguinte.")
+    all_column, close_column = st.columns(2)
+    all_column.markdown("**Todas as partidas**")
+    all_column.dataframe(after_previous_round(selected_rounds), use_container_width=False)
+    close_column.markdown(f"**Só partidas equilibradas (até 4 rounds de diferença no placar final, {close_rounds['match_id'].nunique()} partidas)**")
+    close_column.dataframe(after_previous_round(close_rounds), use_container_width=False)
+
+    st.subheader("3. Pistol e round 2: eco ou force?")
+    pistol_column, cycle_column = st.columns([1, 3])
+    pistol_column.markdown("**Pistol por lado**")
+    pistol_column.dataframe(pistol_by_side(selected_rounds), use_container_width=False)
+    overall_cycle, cycle_by_side = second_round_cycle(selected_rounds)
+    cycle_column.markdown("**Perdedor do pistol: compra no round 2 e o que vem depois.** Força do time é a vitória de rounds do round 5 em diante, para ver quem escolhe cada compra.")
+    cycle_column.dataframe(overall_cycle, use_container_width=True)
+    cycle_column.dataframe(cycle_by_side, use_container_width=True)
+
+    st.subheader("4. Derrotas seguidas")
+    all_column, close_column = st.columns(2)
+    all_column.markdown("**Todas as partidas**")
+    all_column.dataframe(after_streak(selected_rounds), use_container_width=False)
+    close_column.markdown("**Só partidas equilibradas**")
+    close_column.dataframe(after_streak(close_rounds), use_container_width=False)
 
 with fields_tab:
     relevant_fields, irrelevant_fields = build_field_tables()

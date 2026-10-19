@@ -46,12 +46,23 @@ Protocolo sem vazamento (predict.py): nenhuma métrica usa resultado. O lado de 
 - Leitura: abertura e troca descrevem o resultado quase por construção, por isso explicam tão bem. Mas a capacidade de abrir e trocar flutua de partida para partida, e com 2 a 9 partidas por time no campeonato o perfil prevê em torno de 62%. Serve como diagnóstico do que aconteceu, não como oráculo.
 - Cuidado nos nomes: ceub_octopus e ceub_octopus_vulgaris aparecem como times distintos no Univavá, e há variações do tipo inatel, inatel_gray, inatel_dois.
 
+## 7. Dinheiro compra round, e momentum é só dinheiro
+
+- A diferença de loadout entre os times é o que importa, não o valor absoluto. Com diferença de até 2k a vitória é 50%. Com 5k a 10k a mais, 66%. Com mais de 10k, 82%. Entre menos 8k e mais 8k a inclinação é de cerca de 2 pontos de vitória por 1.000 créditos de diferença.
+- Contra compra cheia (adversário com 20k+): eco de 4-8k vence 16%, 8-12k vence 21%, 12-16k vence 30%, 16-20k vence 43%, compra cheia vence 50%. O salto que mais rende é de 12-16k para 16-20k (13 pontos por cerca de 4k). De 16-20k para 20k+ são 7 pontos.
+- Perder um round não abala. Depois de uma derrota o time vence 40,6% dos rounds normais, e o esperado pelo dinheiro era 40,8%. Depois de perder um round fácil (clutch ou thrifty do adversário), 39,4% contra 39,0% esperado. Depois de vencer, 59,5% contra 59,3%. O efeito do round anterior é inteiramente a economia que ele deixa.
+- Sequências de derrotas também não. Com 1 a 3 derrotas seguidas o time fica no esperado pelo dinheiro. Com 4 ou mais fica 6 pontos abaixo, mas só nas partidas desequilibradas (10 pontos abaixo); nas 104 partidas equilibradas o time em sequência de 4 ou mais fica 5 pontos acima do esperado. É time mais fraco, não abalo.
+- Pistol: ataque vence 52%, defesa 48% (659 rounds cada).
+- Round 2 do perdedor do pistol: eco (até 4k, 539 casos) vence 10% do round 2 e 61% do round 3, somando 1,09 rounds em 2 a 4. Force (8k+, 63 casos) vence 40% do round 2, 58% do round 3 e 57% do round 4, somando 1,55. Sugestivo a favor do force, com três ressalvas: 63 casos, só dá para forçar quem saiu do pistol com dinheiro (pistol disputado), e quem força é time mais fraco no resto da partida (29% de vitória do round 5 em diante contra 44% de quem faz eco), o que torna o resultado mais notável, não menos. Por lado, o force funciona no ataque (52% do round 2, 44 casos) e não na defesa (14%, 14 casos).
+- Bônus do vencedor do pistol: vence 86% do round 2 e só 39% do round 3, quando o eco do adversário vira compra cheia.
+
 ## Para investigar como ferramenta para jogadores
 
 - Mortes não trocadas por jogador, separando primeira morte do round, flanco e pós-plant.
 - Mapa individual de mortes na defesa pintado pelo custo da região na base, calculado por mapa, lado e fase, destacando repetição em regiões caras.
 - Taxa de abertura do time por mapa e por região, e conversão de abertura por jogador (quem abre, quem morre primeiro, quanto o time converte depois).
 - Controle de meio por mapa como métrica de time, a partir das regiões onde morrer custa mais.
+- Calculadora de compra: dado o loadout possível e o do adversário, a vitória esperada do round, e o custo de forçar no round 2 por lado.
 
 ## Ressalvas
 
