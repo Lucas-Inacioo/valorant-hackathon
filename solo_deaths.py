@@ -10,7 +10,7 @@ import pandas as pd
 from collections import Counter
 
 from explore_fields import DEFAULT_DATA_DIR, find_match_files, load_match
-from maps import load_maps_by_url, nearest_callout, super_region
+from maps import load_agents_by_id, load_maps_by_url, nearest_callout, super_region
 from round_map import round_events
 
 # ponytail: assume 100 unidades por metro (Unreal usa cm), confirmar a escala antes de citar metros
@@ -48,7 +48,9 @@ def allies_context(victim_location, ally_locations, ally_regions, solo_distance=
 def death_rows(match, match_file, map_meta=None):
     """Uma linha por morte com as distâncias aos aliados e inimigos vivos no instante da kill."""
     team_by_puuid = {player["puuid"]: player["teamId"] for player in match["players"]}
+    character_by_puuid = {player["puuid"]: player["characterId"] for player in match["players"]}
     won_by_team = {team["teamId"]: team["won"] for team in match["teams"]}
+    round_rate_by_team = {team["teamId"]: team["roundsWon"] / team["roundsPlayed"] for team in match["teams"]}
     match_info = match["matchInfo"]
     rows = []
     for round_result in match["roundResults"]:
@@ -73,6 +75,7 @@ def death_rows(match, match_file, map_meta=None):
                 "fase": "pós-plant" if planted_before else "pré-plant",
                 "ordem_da_morte": death_order,
                 "vitima": kill["victim"],
+                "personagem": character_by_puuid[kill["victim"]],
                 "vitima_x": kill["victim_location"]["x"],
                 "vitima_y": kill["victim_location"]["y"],
                 "killer_x": killer_location["x"],
@@ -89,6 +92,7 @@ def death_rows(match, match_file, map_meta=None):
                 "trocada": was_traded(kill, kills[death_order:]),
                 "venceu_round": victim_won_round,
                 "venceu_partida": won_by_team[victim_team],
+                "rounds_do_time": round_rate_by_team[victim_team],
             })
     return rows
 
@@ -132,6 +136,9 @@ def build_deaths_table(data_dir=DEFAULT_DATA_DIR):
     for match, match_file, map_meta in matches_with_meta:
         rows += death_rows(match, match_file, map_meta)
     deaths = pd.DataFrame(rows)
+    agents_by_id = load_agents_by_id()
+    deaths["agente"] = deaths["personagem"].map(lambda character: agents_by_id.get(character, {}).get("agente", "?"))
+    deaths["funcao"] = deaths["personagem"].map(lambda character: agents_by_id.get(character, {}).get("funcao", "?"))
     defender_share = defender_share_by_region([(match, map_meta) for match, _, map_meta in matches_with_meta if map_meta])
     deaths["territorio_defesa"] = [defender_share.get((map_name, region), math.nan) for map_name, region in zip(deaths["mapa"], deaths["regiao"])]
     own_side_share = deaths["territorio_defesa"].where(deaths["lado"] == "defesa", 1 - deaths["territorio_defesa"])

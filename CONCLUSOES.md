@@ -65,9 +65,21 @@ Protocolo sem vazamento (predict.py): nenhuma métrica usa resultado. O lado de 
 - Dentro do site, o plant padrão (a célula de 400 unidades mais usada) é defusado um pouco menos que o esperado: Ascent A 24% contra 26%, Lotus A 19% contra 22%, Haven C 23% contra 26%. Posições fora do padrão são defusadas mais que o esperado, com volume menor: no Lotus C, uma célula com 48 plants dá 58% contra 41% esperado; no Ascent B, uma com 22 plants dá 45% contra 29%. O plant padrão é padrão por um motivo.
 - O defuse, quando acontece, leva em mediana 30,6 s depois do plant, com quartis em 24 e 36 s, ou seja, quase sempre no limite dos 45 s.
 
+## 9. A função do agente não muda o custo da primeira morte, muda quem morre e se alguém troca
+
+Função (duelista, iniciador, controlador, sentinela) vem da lista pública de agentes, só para dar nome ao characterId. Acima do time é a vitória do round menos a taxa de rounds que o time da vítima venceu na partida, o que desconta a força do time e do adversário.
+
+- Primeira morte no ataque: o time da vítima ainda vence 32% quando morre o duelista, 31% o sentinela, 34% o iniciador e 35% o controlador. Na defesa, 24%, 24%, 25% e 26%. Os intervalos de 95% se sobrepõem em todos os pares. Descontada a taxa do time, a primeira morte custa entre 11 e 16 pontos no ataque e entre 20 e 22 na defesa, qualquer que seja a função. O lado pesa mais que a função.
+- Só primeiras mortes até 20 s: duelista e sentinela no ataque empatam em 29%. Controlador e iniciador ficam em 35%, com 230 a 350 rounds e intervalos que ainda encostam nos dos outros. Sugestivo, não conclusivo.
+- Quem morre primeiro, isso sim muda. Duelistas são 36% das escalações e 52% das primeiras mortes no ataque, 46% na defesa. Iniciadores são 21% das escalações e 11% das primeiras mortes no ataque.
+- Quem é trocado também muda. Primeira morte do duelista no ataque é trocada 28%, do iniciador 31%, do controlador 18%, do sentinela 14%. Sem troca, a vitória cai para 26% a 31% em qualquer função; com troca sobe para 45% a 53%. O que diferencia o duelista é morrer com o time atrás para trocar, não a morte custar menos.
+- Qualquer morte, descontada a situação de vivos, fica dentro de 1 ponto do esperado em todas as funções, e o custo do isolamento fica entre menos 0,3 e mais 4,5 pontos, ou seja, nada que se separe do ruído. Trocar vale de 12 a 16 pontos em qualquer função.
+- Por agente, as diferenças são de poucos pontos sobre 200 a 1.000 rounds (Phoenix 27% contra Jett 31% no total, Chamber 27% contra Cypher 32%) e misturam o agente com quem costuma escolhê-lo. Não dá para separar com estes dados.
+
 ## Para investigar como ferramenta para jogadores
 
 - Mortes não trocadas por jogador, separando primeira morte do round, flanco e pós-plant.
+- Por jogador, quantas vezes é a primeira morte do time e quantas delas são trocadas, comparado com o normal da função do agente dele.
 - Mapa individual de mortes na defesa pintado pelo custo da região na base, calculado por mapa, lado e fase, destacando repetição em regiões caras.
 - Taxa de abertura do time por mapa e por região, e conversão de abertura por jogador (quem abre, quem morre primeiro, quanto o time converte depois).
 - Controle de meio por mapa como métrica de time, a partir das regiões onde morrer custa mais.

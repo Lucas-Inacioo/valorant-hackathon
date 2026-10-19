@@ -9,6 +9,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+from agent_roles import ROLE_ORDER, death_cost_by_role, first_death_by_agent, first_death_by_role, first_death_by_role_and_trade, role_share
 from economy import after_previous_round, after_streak, build_rounds_table, close_match_ids, pistol_by_side, second_round_cycle, versus_full_buy, win_rate_by_loadout, win_rate_matrix
 from explore_fields import DEFAULT_DATA_DIR, collect_field_stats, find_match_files, load_match, split_irrelevant_fields, summarize_fields
 from maps import callout_name, load_maps_by_url, nearest_callout
@@ -163,6 +164,16 @@ def opening_impact_chart(by_map):
     return (bars + intervals).properties(height=30 * len(data))
 
 
+def rate_by_role_chart(by_role, color, x_title):
+    """Barra por função com o intervalo de 95% como traço, para um lado."""
+    data = by_role.reset_index()
+    base = alt.Chart(data).encode(y=alt.Y("funcao:N", sort=ROLE_ORDER, title=None, axis=alt.Axis(labelOverlap=False)))
+    tooltip = ["funcao", "rounds", "trocada", "vitoria_da_vitima", "ic95_baixo", "ic95_alto", "acima_do_time"]
+    bars = base.mark_bar(color=color).encode(x=alt.X("vitoria_da_vitima:Q", title=x_title), tooltip=tooltip)
+    intervals = base.mark_rule(color="#4a4a4a", strokeWidth=2).encode(x="ic95_baixo:Q", x2="ic95_alto:Q", tooltip=tooltip)
+    return (bars + intervals).properties(height=220)
+
+
 def openings_by_callout(attack_openings, map_meta):
     """Aberturas do ataque agrupadas pela região (callout) mais próxima de onde o defensor morreu."""
     callouts = attack_openings.assign(callout=[nearest_callout(x, y, map_meta) for x, y in zip(attack_openings["vitima_x"], attack_openings["vitima_y"])])
@@ -216,7 +227,7 @@ selected_ids = set(selected_matches["match_id"])
 selected_players = players[players["match_id"].isin(selected_ids)]
 selected_rounds = rounds[rounds["match_id"].isin(selected_ids)]
 
-overview_tab, players_tab, deaths_tab, first_blood_tab, economy_tab, plants_tab, fields_tab, match_tab, prediction_tab, conclusions_tab = st.tabs(["Visão geral", "Jogadores", "Mortes isoladas", "Primeira morte", "Economia", "Plant e defuse", "Campos", "Partida", "Previsão", "Conclusões"])
+overview_tab, players_tab, deaths_tab, first_blood_tab, roles_tab, economy_tab, plants_tab, fields_tab, match_tab, prediction_tab, conclusions_tab = st.tabs(["Visão geral", "Jogadores", "Mortes isoladas", "Primeira morte", "Função do agente", "Economia", "Plant e defuse", "Campos", "Partida", "Previsão", "Conclusões"])
 
 with overview_tab:
     matches_col, players_col, rounds_col = st.columns(3)
@@ -344,6 +355,35 @@ with first_blood_tab:
     count_column.bar_chart(per_round["rounds"], color=["#7f7f7f"], y_label="rounds na base")
     with st.expander("Números por round"):
         st.dataframe(per_round, use_container_width=False)
+
+with roles_tab:
+    st.markdown("A função do agente (duelista, iniciador, controlador, sentinela) vem da lista pública de agentes, só para dar nome ao characterId. A pergunta: a primeira morte do round e a morte isolada pesam igual para qualquer função? Acima do time é a vitória do round menos a taxa de rounds que o time da vítima venceu na partida inteira, o que desconta a força do time e do adversário.")
+    max_seconds = st.slider("Só primeiras mortes até este tempo do round (s)", 10, 150, 150, step=10, key="role_max_seconds")
+    role_deaths = deaths_table()[deaths_table()["match_id"].isin(selected_ids)]
+    role_first = first_death_by_role(role_deaths, max_seconds)
+    st.caption(f"{int(role_first['rounds'].sum())} rounds com primeira morte até {max_seconds} s e função conhecida.")
+
+    st.subheader("Quem morre primeiro")
+    st.caption("Fração de cada função entre os jogadores escalados e entre as vítimas da primeira morte, por lado.")
+    st.bar_chart(role_share(role_deaths, max_seconds), color=["#7f7f7f", ATTACK_COLOR, DEFENSE_COLOR], stack=False, y_label="fração")
+
+    st.subheader("Quanto a primeira morte custa, por função da vítima")
+    st.caption("Vitória do round do time que perdeu o primeiro jogador, com intervalo de 95%. Barras que se sobrepõem no intervalo não são distinguíveis com estes dados.")
+    for side_column, side, color in zip(st.columns(2), ["ataque", "defesa"], [ATTACK_COLOR, DEFENSE_COLOR]):
+        side_column.markdown(f"**Vítima no {side}**")
+        side_column.altair_chart(rate_by_role_chart(role_first.loc[side], color, "vitória do time da vítima"), use_container_width=True)
+    st.dataframe(role_first, use_container_width=False)
+
+    st.subheader("Trocada ou não: a função importa quando ninguém troca?")
+    st.dataframe(first_death_by_role_and_trade(role_deaths, max_seconds), use_container_width=False)
+
+    st.subheader("Qualquer morte e isolamento, por função")
+    st.caption("Toda morte com aliado vivo. Acima do esperado desconta a situação de vivos (lado, aliados x inimigos). Custo do isolamento é a diferença entre morrer isolado e acompanhado, com o mesmo desconto.")
+    st.dataframe(death_cost_by_role(with_solo_flag(role_deaths, SOLO_DISTANCE)), use_container_width=False)
+
+    st.subheader("Por agente")
+    st.caption("Só agentes com 30 ou mais primeiras mortes no recorte. Diferenças entre agentes misturam o agente com quem costuma escolhê-lo.")
+    st.dataframe(first_death_by_agent(role_deaths, max_seconds), use_container_width=False)
 
 with economy_tab:
     st.markdown("Por round e por time: soma do loadout dos cinco jogadores, resultado e cerimônia. Rounds normais excluem pistol (1 e 13) e o segundo round (2 e 14). Vitória esperada pelo dinheiro é a taxa de vitória da faixa de diferença de loadout; o que sobra acima dela é o que não é dinheiro.")
