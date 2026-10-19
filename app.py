@@ -12,8 +12,9 @@ import streamlit as st
 from economy import after_previous_round, after_streak, build_rounds_table, close_match_ids, pistol_by_side, second_round_cycle, versus_full_buy, win_rate_by_loadout, win_rate_matrix
 from explore_fields import DEFAULT_DATA_DIR, collect_field_stats, find_match_files, load_match, split_irrelevant_fields, summarize_fields
 from maps import callout_name, load_maps_by_url, nearest_callout
+from plants import build_plants_table, cells_for_map, situation_matrix, summary_by_plant_time, summary_by_site
 from predict import forecast_accuracy, in_match_accuracy, load_matches, match_pairs, permutation_ceiling, team_features, tournament_ranking
-from round_map import describe_event, draw_callout_summary, draw_points, draw_round_map, round_events
+from round_map import describe_event, draw_callout_summary, draw_points, draw_rate_markers, draw_round_map, round_events
 from first_blood import first_blood_table, plant_summary, summary_by_map, who_opens_by_time, wilson_interval, win_rate_by_time
 from solo_deaths import SOLO_DISTANCE, build_deaths_table, context_summary, distance_bands, first_death_summary, summary_by_distance_band, summary_by_round_outcome, territory_summary, win_rate_by_situation, with_solo_flag
 
@@ -123,6 +124,11 @@ def rounds_table():
 
 
 @st.cache_data
+def plants_table():
+    return build_plants_table()
+
+
+@st.cache_data
 def prediction_tables():
     matches = load_matches()
     features = team_features(deaths_table(), matches)
@@ -210,7 +216,7 @@ selected_ids = set(selected_matches["match_id"])
 selected_players = players[players["match_id"].isin(selected_ids)]
 selected_rounds = rounds[rounds["match_id"].isin(selected_ids)]
 
-overview_tab, players_tab, deaths_tab, first_blood_tab, economy_tab, fields_tab, match_tab, prediction_tab, conclusions_tab = st.tabs(["Visão geral", "Jogadores", "Mortes isoladas", "Primeira morte", "Economia", "Campos", "Partida", "Previsão", "Conclusões"])
+overview_tab, players_tab, deaths_tab, first_blood_tab, economy_tab, plants_tab, fields_tab, match_tab, prediction_tab, conclusions_tab = st.tabs(["Visão geral", "Jogadores", "Mortes isoladas", "Primeira morte", "Economia", "Plant e defuse", "Campos", "Partida", "Previsão", "Conclusões"])
 
 with overview_tab:
     matches_col, players_col, rounds_col = st.columns(3)
@@ -383,6 +389,44 @@ with economy_tab:
     all_column.dataframe(after_streak(selected_rounds), use_container_width=False)
     close_column.markdown("**Só partidas equilibradas**")
     close_column.dataframe(after_streak(close_rounds), use_container_width=False)
+
+with plants_tab:
+    st.markdown("Uma linha por round plantado: onde a spike foi plantada, quantos de cada lado estavam vivos no plant e se foi defusada. Esperado pelos vivos é a taxa de defuse da mesma situação (ataque x defesa vivos no plant); acima do esperado é o que a posição ou o mapa acrescentam.")
+    selected_plants = plants_table()[plants_table()["match_id"].isin(selected_ids)]
+    plants_col, defuse_col, time_col = st.columns(3)
+    plants_col.metric("Rounds plantados", len(selected_plants))
+    defuse_col.metric("Defusados", f'{selected_plants["defusada"].mean():.1%}')
+    time_col.metric("Tempo mediano do plant", f'{selected_plants["segundos_plant"].median():.0f} s')
+
+    st.subheader("Por mapa e site")
+    map_name_by_internal = dict(zip(matches["mapa_interno"], matches["mapa"]))
+    st.dataframe(summary_by_site(selected_plants).rename(index=map_name_by_internal, level="mapa"), use_container_width=False)
+
+    st.subheader("Defuse por vivos no momento do plant")
+    rates, counts = situation_matrix(selected_plants)
+    rates_column, counts_column = st.columns(2)
+    rates_column.markdown("**Taxa de defuse, ataque vivos (linhas) x defesa vivos (colunas)**")
+    rates_column.dataframe(rates, use_container_width=False)
+    counts_column.markdown("**Rounds em cada célula**")
+    counts_column.dataframe(counts, use_container_width=False)
+
+    st.subheader("Por tempo do plant")
+    st.dataframe(summary_by_plant_time(selected_plants), use_container_width=False)
+
+    st.subheader("Onde a spike é plantada e quanto cada posição é defusada")
+    internal_by_name = {name: internal for internal, name in map_name_by_internal.items()}
+    plant_map_name = st.selectbox("Mapa", list(summary_by_site(selected_plants).index.get_level_values("mapa").map(map_name_by_internal).unique()), key="plant_map")
+    plant_map_internal = internal_by_name[plant_map_name]
+    plant_map_meta = maps_by_url().get(f"/Game/Maps/{plant_map_internal}/{plant_map_internal}")
+    if plant_map_meta is None:
+        st.info("Sem metadado de mapa para este mapId.")
+    else:
+        cells = cells_for_map(selected_plants, plant_map_internal)
+        map_defuse = selected_plants[selected_plants["mapa"] == plant_map_internal]["defusada"].mean()
+        st.caption(f"Plants agrupados em células de 400 unidades (cerca de 4 m) e só células com 5 ou mais. Tamanho: plants. Cor: taxa de defuse, centrada na média do mapa ({map_defuse:.0%}). Azul é bom para a defesa.")
+        map_column, table_column = st.columns([3, 2])
+        map_column.pyplot(draw_rate_markers(plant_map_meta, cells, "plants", "defuse", map_defuse, "taxa de defuse dos plants nesta célula", label_min_count=15, size_per_unit=3))
+        table_column.dataframe(cells[["site", "plants", "defuse", "esperado_pelos_vivos", "acima_do_esperado"]], use_container_width=True)
 
 with fields_tab:
     relevant_fields, irrelevant_fields = build_field_tables()

@@ -90,25 +90,30 @@ def draw_points(map_meta, series):
     return figure
 
 
-def draw_callout_summary(map_meta, callout_rows, center_rate, label_min_count=10):
-    """Um marcador por callout: tamanho pelo número de aberturas, cor pela taxa de vitória do ataque ao abrir ali, centrada na média do mapa."""
+def draw_rate_markers(map_meta, rows, count_column, rate_column, center_rate, colorbar_label, label_min_count=10, size_per_unit=4):
+    """Um marcador por linha (x, y em coordenadas de jogo): tamanho pela contagem, cor pela taxa, centrada em center_rate."""
     image = Image.open(minimap_file(map_meta))
     width, height = image.size
     figure, axes = plt.subplots(figsize=(7, 7))
     axes.imshow(image)
-    fractions = [game_to_image_fraction(x, y, map_meta) for x, y in zip(callout_rows["x"], callout_rows["y"])]
+    fractions = [game_to_image_fraction(x, y, map_meta) for x, y in zip(rows["x"], rows["y"])]
     pixel_xs = [fx * width for fx, _ in fractions]
     pixel_ys = [fy * height for _, fy in fractions]
     norm = TwoSlopeNorm(vcenter=center_rate, vmin=max(0.0, center_rate - 0.3), vmax=min(1.0, center_rate + 0.3))
-    markers = axes.scatter(pixel_xs, pixel_ys, s=20 + 4 * callout_rows["aberturas"], c=callout_rows["ataque_venceu"], cmap="RdBu", norm=norm, edgecolors="white", linewidths=0.8, alpha=0.9)
-    for name, count, pixel_x, pixel_y in zip(callout_rows.index, callout_rows["aberturas"], pixel_xs, pixel_ys):
+    markers = axes.scatter(pixel_xs, pixel_ys, s=20 + size_per_unit * rows[count_column], c=rows[rate_column], cmap="RdBu", norm=norm, edgecolors="white", linewidths=0.8, alpha=0.9)
+    for name, count, pixel_x, pixel_y in zip(rows.index, rows[count_column], pixel_xs, pixel_ys):
         if count >= label_min_count:
             axes.annotate(f"{name} ({count})", (pixel_x, pixel_y), xytext=(0, 9), textcoords="offset points", fontsize=7, color="white", ha="center")
     colorbar = figure.colorbar(markers, ax=axes, fraction=0.04, pad=0.02)
-    colorbar.set_label("vitória do ataque ao abrir aqui")
+    colorbar.set_label(colorbar_label)
     axes.axis("off")
     figure.tight_layout()
     return figure
+
+
+def draw_callout_summary(map_meta, callout_rows, center_rate, label_min_count=10):
+    """Um marcador por callout: tamanho pelo número de aberturas, cor pela vitória do ataque ao abrir ali."""
+    return draw_rate_markers(map_meta, callout_rows, "aberturas", "ataque_venceu", center_rate, "vitória do ataque ao abrir aqui", label_min_count)
 
 
 def draw_player(axes, pixels, color, marker, name, is_selected):

@@ -56,6 +56,15 @@ Protocolo sem vazamento (predict.py): nenhuma métrica usa resultado. O lado de 
 - Round 2 do perdedor do pistol: eco (até 4k, 539 casos) vence 10% do round 2 e 61% do round 3, somando 1,09 rounds em 2 a 4. Force (8k+, 63 casos) vence 40% do round 2, 58% do round 3 e 57% do round 4, somando 1,55. Sugestivo a favor do force, com três ressalvas: 63 casos, só dá para forçar quem saiu do pistol com dinheiro (pistol disputado), e quem força é time mais fraco no resto da partida (29% de vitória do round 5 em diante contra 44% de quem faz eco), o que torna o resultado mais notável, não menos. Por lado, o force funciona no ataque (52% do round 2, 44 casos) e não na defesa (14%, 14 casos).
 - Bônus do vencedor do pistol: vence 86% do round 2 e só 39% do round 3, quando o eco do adversário vira compra cheia.
 
+## 8. Defuse: quem está vivo no plant decide, a posição ajusta
+
+- 4.653 rounds plantados, 29% defusados. Depois do plant o ataque vence por eliminação (2.773) ou detonação (522), e a defesa só por defuse (1.349).
+- Vivos no momento do plant explicam quase tudo. Com 5 contra 5, 33% de defuse. Com 3 contra 3, 39%. Com 2 do ataque contra 3 da defesa, 76%. Com 4 do ataque contra 2, 2%. A taxa de defuse de cada posição deve ser lida contra esse esperado.
+- Plant tardio é pior para o ataque. Plants entre 80 e 100 s são defusados 44%, contra 25% a 27% antes dos 60 s, e 3,5 pontos disso sobram acima do esperado pelos vivos.
+- Por site, com o esperado descontado, os sites são parecidos. As diferenças brutas (Lotus C 36% contra A 27%, Haven B 38% contra C 25%, Sunset B 35% contra A 22%) vêm em boa parte de quantos chegam vivos ao plant em cada site.
+- Dentro do site, o plant padrão (a célula de 400 unidades mais usada) é defusado um pouco menos que o esperado: Ascent A 24% contra 26%, Lotus A 19% contra 22%, Haven C 23% contra 26%. Posições fora do padrão são defusadas mais que o esperado, com volume menor: no Lotus C, uma célula com 48 plants dá 58% contra 41% esperado; no Ascent B, uma com 22 plants dá 45% contra 29%. O plant padrão é padrão por um motivo.
+- O defuse, quando acontece, leva em mediana 30,6 s depois do plant, com quartis em 24 e 36 s, ou seja, quase sempre no limite dos 45 s.
+
 ## Para investigar como ferramenta para jogadores
 
 - Mortes não trocadas por jogador, separando primeira morte do round, flanco e pós-plant.
@@ -63,6 +72,7 @@ Protocolo sem vazamento (predict.py): nenhuma métrica usa resultado. O lado de 
 - Taxa de abertura do time por mapa e por região, e conversão de abertura por jogador (quem abre, quem morre primeiro, quanto o time converte depois).
 - Controle de meio por mapa como métrica de time, a partir das regiões onde morrer custa mais.
 - Calculadora de compra: dado o loadout possível e o do adversário, a vitória esperada do round, e o custo de forçar no round 2 por lado.
+- Mapa de plants do time: onde planta, quanto é defusado ali contra o esperado pelos vivos, e quais posições fora do padrão custaram rounds.
 
 ## Ressalvas
 
