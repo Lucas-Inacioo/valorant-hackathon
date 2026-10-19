@@ -200,6 +200,7 @@ with deaths_tab:
         regular_rounds = side_deaths[side_deaths["round"] <= 24]
         trend = regular_rounds.groupby(["round", "venceu_partida"])["isolada"].mean().unstack().rename(columns=MATCH_OUTCOME_LABELS)
         side_column.line_chart(trend, color=[LOST_COLOR, WON_COLOR], y_label="fração isolada")
+        side_column.bar_chart(regular_rounds.groupby("round").size(), color=["#7f7f7f"], y_label="mortes na base")
 
 with first_blood_tab:
     st.markdown("Uma linha por round: quando aconteceu a primeira morte, qual lado abriu o placar e se o time que abriu venceu o round. O tempo conta a partir do round live, sem a fase de compra.")
@@ -225,8 +226,13 @@ with first_blood_tab:
     map_name_by_internal = dict(zip(matches["mapa_interno"], matches["mapa"]))
     st.dataframe(summary_by_map(first_blood).rename(index=map_name_by_internal), use_container_width=False)
 
-    st.subheader("Ao longo da partida: mediana do tempo da primeira morte por round")
-    st.line_chart(first_blood[first_blood["round"] <= 24].groupby("round")["segundos"].median(), color=["#7f7f7f"], y_label="segundos")
+    st.subheader("Ao longo da partida: tempo da primeira morte por round")
+    per_round = first_blood[first_blood["round"] <= 24].groupby("round")["segundos"].agg(rounds="size", p25=lambda seconds: seconds.quantile(0.25), mediana="median", p75=lambda seconds: seconds.quantile(0.75)).round(1)
+    median_column, count_column = st.columns(2)
+    median_column.line_chart(per_round["mediana"], color=["#7f7f7f"], y_label="mediana (s)")
+    count_column.bar_chart(per_round["rounds"], color=["#7f7f7f"], y_label="rounds na base")
+    with st.expander("Números por round"):
+        st.dataframe(per_round, use_container_width=False)
 
 with fields_tab:
     relevant_fields, irrelevant_fields = build_field_tables()
