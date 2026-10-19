@@ -423,10 +423,13 @@ with plants_tab:
     else:
         cells = cells_for_map(selected_plants, plant_map_internal)
         map_defuse = selected_plants[selected_plants["mapa"] == plant_map_internal]["defusada"].mean()
-        st.caption(f"Plants agrupados em células de 400 unidades (cerca de 4 m) e só células com 5 ou mais. Tamanho: plants. Cor: taxa de defuse, centrada na média do mapa ({map_defuse:.0%}). Azul é bom para a defesa.")
-        map_column, table_column = st.columns([3, 2])
-        map_column.pyplot(draw_rate_markers(plant_map_meta, cells, "plants", "defuse", map_defuse, "taxa de defuse dos plants nesta célula", label_min_count=15, size_per_unit=3))
-        table_column.dataframe(cells[["site", "plants", "defuse", "esperado_pelos_vivos", "acima_do_esperado"]], use_container_width=True)
+        st.caption(f"Plants agrupados em células de 400 unidades (cerca de 4 m) e só células com 5 ou mais, um recorte por site. Tamanho: plants. Cor: taxa de defuse, centrada na média do mapa ({map_defuse:.0%}). Azul é bom para a defesa.")
+        sites = sorted(cells["site"].unique())
+        for site_column, site in zip(st.columns(len(sites)), sites):
+            site_cells = cells[cells["site"] == site]
+            site_column.markdown(f"**Site {site}** ({int(site_cells['plants'].sum())} plants em células com 5+)")
+            site_column.pyplot(draw_rate_markers(plant_map_meta, site_cells, "plants", "defuse", map_defuse, "taxa de defuse", label_min_count=10, size_per_unit=3, zoom_padding=90))
+        st.dataframe(cells[["site", "plants", "defuse", "esperado_pelos_vivos", "acima_do_esperado"]], use_container_width=False)
 
 with fields_tab:
     relevant_fields, irrelevant_fields = build_field_tables()

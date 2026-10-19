@@ -90,8 +90,10 @@ def draw_points(map_meta, series):
     return figure
 
 
-def draw_rate_markers(map_meta, rows, count_column, rate_column, center_rate, colorbar_label, label_min_count=10, size_per_unit=4):
-    """Um marcador por linha (x, y em coordenadas de jogo): tamanho pela contagem, cor pela taxa, centrada em center_rate."""
+def draw_rate_markers(map_meta, rows, count_column, rate_column, center_rate, colorbar_label, label_min_count=10, size_per_unit=4, zoom_padding=None):
+    """Um marcador por linha (x, y em coordenadas de jogo): tamanho pela contagem, cor pela taxa, centrada em center_rate.
+
+    Com zoom_padding (em pixels) a imagem é recortada ao redor dos marcadores."""
     image = Image.open(minimap_file(map_meta))
     width, height = image.size
     figure, axes = plt.subplots(figsize=(7, 7))
@@ -106,6 +108,9 @@ def draw_rate_markers(map_meta, rows, count_column, rate_column, center_rate, co
             axes.annotate(f"{name} ({count})", (pixel_x, pixel_y), xytext=(0, 9), textcoords="offset points", fontsize=7, color="white", ha="center")
     colorbar = figure.colorbar(markers, ax=axes, fraction=0.04, pad=0.02)
     colorbar.set_label(colorbar_label)
+    if zoom_padding and pixel_xs:
+        axes.set_xlim(max(0, min(pixel_xs) - zoom_padding), min(width, max(pixel_xs) + zoom_padding))
+        axes.set_ylim(min(height, max(pixel_ys) + zoom_padding), max(0, min(pixel_ys) - zoom_padding))
     axes.axis("off")
     figure.tight_layout()
     return figure
