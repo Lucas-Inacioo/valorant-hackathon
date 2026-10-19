@@ -76,6 +76,50 @@ Função (duelista, iniciador, controlador, sentinela) vem da lista pública de 
 - Qualquer morte, descontada a situação de vivos, fica dentro de 1 ponto do esperado em todas as funções, e o custo do isolamento fica entre menos 0,3 e mais 4,5 pontos, ou seja, nada que se separe do ruído. Trocar vale de 12 a 16 pontos em qualquer função.
 - Por agente, as diferenças são de poucos pontos sobre 200 a 1.000 rounds (Phoenix 27% contra Jett 31% no total, Chamber 27% contra Cypher 32%) e misturam o agente com quem costuma escolhê-lo. Não dá para separar com estes dados.
 
+## 10. Metade das trocas possíveis não acontece
+
+Troca possível (fights.py): no instante da morte, um aliado vivo a até 20 m do killer com o olhar a até 45 graus dele. viewRadians é atan2(dy, dx) nas coordenadas de jogo, calibrado nas kills com erro mediano de 0,3 grau.
+
+- Com um aliado em condição de trocar, a troca sai 47% das vezes no ataque e 43% na defesa. Com aliado em alcance mas olhando para outro lado, 24% e 22%. Sem aliado em alcance, 11% e 9%.
+- O round acompanha. Vitória do time da vítima de 44%, 35% e 27% no ataque, e 41%, 30% e 23% na defesa, nas três condições.
+- Em 30% das mortes do ataque e 27% da defesa a troca era possível, e em 53% a 57% dessas ela não foi feita. É o erro de execução mais frequente e mais barato de mostrar a um time: a posição estava certa e o olhar também.
+- Em 57% a 62% das mortes não havia ninguém em alcance. Esse é o erro de setup, e é onde a isolação (seção 2) de fato pesa.
+
+## 11. Colapso: um em cada cinco rounds acaba em 10 segundos
+
+Colapso (round_style.py): três mortes do mesmo time em 10 s sem nenhuma kill do time nessa janela.
+
+- 23% dos rounds de ataque e 20% dos de defesa têm colapso. Com colapso o time vence 8% no ataque e 6% na defesa. Sem, 66% e 59%. Três mortes em 10 s com alguma kill no meio (uma luta de site normal) acontece em 36% a 39% dos rounds e não é o problema.
+- O colapso começa em mediana aos 36 s no ataque e 42 s na defesa, ou seja, no momento da execução ou do retake, não na abertura.
+- Por mapa, o ataque colapsa mais no Pearl (42%, 60 rounds), Sunset (26%) e Ascent (25%), e a defesa mais no Haven (23%) e Abyss (23%).
+- Por time a taxa vai de 15% a 26% dos rounds. É a métrica coletiva mais direta da base: nenhum colapso depende de mira, todos dependem de onde os três estavam.
+
+## 12. Distância, arma e reação
+
+- Rifle morre a 16 m em mediana e 20% das mortes são a 25 m ou mais. SMG morre a 13 m e 12% a 25 m ou mais. Shotgun a 10 m, com 47% até 10 m. Sniper a 18 m, mas 21% das mortes de sniper são a até 10 m. No agregado os jogadores respeitam o alcance da arma. A tabela por jogador na aba Lutas mostra quem não respeita.
+- 44% das mortes são sem reação (a vítima não feriu o killer), 35% em foco (dois ou mais inimigos feriram a vítima) e 21% em duelo. Morrer em duelo deixa o round em 39% no ataque e 32% na defesa. Morrer sem reação, 32% e 26%. Foco é trocado menos (23% contra 28%), porque quem foca está junto.
+
+## 13. Peso econômico da morte e o save
+
+- Na defesa, quando o único jogador mais caro do time morre primeiro (605 rounds), o time vence 23% contra 25%, e descontada a taxa do time fica 5 pontos abaixo do normal da primeira morte (menos 25 contra menos 20). No ataque não há diferença.
+- Operator morrendo primeiro na defesa (165 rounds): trocado só 7%, contra 16% das outras primeiras mortes. A vitória bruta é maior (31%) porque time com Operator é time com dinheiro, mas descontada a taxa do time é 2 pontos pior. No ataque são 45 casos, poucos para ler.
+- Save: num round perdido fora do fim de metade, cada sobrevivente vale cerca de 1.200 créditos no loadout do round seguinte (16,4k com zero sobreviventes, 17,5k com um, 18,8k com dois, 20,1k com três). A vitória do round seguinte fica em 37% a 38% até dois sobreviventes e sobe para 57% com três, em 37 rounds. O save paga em dinheiro, e só vira round quando o time inteiro sobra.
+
+## 14. Estilo de round: quem planta rápido vence, e ninguém muda o estilo quando está atrás
+
+Estilo (round_style.py): execução rápida com plant até 40 s, default com plant depois disso, sem plant quando o round acabou antes.
+
+- Execução rápida vence 74% dos rounds (2.034), default 68% (2.619), sem plant 7% (1.885). Sem plant é derrota por construção, então o que compara estilo é rápida contra default.
+- Atrás no placar, o ataque fica sem plant em 39% dos rounds. Na frente, em 20%. Entre os rounds plantados, a fração de execução rápida é 42% atrás e 45% na frente. O time que perde não muda o estilo, ele deixa de conseguir plantar.
+- Contato cedo (primeira morte até 20 s) acontece em 61% dos rounds e quase não muda a vitória (ataque 51,5% com contato cedo contra 53,7% tarde).
+- Os perfis por time variam de 23% a 48% de execução rápida, com vitória por estilo de 55% a 85%. Vira uma frase de identidade por time na aba Rounds do time.
+
+## 15. Setup no plant e retake: a posição não importa, estar vivo importa
+
+- Atacantes a até 15 m da spike no plant, aliados do planter olhando para fora do site e dispersão do ataque não mudam a taxa de defuse além do esperado pelos vivos (menos 1 a mais 3 pontos).
+- A distância da defesa no plant muda pouco. Defesa a até 20 m da spike, 3 pontos acima do esperado. A 50 m ou mais, 3 pontos abaixo.
+- 92% dos defuses (1.246 de 1.349) acontecem com nenhum atacante vivo. Com um atacante vivo (86 casos), ele estava em mediana a 23 m da spike, e em 70% dos casos a mais de 15 m. O retake é uma eliminação, não um defuse sob pressão. O pós-plant que perde não é um setup errado, é um ataque que morreu.
+
 ## Para investigar como ferramenta para jogadores
 
 - Mortes não trocadas por jogador, separando primeira morte do round, flanco e pós-plant.
@@ -85,9 +129,12 @@ Função (duelista, iniciador, controlador, sentinela) vem da lista pública de 
 - Controle de meio por mapa como métrica de time, a partir das regiões onde morrer custa mais.
 - Calculadora de compra: dado o loadout possível e o do adversário, a vitória esperada do round, e o custo de forçar no round 2 por lado.
 - Mapa de plants do time: onde planta, quanto é defusado ali contra o esperado pelos vivos, e quais posições fora do padrão custaram rounds.
+- Trocas possíveis e não feitas por jogador e por dupla, com o minimapa do instante (quem estava em alcance olhando para o killer e não trocou).
+- Colapsos do time por mapa e região, com o replay dos três instantes na aba Partida.
 
 ## Ressalvas
 
-- 100 unidades por metro é suposição, não confirmada.
+- 100 unidades por metro é suposição, não confirmada. Os 20 m da troca possível, os 15 m do site e as faixas de distância dependem dela.
+- A arma da vítima é a da compra do round. Arma pega no chão não aparece.
 - Qualquer taxa com menos de 60 rounds é ruído. Os intervalos de 95% estão nas tabelas.
 - Tudo é correlação. Regiões caras podem refletir quem vai para lá e o que o adversário fez antes, não só a posição.

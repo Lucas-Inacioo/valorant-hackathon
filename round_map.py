@@ -24,6 +24,8 @@ def round_events(round_result):
                 "victim": kill["victim"],
                 "victim_location": kill["victimLocation"],
                 "locations": kill["playerLocations"] or [],
+                "assistants": kill["assistants"] or [],
+                "finishing": kill["finishingDamage"],
             })
     if round_result["bombPlanter"]:
         events.append({"time_ms": round_result["plantRoundTime"], "kind": "plant", "actor": round_result["bombPlanter"], "locations": round_result["plantPlayerLocations"] or []})

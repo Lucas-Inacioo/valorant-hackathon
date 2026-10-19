@@ -15,7 +15,10 @@ from explore_fields import DEFAULT_DATA_DIR, collect_field_stats, find_match_fil
 from maps import callout_name, load_maps_by_url, nearest_callout
 from plants import build_plants_table, cells_for_map, situation_matrix, summary_by_plant_time, summary_by_site
 from predict import forecast_accuracy, in_match_accuracy, load_matches, match_pairs, permutation_ceiling, team_features, tournament_ranking
+from round_style import build_round_styles, collapse_regions, collapse_summary, style_by_score, style_summary, team_profiles
+from setups import build_setups_table, defuse_by, retake_summary, watching_bands
 from round_map import describe_event, draw_callout_summary, draw_points, draw_rate_markers, draw_round_map, round_events
+from fights import build_fights_table, distance_matrix, distance_summary, economic_first_death, fight_class_summary, player_range_discipline, save_effect, team_summary, trade_possibility_summary
 from first_blood import first_blood_table, plant_summary, summary_by_map, who_opens_by_time, wilson_interval, win_rate_by_time
 from solo_deaths import SOLO_DISTANCE, build_deaths_table, context_summary, distance_bands, first_death_summary, summary_by_distance_band, summary_by_round_outcome, territory_summary, win_rate_by_situation, with_solo_flag
 
@@ -130,6 +133,32 @@ def plants_table():
 
 
 @st.cache_data
+def matches_table():
+    return load_matches()
+
+
+@st.cache_data
+def fights_table():
+    return build_fights_table(deaths_table())
+
+
+@st.cache_data
+def round_styles_table():
+    return build_round_styles(deaths_table(), rounds_table(), matches_table())
+
+
+@st.cache_data
+def setups_table():
+    return build_setups_table()
+
+
+def with_team_names(table, team_column, name_column="nome_time"):
+    """Troca a cor do time (Blue, Red) pelo nome que vem do arquivo da partida."""
+    name_by_match_team = {(row.match_id, color): getattr(row, f"nome_{color.lower()}") for row in matches_table().itertuples() for color in ["Blue", "Red"]}
+    return table.assign(**{name_column: [name_by_match_team.get((match_id, team), team) for match_id, team in zip(table["match_id"], table[team_column])]})
+
+
+@st.cache_data
 def prediction_tables():
     matches = load_matches()
     features = team_features(deaths_table(), matches)
@@ -227,7 +256,8 @@ selected_ids = set(selected_matches["match_id"])
 selected_players = players[players["match_id"].isin(selected_ids)]
 selected_rounds = rounds[rounds["match_id"].isin(selected_ids)]
 
-overview_tab, players_tab, deaths_tab, first_blood_tab, roles_tab, economy_tab, plants_tab, fields_tab, match_tab, prediction_tab, conclusions_tab = st.tabs(["Visão geral", "Jogadores", "Mortes isoladas", "Primeira morte", "Função do agente", "Economia", "Plant e defuse", "Campos", "Partida", "Previsão", "Conclusões"])
+map_name_by_internal = dict(zip(matches["mapa_interno"], matches["mapa"]))
+overview_tab, players_tab, deaths_tab, first_blood_tab, roles_tab, fights_tab, team_rounds_tab, economy_tab, plants_tab, fields_tab, match_tab, prediction_tab, conclusions_tab = st.tabs(["Visão geral", "Jogadores", "Mortes isoladas", "Primeira morte", "Função do agente", "Lutas", "Rounds do time", "Economia", "Plant e defuse", "Campos", "Partida", "Previsão", "Conclusões"])
 
 with overview_tab:
     matches_col, players_col, rounds_col = st.columns(3)
@@ -385,6 +415,86 @@ with roles_tab:
     st.caption("Só agentes com 30 ou mais primeiras mortes no recorte. Diferenças entre agentes misturam o agente com quem costuma escolhê-lo.")
     st.dataframe(first_death_by_agent(role_deaths, max_seconds), use_container_width=False)
 
+with fights_tab:
+    st.markdown("Cada morte com o que aconteceu em volta dela. A troca era possível quando um aliado vivo estava a até 20 m do killer com o olhar a até 45 graus dele (viewRadians é atan2 nas coordenadas de jogo, calibrado nas kills com erro mediano de 0,3 grau). Duelo quando a vítima feriu o killer no round, foco quando dois ou mais inimigos feriram a vítima, sem reação no resto. A arma da vítima é a da compra do round.")
+    fights = fights_table()[fights_table()["match_id"].isin(selected_ids)]
+    possible = fights[fights["troca_possivel"] == "aliado em alcance olhando para o killer"]
+    deaths_col, possible_col, missed_col = st.columns(3)
+    deaths_col.metric("Mortes", len(fights))
+    possible_col.metric("Troca possível", f"{len(possible) / max(1, (fights['troca_possivel'] != '?').sum()):.0%}")
+    missed_col.metric("Possível e não feita", f"{1 - possible['trocada'].mean():.0%}")
+
+    st.subheader("A troca era possível?")
+    trade_table = trade_possibility_summary(fights, ["lado"])
+    chart_column, table_column = st.columns(2)
+    short_labels = {"aliado em alcance olhando para o killer": "olhando para o killer", "aliado em alcance olhando para outro lado": "olhando para outro lado", "sem aliado em alcance": "sem aliado em alcance"}
+    chart_column.bar_chart(trade_table["trocada"].unstack("lado").rename(index=short_labels), color=[ATTACK_COLOR, DEFENSE_COLOR], stack=False, y_label="fração trocada", horizontal=True)
+    table_column.dataframe(trade_table, use_container_width=False)
+
+    st.subheader("Por time: trocas possíveis convertidas, mortes sem reação e kills em foco")
+    st.caption("Só times com 150 ou mais mortes com posição do killer. Troca possível é a fração das mortes do time em que um aliado estava em condição de trocar. Convertida é quanto dessas foi trocada. Kills em foco é a fração das kills do time com dois ou mais atirando.")
+    named_fights = fights.assign(time_killer=fights["time_vitima"].map({"Blue": "Red", "Red": "Blue"}))
+    named_fights = with_team_names(with_team_names(named_fights, "time_vitima"), "time_killer", "nome_killer")
+    st.dataframe(team_summary(named_fights), use_container_width=False)
+
+    st.subheader("Disciplina de distância: a arma da vítima e a distância do killer")
+    summary_column, matrix_column = st.columns(2)
+    summary_column.dataframe(distance_summary(fights), use_container_width=False)
+    matrix_column.dataframe(distance_matrix(fights), use_container_width=False)
+    name_by_puuid = players.drop_duplicates("puuid").set_index("puuid")["jogador"]
+    short_table, sniper_table = player_range_discipline(fights, name_by_puuid)
+    short_column, sniper_column = st.columns(2)
+    short_column.markdown("**Por jogador: mortes com SMG ou shotgun em duelo longo (25 m+)**, 10 ou mais mortes")
+    short_column.dataframe(short_table, hide_index=True, use_container_width=False)
+    sniper_column.markdown("**Por jogador: mortes com sniper em duelo curto (até 10 m)**, 10 ou mais mortes")
+    sniper_column.dataframe(sniper_table, hide_index=True, use_container_width=False)
+
+    st.subheader("Luta ou execução: a vítima reagiu?")
+    st.dataframe(fight_class_summary(fights, ["lado"]), use_container_width=False)
+
+    st.subheader("Peso econômico da morte")
+    expensive_column, operator_column = st.columns(2)
+    expensive_column.markdown("**Primeira morte do jogador mais caro do time** (loadout maior que o de todos os colegas)")
+    expensive_column.dataframe(economic_first_death(fights, "mais_caro_do_time"), use_container_width=False)
+    operator_column.markdown("**Primeira morte de quem comprou Operator**")
+    operator_column.dataframe(economic_first_death(fights.assign(operator=fights["arma_vitima"] == "Operator"), "operator"), use_container_width=False)
+    st.markdown("**Save: sobreviventes de um round perdido e o round seguinte** (fora dos rounds 12 e 24, quando a economia reinicia)")
+    selected_rounds_for_save = rounds_table()[rounds_table()["match_id"].isin(selected_ids)]
+    st.dataframe(save_effect(selected_rounds_for_save, fights).loc[0:4], use_container_width=False)
+
+with team_rounds_tab:
+    st.markdown("Uma linha por round e time. Colapso: três mortes do time em 10 s sem nenhuma kill do time na janela. Estilo do ataque pelo tempo do plant: execução rápida até 40 s, default depois, sem plant quando o round acabou antes (quase sempre derrota, é mais resultado que estilo). Contato cedo: primeira morte do round até 20 s. Placar é o estado antes do round.")
+    styles = round_styles_table()
+    styles = styles[styles["match_id"].isin(selected_ids) & (styles["lado"] != "?")]
+    rounds_col, collapse_col, fast_col = st.columns(3)
+    rounds_col.metric("Rounds por time", len(styles))
+    collapse_col.metric("Rounds com colapso", f"{styles['colapso'].mean():.0%}")
+    fast_col.metric("Ataques com execução rápida", f"{(styles.loc[styles['lado'] == 'ataque', 'estilo'] == 'execução rápida').mean():.0%}")
+
+    st.subheader("Colapsos")
+    st.dataframe(collapse_summary(styles, ["lado"]), use_container_width=False)
+    st.dataframe(collapse_summary(styles, ["mapa", "lado"]).rename(index=map_name_by_internal, level="mapa").sort_values("rounds", ascending=False), use_container_width=False)
+    collapse_map_name = st.selectbox("Regiões de colapso no mapa", sorted(styles["mapa"].map(map_name_by_internal).dropna().unique()), key="collapse_map")
+    internal_by_name = {name: internal for internal, name in map_name_by_internal.items()}
+    st.dataframe(collapse_regions(styles, internal_by_name[collapse_map_name]), use_container_width=False)
+
+    st.subheader("Estilo do ataque e contato")
+    attack_styles, contact = style_summary(styles)
+    style_column, contact_column = st.columns(2)
+    style_column.dataframe(attack_styles, use_container_width=False)
+    contact_column.dataframe(contact, use_container_width=False)
+
+    st.subheader("O estilo muda com o placar?")
+    shares, wins, counts = style_by_score(styles)
+    shares_column, wins_column = st.columns(2)
+    shares_column.markdown("**Fração de cada estilo conforme o placar antes do round**")
+    shares_column.dataframe(shares.join(counts), use_container_width=False)
+    wins_column.markdown("**Vitória de cada combinação**")
+    wins_column.dataframe(wins, use_container_width=False)
+
+    st.subheader("Perfil por time (40 ou mais rounds de ataque)")
+    st.dataframe(team_profiles(styles), use_container_width=True)
+
 with economy_tab:
     st.markdown("Por round e por time: soma do loadout dos cinco jogadores, resultado e cerimônia. Rounds normais excluem pistol (1 e 13) e o segundo round (2 e 14). Vitória esperada pelo dinheiro é a taxa de vitória da faixa de diferença de loadout; o que sobra acima dela é o que não é dinheiro.")
     all_rounds = rounds_table()
@@ -439,7 +549,6 @@ with plants_tab:
     time_col.metric("Tempo mediano do plant", f'{selected_plants["segundos_plant"].median():.0f} s')
 
     st.subheader("Por mapa e site")
-    map_name_by_internal = dict(zip(matches["mapa_interno"], matches["mapa"]))
     st.dataframe(summary_by_site(selected_plants).rename(index=map_name_by_internal, level="mapa"), use_container_width=False)
 
     st.subheader("Defuse por vivos no momento do plant")
@@ -470,6 +579,19 @@ with plants_tab:
             site_column.markdown(f"**Site {site}** ({int(site_cells['plants'].sum())} plants em células com 5+)")
             site_column.pyplot(draw_rate_markers(plant_map_meta, site_cells, "plants", "defuse", map_defuse, "taxa de defuse", label_min_count=10, size_per_unit=3, zoom_padding=90))
         st.dataframe(cells[["site", "plants", "defuse", "esperado_pelos_vivos", "acima_do_esperado"]], use_container_width=False)
+
+    st.subheader("Setup no plant e retake")
+    st.caption("Posições e olhar no momento do plant. Atacantes no site: a até 15 m da spike. Olhando para fora: fração dos aliados do planter com o olhar a mais de 90 graus da spike, ou seja, vigiando entradas. Distância da defesa: mediana dos defensores vivos até a spike. Tudo contra o esperado pelos vivos.")
+    selected_setups = setups_table()[setups_table()["match_id"].isin(selected_ids)]
+    on_site_column, watching_column, defense_column = st.columns(3)
+    on_site_column.markdown("**Atacantes a até 15 m da spike**")
+    on_site_column.dataframe(defuse_by(selected_setups, "atacantes_no_site"), use_container_width=False)
+    watching_column.markdown("**Aliados do planter olhando para fora**")
+    watching_column.dataframe(defuse_by(selected_setups, watching_bands(selected_setups)), use_container_width=False)
+    defense_column.markdown("**Distância mediana da defesa no plant**")
+    defense_column.dataframe(defuse_by(selected_setups, "faixa_defesa"), use_container_width=False)
+    st.markdown("**Retake: atacantes vivos quando a spike foi defusada e distância do mais próximo**")
+    st.dataframe(retake_summary(selected_setups), use_container_width=False)
 
 with fields_tab:
     relevant_fields, irrelevant_fields = build_field_tables()

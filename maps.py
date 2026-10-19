@@ -10,6 +10,8 @@ from download_data import fetch
 MAPS_DIR = Path(__file__).parent / "data" / "maps"
 MAPS_METADATA_URL = "https://valorant-api.com/v1/maps"
 AGENTS_METADATA_URL = "https://valorant-api.com/v1/agents?isPlayableCharacter=true"
+WEAPONS_METADATA_URL = "https://valorant-api.com/v1/weapons"
+WEAPON_CATEGORY_LABELS = {"Rifles": "rifle", "Pistols": "pistola", "SMGs": "SMG", "Shotguns": "shotgun", "Sniper Rifles": "sniper", "Heavy Weapons": "pesada"}
 ROLE_LABELS = {"Duelist": "duelista", "Initiator": "iniciador", "Controller": "controlador", "Sentinel": "sentinela"}
 
 
@@ -31,6 +33,16 @@ def load_agents_by_id():
         metadata_file.write_bytes(fetch(AGENTS_METADATA_URL))
     agents = json.loads(metadata_file.read_text(encoding="utf-8"))["data"]
     return {agent["uuid"]: {"agente": agent["displayName"], "funcao": ROLE_LABELS[agent["role"]["displayName"]]} for agent in agents}
+
+
+def load_weapons_by_id():
+    """Nome, custo e categoria indexados pelo id de arma dos JSONs (economy.weapon e finishingDamage.damageItem), em maiúsculas."""
+    metadata_file = MAPS_DIR / "weapons.json"
+    if not metadata_file.exists():
+        MAPS_DIR.mkdir(parents=True, exist_ok=True)
+        metadata_file.write_bytes(fetch(WEAPONS_METADATA_URL))
+    weapons = json.loads(metadata_file.read_text(encoding="utf-8"))["data"]
+    return {weapon["uuid"].upper(): {"arma": weapon["displayName"], "custo": weapon["shopData"]["cost"] if weapon["shopData"] else 0, "categoria": WEAPON_CATEGORY_LABELS.get(weapon["shopData"]["category"] if weapon["shopData"] else "", "outra")} for weapon in weapons}
 
 
 def minimap_file(map_meta):
