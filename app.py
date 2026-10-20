@@ -391,7 +391,14 @@ selected_rounds = rounds[rounds["match_id"].isin(selected_ids)]
 map_name_by_internal = dict(zip(matches["mapa_interno"], matches["mapa"]))
 internal_by_name = {name: internal for internal, name in map_name_by_internal.items()}
 
-overview_tab, opening_tab, trades_tab, collapse_tab, economy_tab, plants_tab, match_tab, postgame_tab, prediction_tab, conclusions_tab, explore_tab = st.tabs(["Visão geral", "Abertura", "Trocas e isolamento", "Colapso e estilo", "Economia", "Plant e defuse", "Partida", "Pós-jogo", "Previsão", "Conclusões", "Exploração"])
+# A primeira aba é a ferramenta proposta e ganha cara de aba de janela, com fundo próprio, para se destacar das abas de análise
+st.markdown("""<style>
+[role="tablist"] [data-testid="stTab"][data-key="0"] {
+    background: #fde9d9; border: 1px solid #c0392b; border-bottom: none; border-radius: 8px 8px 0 0; padding: 4px 14px; margin-right: 12px;
+}
+[role="tablist"] [data-testid="stTab"][data-key="0"] p { color: #c0392b; font-weight: 700; }
+</style>""", unsafe_allow_html=True)
+postgame_tab, overview_tab, opening_tab, trades_tab, collapse_tab, economy_tab, plants_tab, match_tab, prediction_tab, conclusions_tab, explore_tab = st.tabs(["Ferramenta proposta", "Visão geral", "Abertura", "Trocas e isolamento", "Colapso e estilo", "Economia", "Plant e defuse", "Partida", "Previsão", "Conclusões", "Exploração"])
 
 with overview_tab:
     matches_col, rounds_col, players_col = st.columns(3)
