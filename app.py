@@ -713,7 +713,7 @@ with economy_tab:
     save_win_column.altair_chart(rate_chart(saves, "sobreviventes", "venceu_seguinte", "rounds", "% de rounds seguintes vencidos", height=170), use_container_width=True)
 
     st.subheader("5. Vale a pena caçar quem está guardando para o próximo round?")
-    st.caption("Os arquivos não dizem quem foi atrás de quem, então a resposta vem dos dois lados da conta: quanto cada sobrevivente vale para quem venceu e para quem perdeu o round, e como terminam as lutas depois do plant quando o ataque já está em vantagem.")
+    st.caption("Os arquivos não dizem quem foi atrás de quem, então considera-se quanto cada sobrevivente vale para quem venceu e para quem perdeu o round, e como terminam as lutas depois do plant quando o ataque já está em vantagem.")
     ledger_column, exchange_column = st.columns(2)
     next_loadouts, next_counts = next_loadout_by_outcome(economy_rounds, fights)
     ledger_column.markdown("**Quanto a equipe tem para gastar no round seguinte**, conforme quantos sobreviveram, para quem venceu e para quem perdeu o round")
@@ -721,7 +721,6 @@ with economy_tab:
     exchange = post_plant_exchange(plants_table()[plants_table()["match_id"].isin(selected_ids)], fights)
     exchange_column.markdown("**Parte das mortes depois do plant que são de atacantes**, por situação no plant (atacantes x defensores vivos), em rounds que o ataque venceu")
     exchange_column.altair_chart(rate_chart(exchange, "situacao", "parte_do_ataque", "mortes_pos_plant", "% das mortes depois do plant que são de atacantes", color=ATTACK_COLOR), use_container_width=True)
-    st.markdown("Cada sobrevivente vale cerca de 1,2 mil no round seguinte para quem perdeu e cerca de 0,5 mil para quem venceu, porque o vencedor recebe o bônus e recompra. Trocar um atacante por um defensor que estava guardando custa menos da metade do que nega. A caça só deixaria de valer a pena se o caçador morresse quase três vezes para cada abate, e na pior situação observada ele morre menos de uma. Em 5v1 o defensor sozinho leva quase um atacante por abate sofrido, provavelmente porque cinco pessoas procurando viram cinco alvos, mas a conta continua fechando.")
     with st.expander("Números por sobreviventes e por situação no plant"):
         st.dataframe(next_counts.rename(columns=lambda column: f"rounds, {column}"), use_container_width=False)
         st.dataframe(exchange, use_container_width=False)
