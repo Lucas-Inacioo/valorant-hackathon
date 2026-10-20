@@ -700,7 +700,7 @@ with economy_tab:
 
     st.subheader("4. Perder o jogador mais caro custa mais? E sobreviver a um round perdido vale quanto?")
     expensive_column, operator_column = st.columns(2)
-    expensive_column.markdown("**Quando o primeiro a morrer é o jogador mais caro da equipe** (loadout maior que o de todos os colegas). A coluna acima do time compara com a média da equipe na partida.")
+    expensive_column.markdown("**Comparação quando o primeiro a morrer é o jogador com maior loadout da equipe**, em relação a média da equipe na partida.")
     expensive_column.dataframe(economic_first_death(fights, "mais_caro_do_time"), use_container_width=False)
     operator_column.markdown("**Quando o primeiro a morrer tinha um Operator**")
     operator_column.dataframe(economic_first_death(fights.assign(operator=fights["arma_vitima"] == "Operator"), "operator"), use_container_width=False)
