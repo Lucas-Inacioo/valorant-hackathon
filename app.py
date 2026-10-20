@@ -20,7 +20,7 @@ from setups import build_setups_table, defuse_by, retake_summary, watching_bands
 from round_map import describe_event, draw_callout_summary, draw_points, draw_rate_markers, draw_round_map, round_events
 from fights import build_fights_table, distance_matrix, distance_summary, economic_first_death, fight_class_summary, next_loadout_by_outcome, player_range_discipline, post_plant_exchange, save_effect, team_summary, trade_possibility_summary
 from first_blood import TIME_LABELS, first_blood_table, plant_summary, summary_by_map, wilson_interval, win_rate_by_time
-from factors import build_factor_tables, factor_ranking, match_player_summary, match_team_summary, match_timeline, player_decisions, team_round_factors
+from factors import build_factor_tables, factor_ranking, good_factor_ranking, match_player_summary, match_team_summary, match_timeline, player_decisions, team_round_factors
 from solo_deaths import SOLO_DISTANCE, build_deaths_table, context_summary, first_death_summary, summary_by_distance_band, summary_by_round_outcome, territory_summary, win_rate_by_situation, with_solo_flag
 
 st.set_page_config(page_title="VALORANT Hackathon", layout="wide")
@@ -162,7 +162,7 @@ def setups_table():
 @st.cache_data
 def factor_tables():
     deaths, rounds_with_flags = build_factor_tables(fights_table(), rounds_table(), round_styles_table())
-    return deaths, rounds_with_flags, factor_ranking(deaths, rounds_with_flags)
+    return deaths, rounds_with_flags, factor_ranking(deaths, rounds_with_flags), good_factor_ranking(deaths, rounds_with_flags)
 
 
 @st.cache_data
@@ -833,20 +833,30 @@ with match_tab:
         st.json(match["matchInfo"])
 
 with postgame_tab:
-    st.markdown("Ferramenta de análise depois da partida. Escolha uma partida, um round e um jogador, ou sorteie os três, e veja as decisões daquele round que mais derrubaram a chance de vencer, com o minimapa do instante.")
-    flagged_deaths, flagged_rounds, ranking = factor_tables()
-    costs = dict(zip(ranking["fator"], ranking["diferenca"]))
-    st.subheader("1. O que mais derruba a chance de vencer um round")
+    st.markdown("Ferramenta de análise depois da partida. Escolha uma partida, um round e um jogador, ou sorteie os três, e veja o que custou e o que ajudou ao longo da partida e as decisões daquele round que mais mexeram na chance de vencer, com o minimapa do instante.")
+    flagged_deaths, flagged_rounds, ranking, good_ranking = factor_tables()
+    costs = {**dict(zip(ranking["fator"], ranking["diferenca"])), **dict(zip(good_ranking["fator"], good_ranking["diferenca"]))}
+
+    def ranking_chart(table, color):
+        table = table.copy()
+        table["fator"] = table["fator"].astype(str)
+        table["escala"] = table["unidade"].map(lambda unit: "fator do round inteiro" if unit == "round do time" else "morte, descontado o esperado pelos vivos")
+        y = category_axis("fator", list(table["fator"]))
+        error_bars = alt.Chart(table).mark_rule(color="#333333").encode(y=y, x=alt.X("ic_baixo:Q", title="diferença na vitória do round (pontos)", axis=alt.Axis(format="+.0%")), x2="ic_alto:Q")
+        points = alt.Chart(table).mark_point(size=80, filled=True, color=color).encode(y=y, x="diferenca:Q", shape=alt.Shape("escala:N", scale=alt.Scale(domain=["fator do round inteiro", "morte, descontado o esperado pelos vivos"], range=["square", "circle"]), legend=alt.Legend(orient="bottom", title=None, labelLimit=400)), tooltip=["fator", "o que é", "casos", alt.Tooltip("diferenca", format="+.1%")])
+        labels = alt.Chart(table).mark_text(align="left", dx=6, fontSize=10, color="#6b6b6b").encode(y=y, x="ic_alto:Q", text=alt.Text("casos:Q", format=","))
+        return (error_bars + points + labels).properties(height=28 * len(table) + 60, autosize=FIT_WIDTH)
+
+    st.subheader("1. O que mais derruba e o que mais puxa para cima a chance de vencer um round")
     st.caption("Fatores do round inteiro comparam a vitória com e sem o fator. Fatores de morte comparam a vitória com o esperado pelos vivos naquele instante, para não misturar a decisão com o número de vivos. Diferença em pontos de vitória, com o intervalo de 95%.")
-    ranking_chart = ranking.copy()
-    ranking_chart["fator"] = ranking_chart["fator"].astype(str)
-    ranking_chart["escala"] = ranking_chart["unidade"].map(lambda unit: "fator do round inteiro" if unit == "round do time" else "morte, descontado o esperado pelos vivos")
-    error_bars = alt.Chart(ranking_chart).mark_rule(color="#333333").encode(y=category_axis("fator", list(ranking_chart["fator"])), x=alt.X("ic_baixo:Q", title="diferença na vitória do round (pontos)", axis=alt.Axis(format="+.0%")), x2="ic_alto:Q")
-    points = alt.Chart(ranking_chart).mark_point(size=80, filled=True, color=LOST_COLOR).encode(y=category_axis("fator", list(ranking_chart["fator"])), x="diferenca:Q", shape=alt.Shape("escala:N", scale=alt.Scale(domain=list(dict.fromkeys(ranking_chart["escala"])), range=["square", "circle"]), legend=alt.Legend(orient="bottom", title=None, labelLimit=400)), tooltip=["fator", "o que é", "casos", alt.Tooltip("diferenca", format="+.1%")])
-    labels = alt.Chart(ranking_chart).mark_text(align="left", dx=6, fontSize=10, color="#6b6b6b").encode(y=category_axis("fator", list(ranking_chart["fator"])), x="ic_alto:Q", text=alt.Text("casos:Q", format=","))
-    st.altair_chart((error_bars + points + labels).properties(height=360, autosize=FIT_WIDTH), use_container_width=True)
+    down_column, up_column = st.columns(2)
+    down_column.markdown("**O que derruba**")
+    down_column.altair_chart(ranking_chart(ranking, LOST_COLOR), use_container_width=True)
+    up_column.markdown("**O que puxa para cima**")
+    up_column.altair_chart(ranking_chart(good_ranking, WON_COLOR), use_container_width=True)
     with st.expander("Números de cada fator"):
         st.dataframe(ranking.round(3), hide_index=True, use_container_width=False)
+        st.dataframe(good_ranking.round(3), hide_index=True, use_container_width=False)
 
     st.subheader("2. Apanhado da partida: o que as decisões custaram para cada equipe e cada jogador")
     if st.button("Sortear partida, round e jogador"):
@@ -865,12 +875,12 @@ with postgame_tab:
     post_teams = {player["puuid"]: player["teamId"] for player in post_match["players"]}
     post_puuids = [player["puuid"] for player in post_match["players"] if not player["isObserver"]]
     st.write(f'{post_match_row["torneio"]} · {post_match_row["mapa"]} · Blue {post_match_row["rounds_blue"]} x {post_match_row["rounds_red"]} Red')
-    st.caption("Pontos perdidos é a soma do custo de cada fator ou decisão, em pontos de vitória do round, ao longo da partida. Serve para comparar as duas equipes e os jogadores entre si, não para dizer quantos rounds cada um perdeu de fato.")
+    st.caption("Pontos ganhos e perdidos são a soma do efeito de cada fator ou decisão, em pontos de vitória do round, ao longo da partida. Servem para comparar as duas equipes e os jogadores entre si, não para dizer quantos rounds cada um ganhou ou perdeu de fato.")
     team_summary_column, player_summary_column = st.columns([1, 2])
     team_summary_column.markdown("**Por equipe**, quantas vezes cada fator aconteceu")
-    team_summary_column.dataframe(match_team_summary(flagged_rounds, post_match_row["match_id"], costs).T, use_container_width=True)
+    team_summary_column.dataframe(match_team_summary(flagged_rounds, post_match_row["match_id"], costs).T, use_container_width=True, height=600)
     player_summary_column.markdown("**Por jogador**, quantas vezes cada decisão apareceu")
-    player_summary_column.dataframe(match_player_summary(post_match, flagged_deaths, costs), use_container_width=True)
+    player_summary_column.dataframe(match_player_summary(post_match, flagged_deaths, costs), use_container_width=True, column_config={"saldo": st.column_config.NumberColumn(format="%+d"), "pontos ganhos": st.column_config.NumberColumn(format="%+d"), "pontos perdidos": st.column_config.NumberColumn(format="%+d")})
     with st.expander("Round a round, o que cada equipe disparou"):
         st.dataframe(match_timeline(flagged_rounds, post_match_row["match_id"], costs), use_container_width=True)
 
@@ -888,7 +898,7 @@ with postgame_tab:
     st.write(f'Round {post_round_index + 1} · {post_names[post_puuid]} jogou {post_flags["lado"]} e o time {"venceu" if post_flags["venceu"] else "perdeu"} o round · loadout {post_flags["loadout"]:,.0f} contra {post_flags["loadout_adversario"]:,.0f}')
     post_events = round_events(post_round)
     post_round_deaths = flagged_deaths[(flagged_deaths["match_id"] == post_match_row["match_id"]) & (flagged_deaths["round"] == post_round_index + 1)]
-    decisions = player_decisions(post_events, post_teams, post_puuid, post_round_deaths, costs)
+    decisions = player_decisions(post_events, post_teams, post_puuid, post_round_deaths, costs, name_of=post_names.get)
     team_factors = team_round_factors(post_flags, costs)
     factors_column, decisions_column = st.columns([1, 2])
     factors_column.markdown("**Fatores do time neste round**")
@@ -896,12 +906,12 @@ with postgame_tab:
         factors_column.markdown("\n".join(f"- {name} ({cost * 100:+.0f} pontos)" for name, cost in team_factors))
     else:
         factors_column.write("Nenhum fator da lista.")
-    decisions_column.markdown("**Decisões do jogador neste round**, da mais cara para a mais barata")
+    decisions_column.markdown("**Decisões do jogador neste round**, da que mais custou à que mais ajudou")
     post_map_meta = maps_by_url().get(post_match["matchInfo"]["mapId"])
     if not decisions:
-        decisions_column.write("Nenhuma decisão da lista. O jogador não morreu primeiro, não morreu sem reagir e não deixou de trocar um aliado que podia trocar.")
+        decisions_column.write("Nenhuma decisão da lista. O jogador não abriu o round, não trocou, não plantou, não morreu primeiro, não morreu sem reagir e não deixou de trocar um aliado que podia trocar.")
     for decision in decisions:
-        decisions_column.markdown(f'**{decision["fator"]}** ({decision["custo"] * 100:+.0f} pontos). {decision["detalhe"].capitalize()}. {describe_event(post_events[decision["evento"]], post_names, post_round)}')
+        decisions_column.markdown(f'**{decision["fator"]}** ({decision["custo"] * 100:+.0f} pontos). {decision["detalhe"][0].upper() + decision["detalhe"][1:]}. {describe_event(post_events[decision["evento"]], post_names, post_round)}')
         if post_map_meta is not None:
             decisions_column.pyplot(draw_round_map(post_map_meta, post_events, decision["evento"], post_puuid, post_teams, post_names))
 
