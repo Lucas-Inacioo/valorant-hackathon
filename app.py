@@ -557,11 +557,11 @@ with trades_tab:
         st.markdown("**Por função do agente.** Acima do esperado: taxa de vitória do round menos o esperado para a mesma quantidade de vivos. Custo do isolamento: essa mesma conta para mortes isoladas menos para mortes acompanhadas.")
         st.dataframe(death_cost_by_role(deaths_with_allies), use_container_width=False)
 
-    st.subheader("5. Por equipe: quantas trocas possíveis viraram troca?")
-    st.caption("Só equipes com 150 ou mais mortes. Troca possível: parte das mortes da equipe em que um aliado estava a menos de 20 m de quem matou, olhando para ele. Troca convertida: parte dessas em que a troca de fato saiu. Sem reação: parte das mortes em que o jogador morreu sem causar dano em quem o matou. Abates em foco: parte dos abates da equipe em que dois ou mais jogadores atiraram na vítima.")
+    st.subheader("5. Quantas trocas possíveis viraram troca? Por equipe")
+    st.caption("Só equipes com 150 ou mais mortes. Uma troca é possível quando um aliado estava a menos de 20 m de quem matou, olhando para ele, e é considerada uma troca convertida quando ela de fato ocorreu. Também foi considerado um caso para 'sem reação', quando o jogador morreu sem causar dano em quem o matou.")
     named_fights = fights.assign(time_killer=fights["time_vitima"].map({"Blue": "Red", "Red": "Blue"}))
     named_fights = with_team_names(with_team_names(named_fights, "time_vitima"), "time_killer", "nome_killer")
-    st.dataframe(team_summary(named_fights), use_container_width=False)
+    st.dataframe(team_summary(named_fights).drop(columns=["kills_em_foco"]), use_container_width=False)
 
 with collapse_tab:
     st.markdown("Cada round entra duas vezes, uma para cada equipe. Colapso: três jogadores da equipe morrem em até 10 segundos sem que a equipe mate ninguém nesse intervalo. Ritmo do ataque, pelo segundo do plant: execução rápida quando a spike é plantada até 40 s, default quando é plantada depois disso, sem plant quando o round acabou antes de plantar (quase sempre derrota, por isso é mais resultado do que escolha). Contato cedo: o primeiro abate do round aconteceu até 20 s. Placar: quem estava na frente antes do round começar.")
