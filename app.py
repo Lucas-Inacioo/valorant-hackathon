@@ -663,9 +663,9 @@ with economy_tab:
     st.subheader("1. Quanto o dinheiro gasto em armas compra de rounds?")
     own_table, difference_table = win_rate_by_loadout(economy_rounds)
     difference_column, full_buy_column = st.columns(2)
-    difference_column.markdown("**Pela diferença de loadout entre a equipe e o adversário**, todos os rounds. Acima de zero, a equipe gastou mais.")
+    difference_column.markdown("**Diferença de loadout entre a equipe e o adversário.** Acima de zero, a equipe gastou mais. (todos os rounds)")
     difference_column.altair_chart(rate_chart(difference_table, "faixa_diferenca", "vitoria", "rounds", "% de rounds vencidos"), use_container_width=True)
-    full_buy_column.markdown("**Pelo loadout da equipe quando o adversário comprou tudo (20 mil ou mais)**, rounds normais")
+    full_buy_column.markdown("**Pelo loadout da equipe quando o adversário comprou tudo** (20 mil ou mais, rounds normais)")
     full_buy_column.altair_chart(rate_chart(versus_full_buy(economy_rounds), "faixa_loadout", "vitoria", "rounds", "% de rounds vencidos"), use_container_width=True)
     with st.expander("Números: ganho de vitória por 1.000 créditos a mais, loadout da equipe sem olhar o adversário, e o cruzamento loadout da equipe x loadout do adversário"):
         st.dataframe(versus_full_buy(economy_rounds), use_container_width=False)
