@@ -674,7 +674,7 @@ with economy_tab:
         st.altair_chart(heatmap_chart(rates, counts, "loadout do adversário", "loadout da equipe", "% de rounds vencidos"), use_container_width=True)
 
     st.subheader("2. Perder um round abala a equipe no round seguinte?")
-    st.caption("Round fácil perdido: a equipe perdeu um round em que o adversário venceu em desvantagem (clutch ou thrifty). Quadrado: quantos rounds seguintes a equipe deveria vencer só pelo dinheiro que tinha. Círculo: quantos venceu de fato. Pontos juntos significam que o resultado do round anterior não mudou nada além do dinheiro que deixou.")
+    st.caption("Round fácil perdido é quando a equipe perdeu um round em que o adversário venceu em desvantagem (clutch ou thrifty). Quadrado mostra quantos rounds seguintes a equipe deveria vencer só pelo dinheiro que tinha. Círculo mostra quantos venceu de fato.")
     all_column, close_column = st.columns(2)
     all_column.markdown("**Todas as partidas**")
     previous_labels = {"perdeu round fácil (clutch ou thrifty do adversário)": "perdeu round fácil"}
