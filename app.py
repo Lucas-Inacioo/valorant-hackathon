@@ -692,7 +692,7 @@ with economy_tab:
     pistol_column.markdown("**Round pistol**, quantos cada lado vence")
     pistol_column.dataframe(pistol_by_side(economy_rounds), use_container_width=False)
     overall_cycle, cycle_by_side = second_round_cycle(economy_rounds)
-    cycle_column.markdown("**Equipe que perdeu o pistol: o que ela gastou no round 2 e quantos dos rounds 2, 3 e 4 venceu.** Eco: até 4 mil. Leve: 4 a 8 mil. Force: 8 mil ou mais. Nas tabelas, força da equipe é a taxa de vitória do round 5 em diante, para ver se quem força é uma equipe melhor ou pior.")
+    cycle_column.markdown("**Equipe que perdeu o pistol, o que ela gastou no round 2 e quantos dos rounds 2, 3 e 4 venceu.** Nas tabelas, força da equipe é a taxa de vitória do round 5 em diante, para ver se quem força é uma equipe melhor ou pior.")
     cycle_column.altair_chart(grouped_bar_chart(overall_cycle[["vitoria_round_2", "vitoria_round_3", "vitoria_round_4"]].rename(columns={"vitoria_round_2": "round 2", "vitoria_round_3": "round 3", "vitoria_round_4": "round 4"}).rename_axis(index="quanto a equipe gastou no round 2"), [WON_COLOR, TRADE_COLOR, NEUTRAL_COLOR], "% de rounds vencidos"), use_container_width=True)
     with st.expander("Números dos rounds 2 a 4, no total e por lado"):
         st.dataframe(overall_cycle, use_container_width=True)
