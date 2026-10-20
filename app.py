@@ -381,12 +381,20 @@ with overview_tab:
 - **Primeiro abate.** O primeiro abate do round. A equipe que o faz "abre o round".
 - **Troca.** Quando o jogador que matou alguém é morto por um aliado da vítima em até 5 segundos.
 - **Isolado.** Jogador que morre sem nenhum aliado vivo a menos de 10 metros (ajustável).
-  - As posições nos arquivos vêm em unidades do jogo, sem metro. O painel assume 100 unidades por metro, que é a escala padrão da engine do jogo (Unreal, em centímetros). Então 10 metros são 1.000 unidades. É uma suposição, ainda não confirmada com os organizadores, e vale para toda distância citada no painel.
+  - As posições nos arquivos vêm em unidades do jogo, não metros.
+  - O estudo assume 100 unidades por metro, que é a escala padrão da engine do jogo (Unreal, em centímetros).
+  - Então 10 metros são 1.000 unidades, e será apenas uma suposição para facilitar a leitura.
 - **Colapso.** Três jogadores da mesma equipe morrem em até 10 segundos sem matar ninguém nesse intervalo.
 - **Plant e defuse.** Plantar a spike (ataque) e desarmar a spike (defesa).
 - **Loadout.** Valor total, em créditos, das armas e escudos dos cinco jogadores no início do round.
-- **Esperado pelos vivos.** A taxa que seria normal para a mesma quantidade de jogadores vivos de cada lado. Serve para separar o efeito da posição ou do tempo do efeito de estar em vantagem numérica.
-- **Comparado com a equipe.** A taxa de vitória do round menos a taxa de rounds que a equipe venceu na partida inteira. Desconta equipes mais fortes ou mais fracas.
+- **Esperado pelos vivos.** Uma comparação justa para o desarme da spike.
+  - Quantos jogadores estão vivos de cada lado no momento do plant é o que mais decide se a defesa desarma. Com 2 atacantes contra 3 defensores, a defesa desarma 76% das vezes. Com 5 contra 5, 33%.
+  - Por isso, antes de dizer que uma posição ou um horário de plant é bom, o painel pergunta: com esse mesmo número de vivos, quanto a defesa costuma desarmar? Esse é o esperado pelos vivos.
+  - Se a posição desarma 40% e o esperado era 30%, a posição em si vale 10 pontos. Se desarma 40% e o esperado era 40%, a posição não muda nada, o que mudou foi quantos chegaram vivos.
+- **Comparado com a equipe.** Uma comparação justa para o custo de uma morte.
+  - Uma equipe forte vence muitos rounds mesmo perdendo o primeiro jogador. Uma equipe fraca perde muitos rounds mesmo sem perder ninguém. Olhar só a taxa de vitória depois da morte misturaria essas duas coisas.
+  - Então o painel pega a taxa de vitória do round depois da morte e subtrai a taxa de rounds que aquela equipe venceu na partida inteira. O que sobra é quanto a morte custou além do normal daquela equipe.
+  - Exemplo: a equipe venceu 50% dos rounds da partida, mas só 30% dos rounds em que o sentinela morreu primeiro. Comparado com a equipe, essa morte custou 20 pontos.
 """)
     maps_column, results_column = st.columns(2)
     maps_column.markdown("**Partidas em cada mapa**")
