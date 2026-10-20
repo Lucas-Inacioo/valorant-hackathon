@@ -776,7 +776,7 @@ with plants_tab:
     watching_column.altair_chart(dumbbell_chart(defuse_by(selected_setups, watching_bands(selected_setups)), "olhando_para_fora", "esperado_pelos_vivos", "defuse", "esperado pelos vivos", "desarmado de fato", "% de spikes desarmadas", count_column="plants", x_domain=[0, 0.6]), use_container_width=True)
     defense_column.markdown("**Distância da defesa até a spike no momento do plant**")
     defense_column.altair_chart(dumbbell_chart(defuse_by(selected_setups, "faixa_defesa"), "faixa_defesa", "esperado_pelos_vivos", "defuse", "esperado pelos vivos", "desarmado de fato", "% de spikes desarmadas", count_column="plants", x_domain=[0, 0.6]), use_container_width=True)
-    st.markdown("**Retomada do site: quando a defesa desarmou, quantos atacantes ainda estavam vivos e a que distância da spike estava o mais próximo**")
+    st.markdown("**Quando a defesa desarmou, quantos atacantes ainda estavam vivos e a que distância da spike estava o mais próximo**")
     st.dataframe(retake_summary(selected_setups), use_container_width=False)
 
 with match_tab:
