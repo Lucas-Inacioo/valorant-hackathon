@@ -684,7 +684,7 @@ with economy_tab:
     streak_all_column, streak_close_column = st.columns(2)
     streak_all_column.markdown("**Quantos rounds seguidos a equipe tinha perdido antes deste**, todas as partidas")
     streak_all_column.altair_chart(dumbbell_chart(after_streak(economy_rounds), "derrotas", "esperado_pelo_dinheiro", "vitoria", "esperado pelo dinheiro", "venceu de fato", "% de rounds vencidos", count_column="rounds", x_domain=[0.2, 0.7]), use_container_width=True)
-    streak_close_column.markdown("**Derrotas seguidas antes do round**, só partidas equilibradas")
+    streak_close_column.markdown("**Quantos rounds seguidos a equipe tinha perdido antes deste**, só partidas equilibradas")
     streak_close_column.altair_chart(dumbbell_chart(after_streak(close_rounds), "derrotas", "esperado_pelo_dinheiro", "vitoria", "esperado pelo dinheiro", "venceu de fato", "% de rounds vencidos", count_column="rounds", x_domain=[0.2, 0.7]), use_container_width=True)
 
     st.subheader("3. Quem perde o pistol deve economizar ou comprar no round 2?")
