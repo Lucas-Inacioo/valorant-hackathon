@@ -895,17 +895,17 @@ with postgame_tab:
     post_round = post_match["roundResults"][post_round_index]
     post_team = post_teams[post_puuid]
     post_flags = flagged_rounds[(flagged_rounds["match_id"] == post_match_row["match_id"]) & (flagged_rounds["round"] == post_round_index + 1) & (flagged_rounds["time"] == post_team)].iloc[0]
-    st.write(f'Round {post_round_index + 1} · {post_names[post_puuid]} jogou {post_flags["lado"]} e o time {"venceu" if post_flags["venceu"] else "perdeu"} o round · loadout {post_flags["loadout"]:,.0f} contra {post_flags["loadout_adversario"]:,.0f}')
+    st.write(f'Round {post_round_index + 1} · {post_names[post_puuid]} é do time {post_team}, que jogou {post_flags["lado"]} e {"venceu" if post_flags["venceu"] else "perdeu"} o round · loadout {post_flags["loadout"]:,.0f} contra {post_flags["loadout_adversario"]:,.0f}')
     post_events = round_events(post_round)
     post_round_deaths = flagged_deaths[(flagged_deaths["match_id"] == post_match_row["match_id"]) & (flagged_deaths["round"] == post_round_index + 1)]
     decisions = player_decisions(post_events, post_teams, post_puuid, post_round_deaths, costs, name_of=post_names.get)
-    team_factors = team_round_factors(post_flags, costs)
     factors_column, decisions_column = st.columns([1, 2])
-    factors_column.markdown("**Fatores do time neste round**")
-    if team_factors:
-        factors_column.markdown("\n".join(f"- {name} ({cost * 100:+.0f} pontos)" for name, cost in team_factors))
-    else:
-        factors_column.write("Nenhum fator da lista.")
+    factors_column.markdown("**Fatores de cada time neste round**")
+    for team_column, team in zip(factors_column.columns(2), ["Blue", "Red"]):
+        team_flags = flagged_rounds[(flagged_rounds["match_id"] == post_match_row["match_id"]) & (flagged_rounds["round"] == post_round_index + 1) & (flagged_rounds["time"] == team)].iloc[0]
+        team_factors = team_round_factors(team_flags, costs)
+        team_column.markdown(f'**{team}** ({team_flags["lado"]}{", time do jogador" if team == post_team else ""})')
+        team_column.markdown("\n".join(f"- {name} ({cost * 100:+.0f} pontos)" for name, cost in team_factors) if team_factors else "Nenhum fator da lista.")
     decisions_column.markdown("**Decisões do jogador neste round**, da que mais custou à que mais ajudou")
     post_map_meta = maps_by_url().get(post_match["matchInfo"]["mapId"])
     if not decisions:
