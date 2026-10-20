@@ -38,6 +38,7 @@ valorant/
     controls.py             Seletores compartilhados
     post_match_selection.py Seleção de partida e saltos para lances
     post_match_views.py     Visões de equipe, jogadores e lances
+    post_match_occurrences.py Sequência de ocorrências e seus botões
     state_comparison.py     Comparação com situações parecidas
     association_comparison.py Comparação histórica das ocorrências
     replay.py               Botões por evento e consulta das posições
@@ -66,6 +67,8 @@ Em **Análise pós-jogo**, você começa pela partida e pela equipe. As visões 
 As observações saem de `valorant/analysis/post_match.py`. Cada padrão tem uma base de oportunidades definida. O resumo conta rounds distintos e separa ações individuais das situações da equipe. Informações de equipamento, posição compatível com troca e ataque sem plant continuam como contexto. As situações coletivas em que um jogador participou aparecem separadas de suas próprias ações.
 
 Os botões dos padrões abrem os lances correspondentes. O estado da navegação é separado por partida e round, para uma troca de seleção não abrir um evento inválido. As análises da partida usam somente os dados daquela partida e os detalhes adicionais são carregados quando você os abre.
+
+Na visão Lances, os botões Ocorrência anterior e Próxima ocorrência percorrem os casos do filtro e mudam o round e o evento automaticamente. O contador indica a posição na sequência, com os rounds perdidos primeiro. O botão de voltar restaura a visão de equipe ou de jogador de onde os lances foram abertos, incluindo o jogador e o round que estavam selecionados naquela tela.
 
 A consulta opcional de situações parecidas usa outras partidas da seleção e combina vivos, fase, equipamento inicial e tempo. Ela exige pelo menos 20 rounds de cinco outras partidas. Quando faltam casos, o valor fica indisponível. As associações históricas e os detalhes de arma inicial, distância e dano do round continuam disponíveis como apoio à revisão.
 

@@ -10,17 +10,21 @@ A navegação de eventos usa um botão para cada registro, com seleção destaca
 
 A troca de partida também reenvia os valores dos seletores ao navegador. Isso evita que uma equipe da partida anterior continue exibida ou que a escolha de um round deixe o mapa no round anterior.
 
+Os botões Ocorrência anterior e Próxima ocorrência percorrem todos os casos do filtro, com contador e troca automática de round e evento. As pontas da sequência ficam desabilitadas. O botão de voltar restaura a visão de origem, o jogador e o round de consulta. Essa origem deixa de valer ao mudar de partida ou equipe.
+
 Os dados originais e o relatório de conclusões não foram alterados nesta etapa.
 
 ## Verificações automáticas
 
-- 73 testes passaram na execução padrão, incluindo testes de navegação com Streamlit. A descoberta encontra 74 testes e deixa a integração completa como execução separada.
+- 80 testes passaram na execução padrão, incluindo testes de navegação com Streamlit. A descoberta encontra 81 testes e deixa a integração completa como execução separada.
 - O domínio tem 18 testes de pós-jogo. Eles conferem oportunidades por padrão, autoria das trocas, rounds únicos, abertura simultânea, ressurreições, perda de vantagem entre registros, coordenadas ausentes e exclusão de eventos após a decisão.
 - Os testes de mapa conferem a ausência de nomes, os destaques de autor e vítima, eventos simultâneos, ressurreição e posições ausentes.
 - Quatro testes de navegação conferem os botões, o foco inicial, a escolha preservada, a separação entre partidas e rounds e a ausência de eventos.
-- 50 cenários de integração passaram nas 11 seções, com o código estável durante toda a execução. A assinatura do aplicativo e módulos permaneceu `3d881e2de1a6c929a69d22a98cf11970b434da502636b137021217a4154b797b`.
+- Sete testes de ocorrências conferem a sequência entre rounds, filtros preservados, múltiplas observações no mesmo evento, escolhas manuais de evento, seleção vazia ou com um único caso e retorno à equipe ou ao jogador de origem.
+- 55 cenários de integração passaram nas 11 seções, com o código estável durante toda a execução. A assinatura do aplicativo e módulos permaneceu `dba5f92dab4f7a28afbf5b3563151e503bbdba2250b241fe5b76b66eec2867d0`.
 - A integração percorre as três visões, troca de equipe e jogador, saltos de padrões para seus lances, oito eventos do round 8 de RUSH2_007, comparação opcional, troca para uma partida mais curta, filtros vazios e as regressões anteriores de isolamento e plant.
 - A conferência no Chromium percorreu as três visões, trocou de partida, abriu o round 8 e alternou entre seus oito botões. Também abriu os detalhes e as associações históricas. Não houve exceção na tela nem erro de JavaScript. A página coube na largura móvel de 390 pixels.
+- A nova conferência no Chromium percorreu as nove mortes longe do apoio de stockão, nos rounds 1, 2, 7, 9, 13, 16, 18, 19 e 10, com os rounds perdidos primeiro. Conferiu o retorno ao mesmo jogador após mudar o filtro e o retorno à equipe com o round de consulta preservado. Não houve erro de JavaScript e a página continuou sem rolagem horizontal em 390 pixels.
 
 ## Dados e conclusões
 

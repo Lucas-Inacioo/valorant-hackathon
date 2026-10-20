@@ -7,8 +7,11 @@ from valorant.ui.post_match_selection import (
     ALL_PATTERNS,
     ALL_PLAYERS,
     PostMatchSelection,
+    evidence_origin,
     jump_to_evidence,
+    return_from_evidence,
 )
+from valorant.ui.post_match_occurrences import render_occurrence_navigation
 from valorant.ui.presentation import display_table
 from valorant.ui.replay import RecordedRound, render_event_buttons, render_recorded_event
 from valorant.ui.state_comparison import render_references
@@ -288,6 +291,19 @@ def show_fight_context(selection: PostMatchSelection, recorded: RecordedRound, e
 
 
 def show_evidence(selection: PostMatchSelection):
+    origin = evidence_origin(selection)
+    if origin:
+        label = (
+            "Voltar para a análise do jogador"
+            if origin["state"]["review_view"] == "Jogadores"
+            else "Voltar para a análise da equipe"
+        )
+        st.button(
+            label,
+            key="review_return",
+            on_click=return_from_evidence,
+            args=(selection,),
+        )
     player_options = [ALL_PLAYERS, *selection.team_players]
     if st.session_state.get("pos_player") not in player_options:
         st.session_state["pos_player"] = ALL_PLAYERS
@@ -374,6 +390,7 @@ def show_evidence(selection: PostMatchSelection):
     event_index = render_event_buttons(
         recorded, key_prefix=f"postmatch_event_{serial}", initial_event_index=initial_event
     )
+    render_occurrence_navigation(selection, recorded, event_index, pattern_id, player_id)
     if event_index is not None:
         map_metadata = selection.app.data.maps().get(selection.match["matchInfo"]["mapId"])
         if map_metadata is None:

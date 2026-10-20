@@ -80,40 +80,84 @@ def select_match_and_team(context: AppContext) -> PostMatchSelection:
         st.session_state["review_pattern"] = ALL_PATTERNS
         st.session_state["overview_round"] = 1
         st.session_state.pop("review_event_focus", None)
+        st.session_state.pop("review_return_to", None)
+        st.session_state.pop("review_occurrence_id", None)
         st.session_state["review_scope"] = scope
     with st.spinner("Reunindo os lances da partida"):
         review = context.data.match_review(match)
     return PostMatchSelection(context, match_info, match, team_id, names, review)
 
 
-def jump_to_evidence(
-    selection: PostMatchSelection, pattern_id=ALL_PATTERNS, player_id=ALL_PLAYERS, round_number=None
-):
-    """Callback executado antes dos seletores para abrir o primeiro lance correspondente."""
+def matching_occurrences(selection, pattern_id=ALL_PATTERNS, player_id=ALL_PLAYERS):
+    """Mantém a mesma sequência nos atalhos e nos botões de ocorrência."""
     observations = selection.review.observations
     chosen = observations[observations["team_id"] == selection.team_id]
     if pattern_id != ALL_PATTERNS:
         chosen = chosen[chosen["pattern_id"] == pattern_id]
     if player_id != ALL_PLAYERS:
         chosen = chosen[chosen["player_id"] == player_id]
-    if round_number is not None:
-        chosen = chosen[chosen["round"] == round_number]
-    if not chosen.empty:
-        chosen = chosen.sort_values(["won_round", "round", "time_ms"])
-        first = chosen.iloc[0]
-        round_number = int(first["round"])
-        event_index = int(first["event_index"]) if pd.notna(first["event_index"]) else 0
+    return chosen.sort_values(["won_round", "round", "time_ms", "event_index", "observation_id"])
+
+
+def evidence_origin(selection):
+    origin = st.session_state.get("review_return_to")
+    if origin and origin["scope"] == (selection.match_id, selection.team_id):
+        return origin
+    return None
+
+
+def return_from_evidence(selection):
+    """Restaura a visão e as escolhas feitas antes de abrir os lances."""
+    origin = evidence_origin(selection)
+    if origin:
+        for key, value in origin["state"].items():
+            st.session_state[key] = value
+
+
+def _open_evidence(selection, pattern_id, player_id, round_number, observation=None):
+    event_index = 0
+    if observation is not None:
+        round_number = int(observation["round"])
+        if pd.notna(observation["event_index"]):
+            event_index = int(observation["event_index"])
+        st.session_state["review_occurrence_id"] = observation["observation_id"]
     else:
-        round_number = round_number or 1
-        event_index = 0
+        st.session_state.pop("review_occurrence_id", None)
     st.session_state["review_view"] = "Lances"
     st.session_state["review_pattern"] = pattern_id
     st.session_state["pos_player"] = player_id
     st.session_state["pos_round"] = round_number - 1
-    serial = st.session_state.get("review_jump_serial", 0) + 1
-    st.session_state["review_jump_serial"] = serial
+    st.session_state["review_jump_serial"] = st.session_state.get("review_jump_serial", 0) + 1
     st.session_state["review_event_focus"] = {
         "match_id": selection.match_id,
         "round": round_number,
         "event_index": event_index,
     }
+
+
+def jump_to_occurrence(selection, pattern_id, player_id, observation_id):
+    chosen = matching_occurrences(selection, pattern_id, player_id)
+    chosen = chosen[chosen["observation_id"] == observation_id]
+    if not chosen.empty:
+        _open_evidence(selection, pattern_id, player_id, 1, chosen.iloc[0])
+
+
+def jump_to_evidence(
+    selection: PostMatchSelection, pattern_id=ALL_PATTERNS, player_id=ALL_PLAYERS, round_number=None
+):
+    """Guarda a origem e abre a primeira ocorrência do filtro solicitado."""
+    view = st.session_state.get("review_view", "Equipe")
+    if view in {"Equipe", "Jogadores"}:
+        st.session_state["review_return_to"] = {
+            "scope": (selection.match_id, selection.team_id),
+            "state": {
+                "review_view": view,
+                "pos_player": st.session_state.get("pos_player", ALL_PLAYERS),
+                "overview_round": st.session_state.get("overview_round", 1),
+            },
+        }
+    chosen = matching_occurrences(selection, pattern_id, player_id)
+    if round_number is not None:
+        chosen = chosen[chosen["round"] == round_number]
+    first = chosen.iloc[0] if not chosen.empty else None
+    _open_evidence(selection, pattern_id, player_id, round_number or 1, first)

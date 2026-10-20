@@ -8,6 +8,7 @@ import contextlib
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import unittest
 
@@ -161,6 +162,24 @@ class AppIntegrationTests(unittest.TestCase):
             check_selected_round_and_player()
             self.assertTrue(event_buttons())
 
+        def check_occurrence(number):
+            check_pattern_jump()
+            counts = [
+                re.fullmatch(r"Ocorrência (\d+) de (\d+)", caption.value)
+                for caption in app.caption
+            ]
+            current = next(match for match in counts if match)
+            self.assertEqual(number, int(current[1]))
+            self.assertGreaterEqual(int(current[2]), number)
+            focus = app.session_state["review_event_focus"]
+            self.assertEqual(focus["round"] - 1, app.selectbox(key="pos_round").value)
+            check_event_selection(focus["event_index"], len(event_buttons()))
+
+        def check_return_to_players(player_id):
+            self.assertEqual("Jogadores", app.radio(key="review_view").value)
+            self.assertEqual(player_id, app.selectbox(key="pos_player").value)
+            check_team_players()
+
         def open_first_pattern():
             buttons = [
                 button
@@ -221,7 +240,22 @@ class AppIntegrationTests(unittest.TestCase):
             run(
                 "Abrir os rounds de um padrão da equipe",
                 open_first_pattern,
-                check_pattern_jump,
+                lambda: check_occurrence(1),
+            )
+            run(
+                "Próxima ocorrência abre o round e evento correspondentes",
+                lambda: app.button(key="review_next_occurrence").click(),
+                lambda: check_occurrence(2),
+            )
+            run(
+                "Ocorrência anterior retorna ao primeiro lance",
+                lambda: app.button(key="review_previous_occurrence").click(),
+                lambda: check_occurrence(1),
+            )
+            run(
+                "Voltar restaura a análise da equipe",
+                lambda: app.button(key="review_return").click(),
+                lambda: self.assertEqual("Equipe", app.radio(key="review_view").value),
             )
             run(
                 "Visão dos jogadores usa somente os integrantes da equipe",
@@ -235,10 +269,21 @@ class AppIntegrationTests(unittest.TestCase):
                 ).select("Red" if app.selectbox(key="review_team").value == "Blue" else "Blue"),
                 check_team_players,
             )
+            origin_player = app.selectbox(key="pos_player").value
             run(
                 "Abrir os rounds de um padrão individual",
                 open_first_pattern,
-                check_pattern_jump,
+                lambda: check_occurrence(1),
+            )
+            run(
+                "Voltar restaura a análise do mesmo jogador",
+                lambda: app.button(key="review_return").click(),
+                lambda: check_return_to_players(origin_player),
+            )
+            run(
+                "Reabrir lances mantém a origem do jogador",
+                open_first_pattern,
+                lambda: check_occurrence(1),
             )
             run(
                 "Lances de todos os jogadores e padrões",
