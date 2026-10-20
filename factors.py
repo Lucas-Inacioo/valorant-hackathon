@@ -134,3 +134,53 @@ def team_round_factors(round_flags, costs):
     """Fatores do round inteiro que o time disparou, do mais caro ao mais barato."""
     triggered = [(name, costs[name]) for name, _, column in ROUND_FACTORS if bool(round_flags[column])]
     return sorted(triggered, key=lambda item: item[1])
+
+
+def match_team_summary(rounds_with_flags, match_id, costs):
+    """Por time da partida: rounds vencidos e, para cada fator do round, quantas vezes aconteceu e quantos pontos de vitória isso custou somados."""
+    match_rounds = rounds_with_flags[rounds_with_flags["match_id"] == match_id]
+    rows = []
+    for team, team_rounds_ in match_rounds.groupby("time"):
+        row = {"time": team, "rounds vencidos": int(team_rounds_["venceu"].sum()), "rounds": len(team_rounds_)}
+        total = 0.0
+        for name, _, column in ROUND_FACTORS:
+            count = int(team_rounds_[column].sum())
+            row[name] = count
+            total += count * costs[name]
+        row["pontos perdidos"] = round(total * 100)
+        rows.append(row)
+    return pd.DataFrame(rows).set_index("time")
+
+
+def match_player_summary(match, deaths, costs):
+    """Por jogador da partida: quantas vezes cada decisão apareceu nos rounds e a soma dos pontos de vitória que custaram."""
+    from round_map import round_events
+    team_by_puuid = {player["puuid"]: player["teamId"] for player in match["players"]}
+    name_by_puuid = {player["puuid"]: f'{player["gameName"]}#{player["tagLine"]}' for player in match["players"]}
+    match_deaths = deaths[deaths["match_id"] == match["matchInfo"]["matchId"]]
+    rows = {puuid: {"jogador": name_by_puuid[puuid], "time": team_by_puuid[puuid], "pontos perdidos": 0.0} for puuid in team_by_puuid if not next(player for player in match["players"] if player["puuid"] == puuid)["isObserver"]}
+    for round_result in match["roundResults"]:
+        events = round_events(round_result)
+        round_deaths = match_deaths[match_deaths["round"] == round_result["roundNum"] + 1]
+        for puuid, row in rows.items():
+            for decision in player_decisions(events, team_by_puuid, puuid, round_deaths, costs):
+                row[decision["fator"]] = row.get(decision["fator"], 0) + 1
+                row["pontos perdidos"] += decision["custo"] * 100
+    table = pd.DataFrame(list(rows.values())).fillna(0)
+    table["pontos perdidos"] = table["pontos perdidos"].round(0)
+    count_columns = [column for column in table.columns if column not in {"jogador", "time", "pontos perdidos"}]
+    table[count_columns] = table[count_columns].astype(int)
+    return table.sort_values(["time", "pontos perdidos"]).set_index("jogador")
+
+
+def match_timeline(rounds_with_flags, match_id, costs):
+    """Round a round: lado e resultado de cada time e os fatores que cada um disparou, do mais caro ao mais barato."""
+    match_rounds = rounds_with_flags[rounds_with_flags["match_id"] == match_id].sort_values(["round", "time"])
+    rows = []
+    for round_number, pair in match_rounds.groupby("round"):
+        row = {"round": round_number}
+        for flags in pair.itertuples():
+            factors = ", ".join(name for name, _ in team_round_factors(flags._asdict(), costs))
+            row[flags.time] = f"{flags.lado}, " + ("venceu" if flags.venceu else "perdeu") + (f" · {factors}" if factors else "")
+        rows.append(row)
+    return pd.DataFrame(rows).set_index("round")

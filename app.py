@@ -20,7 +20,7 @@ from setups import build_setups_table, defuse_by, retake_summary, watching_bands
 from round_map import describe_event, draw_callout_summary, draw_points, draw_rate_markers, draw_round_map, round_events
 from fights import build_fights_table, distance_matrix, distance_summary, economic_first_death, fight_class_summary, next_loadout_by_outcome, player_range_discipline, post_plant_exchange, save_effect, team_summary, trade_possibility_summary
 from first_blood import TIME_LABELS, first_blood_table, plant_summary, summary_by_map, wilson_interval, win_rate_by_time
-from factors import build_factor_tables, factor_ranking, player_decisions, team_round_factors
+from factors import build_factor_tables, factor_ranking, match_player_summary, match_team_summary, match_timeline, player_decisions, team_round_factors
 from solo_deaths import SOLO_DISTANCE, build_deaths_table, context_summary, first_death_summary, summary_by_distance_band, summary_by_round_outcome, territory_summary, win_rate_by_situation, with_solo_flag
 
 st.set_page_config(page_title="VALORANT Hackathon", layout="wide")
@@ -848,7 +848,7 @@ with postgame_tab:
     with st.expander("Números de cada fator"):
         st.dataframe(ranking.round(3), hide_index=True, use_container_width=False)
 
-    st.subheader("2. As decisões de um jogador em um round")
+    st.subheader("2. Apanhado da partida: o que as decisões custaram para cada equipe e cada jogador")
     if st.button("Sortear partida, round e jogador"):
         random_match = selected_matches.sample(1).iloc[0]
         random_loaded = load_match(Path(random_match["caminho"]))
@@ -858,13 +858,24 @@ with postgame_tab:
     match_files = selected_matches["arquivo"].tolist()
     if st.session_state.get("pos_match") not in match_files:
         st.session_state.pop("pos_match", None)
-    post_match_column, post_round_column, post_player_column = st.columns(3)
-    post_file = post_match_column.selectbox("Partida", match_files, key="pos_match")
+    post_file = st.selectbox("Partida", match_files, key="pos_match")
     post_match_row = selected_matches[selected_matches["arquivo"] == post_file].iloc[0]
     post_match = load_match(Path(post_match_row["caminho"]))
     post_names = {player["puuid"]: f'{player["gameName"]}#{player["tagLine"]}' for player in post_match["players"]}
     post_teams = {player["puuid"]: player["teamId"] for player in post_match["players"]}
     post_puuids = [player["puuid"] for player in post_match["players"] if not player["isObserver"]]
+    st.write(f'{post_match_row["torneio"]} · {post_match_row["mapa"]} · Blue {post_match_row["rounds_blue"]} x {post_match_row["rounds_red"]} Red')
+    st.caption("Pontos perdidos é a soma do custo de cada fator ou decisão, em pontos de vitória do round, ao longo da partida. Serve para comparar as duas equipes e os jogadores entre si, não para dizer quantos rounds cada um perdeu de fato.")
+    team_summary_column, player_summary_column = st.columns([1, 2])
+    team_summary_column.markdown("**Por equipe**, quantas vezes cada fator aconteceu")
+    team_summary_column.dataframe(match_team_summary(flagged_rounds, post_match_row["match_id"], costs).T, use_container_width=True)
+    player_summary_column.markdown("**Por jogador**, quantas vezes cada decisão apareceu")
+    player_summary_column.dataframe(match_player_summary(post_match, flagged_deaths, costs), use_container_width=True)
+    with st.expander("Round a round, o que cada equipe disparou"):
+        st.dataframe(match_timeline(flagged_rounds, post_match_row["match_id"], costs), use_container_width=True)
+
+    st.subheader("3. As decisões de um jogador em um round")
+    post_round_column, post_player_column = st.columns(2)
     if st.session_state.get("pos_round") not in range(len(post_match["roundResults"])):
         st.session_state.pop("pos_round", None)
     if st.session_state.get("pos_player") not in post_puuids:
@@ -874,7 +885,7 @@ with postgame_tab:
     post_round = post_match["roundResults"][post_round_index]
     post_team = post_teams[post_puuid]
     post_flags = flagged_rounds[(flagged_rounds["match_id"] == post_match_row["match_id"]) & (flagged_rounds["round"] == post_round_index + 1) & (flagged_rounds["time"] == post_team)].iloc[0]
-    st.write(f'{post_match_row["torneio"]} · {post_match_row["mapa"]} · round {post_round_index + 1} · {post_names[post_puuid]} jogou {post_flags["lado"]} e o time {"venceu" if post_flags["venceu"] else "perdeu"} o round · loadout {post_flags["loadout"]:,.0f} contra {post_flags["loadout_adversario"]:,.0f}')
+    st.write(f'Round {post_round_index + 1} · {post_names[post_puuid]} jogou {post_flags["lado"]} e o time {"venceu" if post_flags["venceu"] else "perdeu"} o round · loadout {post_flags["loadout"]:,.0f} contra {post_flags["loadout_adversario"]:,.0f}')
     post_events = round_events(post_round)
     post_round_deaths = flagged_deaths[(flagged_deaths["match_id"] == post_match_row["match_id"]) & (flagged_deaths["round"] == post_round_index + 1)]
     decisions = player_decisions(post_events, post_teams, post_puuid, post_round_deaths, costs)
