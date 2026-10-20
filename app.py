@@ -36,6 +36,8 @@ SIDE_PHRASES = {"ataque": "no ataque", "defesa": "na defesa"}
 STYLE_COLORS = {"execução rápida": WON_COLOR, "default": TRADE_COLOR, "sem plant": LOST_COLOR}
 ROUND_OUTCOME_LABELS = {False: "perdeu o round", True: "venceu o round"}
 TRADE_POSSIBLE = "aliado em alcance olhando para o killer"
+# Só a largura segue o container, senão o Streamlit encolhe a área do gráfico para caber eixos e legenda na altura
+FIT_WIDTH = alt.AutoSizeParams(type="fit-x", contains="padding")
 
 
 def match_row(match_file, match):
@@ -190,14 +192,16 @@ def rate_chart(table, category_column, rate_column, count_column, x_title, color
     base = alt.Chart(data).encode(y=category_axis(category_column, order), tooltip=tooltip + ([group_column] if group_column else []))
     if group_column:
         groups = list(group_colors)
-        base = base.encode(yOffset=alt.YOffset(f"{group_column}:N", sort=groups), color=alt.Color(f"{group_column}:N", scale=alt.Scale(domain=groups, range=list(group_colors.values())), title=None))
+        base = base.encode(yOffset=alt.YOffset(f"{group_column}:N", sort=groups), color=alt.Color(f"{group_column}:N", scale=alt.Scale(domain=groups, range=list(group_colors.values())), title=None, legend=alt.Legend(orient="bottom")))
         bars = base.mark_bar().encode(x=alt.X(f"{rate_column}:Q", title=x_title))
     else:
         bars = base.mark_bar(color=color).encode(x=alt.X(f"{rate_column}:Q", title=x_title))
     rules = base.mark_rule(strokeWidth=2).encode(x="ic95_baixo:Q", x2="ic95_alto:Q", color=alt.value("#4a4a4a"))
-    counts = base.mark_text(align="left", dx=4, fontSize=10).encode(x="ic95_alto:Q", text=alt.Text(f"{count_column}:Q", format=","), color=alt.value("#6b6b6b"))
+    # O nome do grupo vai escrito ao lado da contagem, para não depender só da cor
+    data["rotulo_contagem"] = data[count_column].map(lambda count: f"{count:,}") if not group_column else data[group_column].astype(str) + " · " + data[count_column].map(lambda count: f"{count:,}")
+    counts = base.mark_text(align="left", dx=4, fontSize=10).encode(x="ic95_alto:Q", text="rotulo_contagem:N", color=alt.value("#6b6b6b"))
     rows = len(order) * (len(group_colors) if group_column else 1)
-    return (bars + rules + counts).properties(height=height or max(120, 24 * rows + 40))
+    return (bars + rules + counts).properties(height=height or max(120, 24 * rows + 40), autosize=FIT_WIDTH)
 
 
 def dumbbell_chart(table, category_column, left_column, right_column, left_label, right_label, x_title, count_column=None, left_color=NEUTRAL_COLOR, right_color=WON_COLOR, order=None, x_domain=None):
@@ -212,8 +216,10 @@ def dumbbell_chart(table, category_column, left_column, right_column, left_label
     long = data.melt(id_vars=["rotulo"], value_vars=[left_column, right_column], var_name="medida", value_name="valor").replace({"medida": {left_column: left_label, right_column: right_label}})
     scale = alt.Scale(domain=x_domain) if x_domain else alt.Undefined
     lines = alt.Chart(data).mark_rule(color="#b0b0b0", strokeWidth=2).encode(y=category_axis("rotulo", order), x=alt.X(f"{left_column}:Q", title=x_title, scale=scale), x2=f"{right_column}:Q")
-    points = alt.Chart(long).mark_circle(size=110, opacity=1).encode(y=category_axis("rotulo", order), x=alt.X("valor:Q", title=x_title, scale=scale), color=alt.Color("medida:N", scale=alt.Scale(domain=[left_label, right_label], range=[left_color, right_color]), title=None), tooltip=["rotulo", "medida", alt.Tooltip("valor:Q", format=".3f")])
-    return (lines + points).properties(height=max(120, 28 * len(data) + 40))
+    measures = alt.Scale(domain=[left_label, right_label], range=[left_color, right_color])
+    shapes = alt.Scale(domain=[left_label, right_label], range=["square", "circle"])
+    points = alt.Chart(long).mark_point(size=110, opacity=1, filled=True).encode(y=category_axis("rotulo", order), x=alt.X("valor:Q", title=x_title, scale=scale), color=alt.Color("medida:N", scale=measures, title=None), shape=alt.Shape("medida:N", scale=shapes, title=None), tooltip=["rotulo", "medida", alt.Tooltip("valor:Q", format=".3f")])
+    return (lines + points).properties(height=max(120, 28 * len(data) + 40), autosize=FIT_WIDTH)
 
 
 def heatmap_chart(rates, counts, x_title, y_title, color_title):
@@ -249,13 +255,35 @@ def share_chart(shares, counts, part_colors, x_title):
     long["rotulo"] = long["categoria"] + " (" + long["categoria"].map(lambda category: int(counts.get(category, 0))).astype(str) + ")"
     parts = list(part_colors)
     long["parte_ordem"] = long["parte"].map(parts.index)
-    return alt.Chart(long).mark_bar().encode(
-        y=category_axis("rotulo", list(dict.fromkeys(long["rotulo"]))),
-        x=alt.X("fracao:Q", stack="normalize", title=x_title, axis=alt.Axis(format="%")),
+    long = long.sort_values(["rotulo", "parte_ordem"])
+    long["fim"] = long.groupby("rotulo")["fracao"].cumsum()
+    long["inicio"] = long["fim"] - long["fracao"]
+    long["meio"] = (long["inicio"] + long["fim"]) / 2
+    long["texto"] = long.apply(lambda row: f"{row['parte']} {row['fracao']:.0%}" if row["fracao"] >= 0.12 else "", axis=1)
+    y = category_axis("rotulo", list(dict.fromkeys(long["rotulo"])))
+    bars = alt.Chart(long).mark_bar().encode(
+        y=y,
+        x=alt.X("inicio:Q", title=x_title, axis=alt.Axis(format="%")),
+        x2="fim:Q",
         color=alt.Color("parte:N", scale=alt.Scale(domain=parts, range=list(part_colors.values())), sort=parts, title=None),
-        order=alt.Order("parte_ordem:Q"),
         tooltip=["rotulo", "parte", alt.Tooltip("fracao:Q", format=".0%")],
-    ).properties(height=max(120, 32 * long["rotulo"].nunique() + 40))
+    )
+    text = alt.Chart(long).mark_text(fontSize=10, color="white").encode(y=y, x="meio:Q", text="texto:N")
+    return (bars + text).properties(height=max(120, 32 * long["rotulo"].nunique() + 40), autosize=FIT_WIDTH)
+
+
+def grouped_bar_chart(wide, series_colors, x_title, value_format=".0%", height=None):
+    """Barras horizontais por categoria com uma barra por série. O nome da série vai escrito ao lado do valor, para não depender da cor."""
+    long = wide.rename_axis(index="categoria", columns="serie").stack().rename("valor").reset_index()
+    long["categoria"] = long["categoria"].astype(str)
+    series = [column for column in wide.columns]
+    long["texto"] = long["serie"].astype(str) + " · " + long["valor"].map(lambda value: format(value, value_format))
+    y = category_axis("categoria", list(dict.fromkeys(long["categoria"])))
+    y.title = wide.index.name
+    base = alt.Chart(long).encode(y=y, yOffset=alt.YOffset("serie:N", sort=series), tooltip=["categoria", "serie", alt.Tooltip("valor:Q", format=value_format)])
+    bars = base.mark_bar().encode(x=alt.X("valor:Q", title=x_title), color=alt.Color("serie:N", scale=alt.Scale(domain=series, range=list(series_colors)), title=None, legend=alt.Legend(orient="bottom")))
+    labels = base.mark_text(align="left", dx=4, fontSize=10, color="#6b6b6b").encode(x=alt.X("valor:Q"), text="texto:N")
+    return (bars + labels).properties(height=height or max(120, 22 * len(long) + 40), autosize=FIT_WIDTH)
 
 
 def team_scatter(profiles, x_column, y_column, size_column, x_title, y_title):
@@ -418,7 +446,7 @@ with opening_tab:
     rate_column, count_column = st.columns([3, 2])
     rate_column.altair_chart(rate_chart(win_rate_by_time(first_blood), "faixa", "abriu_venceu", "rounds", "% de rounds vencidos pela equipe que conseguiu o primeiro abate", group_column="lado_abriu", group_colors=SIDE_COLORS, order=TIME_LABELS), use_container_width=True)
     count_column.markdown("**Em que segundo o primeiro abate acontece**, separado pelo lado que fez o abate")
-    count_column.bar_chart(pd.crosstab(first_blood["faixa"], first_blood["lado_abriu"]), color=[ATTACK_COLOR, DEFENSE_COLOR], stack=False, y_label="rounds", x_label="")
+    count_column.altair_chart(grouped_bar_chart(pd.crosstab(first_blood["faixa"], first_blood["lado_abriu"]).reindex(TIME_LABELS), [ATTACK_COLOR, DEFENSE_COLOR], "rounds", ","), use_container_width=True)
     with st.expander("Primeiro abate antes ou depois do plant"):
         st.dataframe(plant_summary(first_blood).rename(index={True: "antes do plant", False: "depois do plant"}, level="antes_do_plant"), use_container_width=False)
 
@@ -437,14 +465,14 @@ with opening_tab:
     else:
         by_callout = openings_by_callout(attack_openings, chosen_map_meta)
         map_average = attack_openings["abriu_venceu"].mean()
-        st.caption(f"Cada círculo é uma região do mapa, com o nome que os jogadores usam para ela. Só foram considerados o primeiro abate de cada round do ataque, antes do plant, e agrupados na região mais próxima de onde o defensor morreu. O tamanho do círculo mostra quantos primeiros abates aconteceram ali, enquanto a cor quantos desses rounds o ataque venceu, em relação à média do mapa ({map_average:.0%}). Quanto mais azul, mais matar um defensor ali quase garante o round. Quanto mais laranja, mesmo matando ali, o round continua em aberto.")
+        st.caption(f"Cada círculo é uma região do mapa, com o nome que os jogadores usam para ela. Só foram considerados o primeiro abate de cada round do ataque, antes do plant, e agrupados na região mais próxima de onde o defensor morreu. O tamanho do círculo mostra quantos primeiros abates aconteceram ali, enquanto a cor e a forma quantos desses rounds o ataque venceu, em relação à média do mapa ({map_average:.0%}). Círculo: matar um defensor ali quase garante o round. Quadrado: mesmo matando ali, o round continua em aberto.")
         map_column, table_column = st.columns([3, 2])
         if st.checkbox("Mostrar cada abate em vez das regiões"):
             won = attack_openings[attack_openings["abriu_venceu"]]
             lost = attack_openings[~attack_openings["abriu_venceu"]]
             map_column.pyplot(draw_points(chosen_map_meta, [
-                ("ataque venceu o round", WON_COLOR, list(zip(won["vitima_x"], won["vitima_y"]))),
-                ("ataque perdeu o round", LOST_COLOR, list(zip(lost["vitima_x"], lost["vitima_y"]))),
+                ("ataque venceu o round", WON_COLOR, "o", list(zip(won["vitima_x"], won["vitima_y"]))),
+                ("ataque perdeu o round", LOST_COLOR, "x", list(zip(lost["vitima_x"], lost["vitima_y"]))),
             ]))
         else:
             # Sem nomes sobre o mapa: a tabela ao lado traz as regiões
@@ -458,7 +486,7 @@ with opening_tab:
     role_first = first_death_by_role(role_deaths, max_seconds)
     share_column, cost_column = st.columns(2)
     share_column.markdown("**Quem morre primeiro e frequência nas composições de times**")
-    share_column.bar_chart(role_share(role_deaths, max_seconds), color=[NEUTRAL_COLOR, ATTACK_COLOR, DEFENSE_COLOR], stack=False, y_label="fração", x_label="")
+    share_column.altair_chart(grouped_bar_chart(role_share(role_deaths, max_seconds), [NEUTRAL_COLOR, ATTACK_COLOR, DEFENSE_COLOR], "fração"), use_container_width=True)
     cost_column.markdown("**Quantos rounds a equipe ainda vence depois de perder o primeiro jogador**, separado pela função do jogador perdido")
     cost_column.altair_chart(rate_chart(role_first, "funcao", "vitoria_da_vitima", "rounds", "% de rounds vencidos pela equipe que perdeu o primeiro jogador", group_column="lado", group_colors=SIDE_COLORS, order=ROLE_ORDER), use_container_width=True)
     with st.expander("Tabelas por função, por troca e por agente"):
@@ -505,7 +533,7 @@ with trades_tab:
         by_situation["aliados vivos no instante da morte"] = by_situation["situacao"].str.split("v").str[0].astype(int)
         by_allies = (by_situation["diferenca"] * by_situation["mortes"]).groupby([by_situation["aliados vivos no instante da morte"], by_situation["lado"]]).sum() / by_situation.groupby(["aliados vivos no instante da morte", "lado"])["mortes"].sum()
         st.markdown(f"**{label}**")
-        st.bar_chart(by_allies.unstack("lado"), color=[ATTACK_COLOR, DEFENSE_COLOR], stack=False, y_label="diferença na vitória", x_label="aliados da vítima vivos no instante da morte", height=260)
+        st.altair_chart(grouped_bar_chart(by_allies.unstack("lado").rename_axis(index="aliados da vítima vivos no instante da morte"), [ATTACK_COLOR, DEFENSE_COLOR], "diferença na vitória", "+.0%", height=260), use_container_width=True)
         with st.expander(f"Números de cada situação (aliados x inimigos vivos): {label.lower()}"):
             st.dataframe(by_situation.drop(columns=["aliados vivos no instante da morte"]), hide_index=True, use_container_width=False)
 
@@ -518,11 +546,11 @@ with trades_tab:
     won_column.altair_chart(rate_chart(trade_table, "troca_possivel", "venceu_round", "mortes", "% de rounds vencidos pela equipe da vítima", group_column="lado", group_colors=SIDE_COLORS), use_container_width=True)
 
     st.subheader("3. A que distância do aliado mais próximo o jogador morreu?")
-    st.caption("Mortes agrupadas pela distância até o aliado vivo mais próximo, em unidades do jogo (100 unidades são cerca de 1 metro). Verde: quantas foram trocadas. Azul: quantos desses rounds a equipe da vítima ainda venceu.")
+    st.caption("Mortes agrupadas pela distância até o aliado vivo mais próximo, em unidades do jogo (100 unidades são cerca de 1 metro). Morte trocada: quantas foram trocadas. Equipe venceu o round: quantos desses rounds a equipe da vítima ainda venceu.")
     for side_column, side in zip(st.columns(2), ["ataque", "defesa"]):
         side_deaths = deaths_with_allies[deaths_with_allies["lado"] == side]
         side_column.markdown(f"**Jogador que morreu estava {SIDE_PHRASES[side]}**")
-        side_column.bar_chart(summary_by_distance_band(side_deaths)[["fracao_trocadas", "venceu_round"]].rename(columns={"fracao_trocadas": "morte trocada", "venceu_round": "equipe venceu o round"}), color=[TRADE_COLOR, WON_COLOR], stack=False, y_label="% das mortes", x_label="distância até o aliado mais próximo (unidades do jogo)")
+        side_column.altair_chart(grouped_bar_chart(summary_by_distance_band(side_deaths)[["fracao_trocadas", "venceu_round"]].rename(columns={"fracao_trocadas": "morte trocada", "venceu_round": "equipe venceu o round"}).rename_axis(index="distância até o aliado mais próximo (unidades do jogo)"), [TRADE_COLOR, WON_COLOR], "% das mortes"), use_container_width=True)
     with st.expander("Números por lado e resultado do round, e o primeiro abate separado em isolado ou trocado"):
         st.dataframe(summary_by_round_outcome(deaths_with_allies, ["lado"]).rename(index=ROUND_OUTCOME_LABELS, level="venceu_round"), use_container_width=False)
         for side_column, side in zip(st.columns(2), ["ataque", "defesa"]):
@@ -577,7 +605,7 @@ with collapse_tab:
     side_column, map_column = st.columns([2, 3])
     side_column.markdown("**Parte dos rounds com colapso**, em cada lado")
     side_column.altair_chart(rate_chart(by_side, "lado", "colapsos", "rounds", "% dos rounds com colapso", group_column="lado", group_colors=SIDE_COLORS, height=140), use_container_width=True)
-    side_column.markdown("**Quantos rounds a equipe vence** quando colapsa (laranja) e quando não colapsa (azul)")
+    side_column.markdown("**Quantos rounds a equipe vence** quando colapsa (quadrado) e quando não colapsa (círculo)")
     side_column.altair_chart(dumbbell_chart(by_side, "lado", "venceu_com_colapso", "venceu_sem_colapso", "com colapso", "sem colapso", "% de rounds vencidos", count_column="rounds", left_color=LOST_COLOR), use_container_width=True)
     map_column.markdown("**Parte dos rounds com colapso em cada mapa**, por lado")
     by_map_side = collapse_summary(styles, ["mapa", "lado"]).rename(index=map_name_by_internal, level="mapa").sort_values("rounds", ascending=False)
@@ -593,7 +621,7 @@ with collapse_tab:
         regions["y"] = regions["regiao_colapso"].map(lambda name: location_by_name.get(name, (None, None))[1])
         regions = regions.dropna(subset=["x", "y"])
         map_pre_plant = regions["pre_plant"].mean()
-        st.caption(f"Cada círculo é uma região do mapa, só regiões com 5 ou mais colapsos. O tamanho mostra quantos colapsos aconteceram ali, enquanto a cor mostra quando, com azul sendo antes do plant e vermelho depois do plant, em relação à média do mapa ({map_pre_plant:.0%} antes do plant).")
+        st.caption(f"Cada círculo é uma região do mapa, só regiões com 5 ou mais colapsos. O tamanho mostra quantos colapsos aconteceram ali, enquanto a cor e a forma mostram quando, com círculo sendo antes do plant e quadrado depois do plant, em relação à média do mapa ({map_pre_plant:.0%} antes do plant).")
         for side_column, side in zip(st.columns(2), ["ataque", "defesa"]):
             side_regions = regions[regions["lado"] == side].set_index("regiao_colapso")
             side_column.markdown(f"**Colapsos da equipe {SIDE_PHRASES[side].replace('no ', 'de ').replace('na ', 'de ')}** ({int(side_regions['colapsos'].sum())} colapsos)")
@@ -646,7 +674,7 @@ with economy_tab:
         st.altair_chart(heatmap_chart(rates, counts, "loadout do adversário", "loadout da equipe", "% de rounds vencidos"), use_container_width=True)
 
     st.subheader("2. Perder um round abala a equipe no round seguinte?")
-    st.caption("Round fácil perdido: a equipe perdeu um round em que o adversário venceu em desvantagem (clutch ou thrifty). Ponto cinza: quantos rounds seguintes a equipe deveria vencer só pelo dinheiro que tinha. Ponto azul: quantos venceu de fato. Pontos juntos significam que o resultado do round anterior não mudou nada além do dinheiro que deixou.")
+    st.caption("Round fácil perdido: a equipe perdeu um round em que o adversário venceu em desvantagem (clutch ou thrifty). Quadrado: quantos rounds seguintes a equipe deveria vencer só pelo dinheiro que tinha. Círculo: quantos venceu de fato. Pontos juntos significam que o resultado do round anterior não mudou nada além do dinheiro que deixou.")
     all_column, close_column = st.columns(2)
     all_column.markdown("**Todas as partidas**")
     previous_labels = {"perdeu round fácil (clutch ou thrifty do adversário)": "perdeu round fácil"}
@@ -665,7 +693,7 @@ with economy_tab:
     pistol_column.dataframe(pistol_by_side(economy_rounds), use_container_width=False)
     overall_cycle, cycle_by_side = second_round_cycle(economy_rounds)
     cycle_column.markdown("**Equipe que perdeu o pistol: o que ela gastou no round 2 e quantos dos rounds 2, 3 e 4 venceu.** Eco: até 4 mil. Leve: 4 a 8 mil. Force: 8 mil ou mais. Nas tabelas, força da equipe é a taxa de vitória do round 5 em diante, para ver se quem força é uma equipe melhor ou pior.")
-    cycle_column.bar_chart(overall_cycle[["vitoria_round_2", "vitoria_round_3", "vitoria_round_4"]].rename(columns={"vitoria_round_2": "round 2", "vitoria_round_3": "round 3", "vitoria_round_4": "round 4"}), color=[WON_COLOR, TRADE_COLOR, NEUTRAL_COLOR], stack=False, y_label="% de rounds vencidos", x_label="quanto a equipe gastou no round 2")
+    cycle_column.altair_chart(grouped_bar_chart(overall_cycle[["vitoria_round_2", "vitoria_round_3", "vitoria_round_4"]].rename(columns={"vitoria_round_2": "round 2", "vitoria_round_3": "round 3", "vitoria_round_4": "round 4"}).rename_axis(index="quanto a equipe gastou no round 2"), [WON_COLOR, TRADE_COLOR, NEUTRAL_COLOR], "% de rounds vencidos"), use_container_width=True)
     with st.expander("Números dos rounds 2 a 4, no total e por lado"):
         st.dataframe(overall_cycle, use_container_width=True)
         st.dataframe(cycle_by_side, use_container_width=True)
@@ -685,7 +713,7 @@ with economy_tab:
     save_win_column.altair_chart(rate_chart(saves, "sobreviventes", "venceu_seguinte", "rounds", "% de rounds seguintes vencidos", height=170), use_container_width=True)
 
 with plants_tab:
-    st.markdown("Cada round em que a spike foi plantada entra uma vez: onde foi plantada, quantos jogadores de cada lado estavam vivos nesse momento e se a defesa desarmou. Esperado pelos vivos: a taxa de desarme normal para a mesma quantidade de vivos de cada lado. Nos gráficos de dois pontos, cinza é o esperado e azul é o que aconteceu. Quando o azul fica à direita do cinza, a defesa desarmou mais do que o número de vivos explica.")
+    st.markdown("Cada round em que a spike foi plantada entra uma vez: onde foi plantada, quantos jogadores de cada lado estavam vivos nesse momento e se a defesa desarmou. Esperado pelos vivos: a taxa de desarme normal para a mesma quantidade de vivos de cada lado. Nos gráficos de dois pontos, o quadrado é o esperado e o círculo é o que aconteceu. Quando o círculo fica à direita do quadrado, a defesa desarmou mais do que o número de vivos explica.")
     selected_plants = plants_table()[plants_table()["match_id"].isin(selected_ids)]
     plants_col, defuse_col, time_col = st.columns(3)
     plants_col.metric("Rounds com spike plantada", len(selected_plants))
@@ -716,7 +744,7 @@ with plants_tab:
     else:
         cells = cells_for_map(selected_plants, plant_map_internal)
         map_defuse = selected_plants[selected_plants["mapa"] == plant_map_internal]["defusada"].mean()
-        st.caption(f"Cada bola junta os plants feitos num quadrado de cerca de 4 metros, só quadrados com 5 ou mais plants, com uma imagem por site. Tamanho da bola: quantos plants. Cor: quantos foram desarmados, em relação à média do mapa ({map_defuse:.0%}). Azul: a defesa desarma mais do que a média ali. Vermelho: menos.")
+        st.caption(f"Cada bola junta os plants feitos num quadrado de cerca de 4 metros, só quadrados com 5 ou mais plants, com uma imagem por site. Tamanho da bola: quantos plants. Cor e forma: quantos foram desarmados, em relação à média do mapa ({map_defuse:.0%}). Círculo: a defesa desarma mais do que a média ali. Quadrado: menos.")
         sites = sorted(cells["site"].unique())
         for site_column, site in zip(st.columns(len(sites)), sites):
             site_cells = cells[cells["site"] == site]
