@@ -509,9 +509,9 @@ with trades_tab:
             st.dataframe(by_situation.drop(columns=["aliados vivos no instante da morte"]), hide_index=True, use_container_width=False)
 
     st.subheader("2. Quando a troca era possível, ela aconteceu?")
-    trade_table = trade_possibility_summary(fights, ["lado"]).rename(index={TRADE_POSSIBLE: "aliado da vítima a menos de 20 m do inimigo que a matou, olhando para ele", "aliado em alcance olhando para outro lado": "aliado da vítima a menos de 20 m do inimigo que a matou, olhando para outro lado", "sem aliado em alcance": "nenhum aliado da vítima a menos de 20 m do inimigo que a matou"}, level="troca_possivel")
+    trade_table = trade_possibility_summary(fights, ["lado"]).rename(index={TRADE_POSSIBLE: "aliado perto, olhando para o inimigo", "aliado em alcance olhando para outro lado": "aliado perto, olhando para outro lado", "sem aliado em alcance": "nenhum aliado perto"}, level="troca_possivel")
     traded_column, won_column = st.columns(2)
-    traded_column.markdown("**Quantas mortes foram trocadas**, considerando se algum aliado da vítima estava perto do inimigo que a matou e olhando para ele")
+    traded_column.markdown("**Quantas mortes foram trocadas**, considerando se algum aliado da vítima estava a menos de 20 m do inimigo que a matou e olhando para ele")
     traded_column.altair_chart(rate_chart(trade_table, "troca_possivel", "trocada", "mortes", "% de mortes trocadas", group_column="lado", group_colors=SIDE_COLORS), use_container_width=True)
     won_column.markdown("**Quantos rounds a equipe da vítima venceu**, nas mesmas três situações")
     won_column.altair_chart(rate_chart(trade_table, "troca_possivel", "venceu_round", "mortes", "% de rounds vencidos pela equipe da vítima", group_column="lado", group_colors=SIDE_COLORS), use_container_width=True)
