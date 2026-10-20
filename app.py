@@ -284,7 +284,7 @@ def opening_impact_chart(by_map):
     data["rotulo"] = data["mapa"] + " (" + data["rounds"].astype(str) + ")"
     base = alt.Chart(data).encode(y=category_axis("rotulo", list(data["rotulo"])))
     tooltip = ["mapa", "rounds", "ataque_vence_se_abre", "ataque_vence_se_defesa_abre", "impacto_da_abertura", "impacto_ic95_baixo", "impacto_ic95_alto"]
-    bars = base.mark_bar(color=ATTACK_COLOR).encode(x=alt.X("impacto_da_abertura:Q", title="diferença entre taxa de vitória quando ataque abre e quando defesa abre"), tooltip=tooltip)
+    bars = base.mark_bar(color=ATTACK_COLOR).encode(x=alt.X("impacto_da_abertura:Q", title="% de vitória do ataque com o primeiro abate menos % de vitória do ataque sem ele"), tooltip=tooltip)
     intervals = base.mark_rule(color="#4a4a4a", strokeWidth=2).encode(x="impacto_ic95_baixo:Q", x2="impacto_ic95_alto:Q", tooltip=tooltip)
     return (bars + intervals).properties(height=30 * len(data) + 40)
 
@@ -346,8 +346,8 @@ matches, players, rounds = build_tables()
 st.sidebar.title("Macro game")
 all_tournaments = sorted(matches["torneio"].unique())
 chosen_tournaments = st.sidebar.multiselect("Torneios", all_tournaments, default=all_tournaments)
-st.sidebar.markdown("Cada aba responde uma pergunta de decisão de time. Mecânica individual (mira, score) fica fora, na aba Exploração.")
-st.sidebar.markdown("Taxas vêm com intervalo de 95% (traço escuro) e o número de casos ao lado. Barras cujos traços se sobrepõem não são distinguíveis com estes dados.")
+st.sidebar.markdown("Cada aba responde uma pergunta sobre decisões da equipe. Mira e pontuação individual ficam de fora, na aba Exploração.")
+st.sidebar.markdown("Como ler os gráficos: o traço escuro em cada barra é a margem de erro (intervalo de 95%) e o número ao lado é quantos rounds ou mortes entraram na conta. Se os traços de duas barras se cruzam, a diferença entre elas pode ser só acaso.")
 selected_matches = matches[matches["torneio"].isin(chosen_tournaments)]
 selected_ids = set(selected_matches["match_id"])
 selected_players = players[players["match_id"].isin(selected_ids)]
@@ -365,56 +365,70 @@ with overview_tab:
     st.markdown("""
 **O que cada aba responde**
 
-- **Abertura.** Quando e onde a primeira morte acontece, quanto ela pesa por lado, por mapa e por função do agente que morreu.
-- **Trocas e isolamento.** O que a troca vale, quando ela era possível e não saiu, e o que a distância ao aliado muda.
-- **Colapso e estilo.** Rounds que acabam em 10 segundos, ritmo do ataque (execução rápida ou default) e se o time muda quando está atrás.
-- **Economia.** Quanto o loadout compra de round, o round seguinte, pistol e round 2, e o que o save rende.
-- **Plant e defuse.** Onde a spike é plantada, quanto cada posição é defusada e o que o setup do pós-plant muda.
+- **Abertura.** Quando e onde acontece o primeiro abate do round, quanto ele pesa para cada lado, em cada mapa e conforme a função do agente que morreu.
+- **Trocas e isolamento.** Quanto vale vingar um aliado logo após a morte dele (a troca), quantas vezes a troca era possível e não saiu, e o que muda quando o jogador morre longe dos aliados.
+- **Colapso e estilo.** Rounds em que três jogadores morrem em 10 segundos, ritmo do ataque (plantar rápido ou devagar) e se a equipe muda o ritmo quando está perdendo.
+- **Economia.** Quanto o dinheiro gasto em armas compra de rounds, o que acontece no round seguinte a uma derrota, como comprar no round 2 e quanto vale sobreviver a um round perdido.
+- **Plant e defuse.** Onde a spike é plantada, quantas vezes a defesa desarma em cada posição e se o posicionamento no momento do plant muda isso.
 - **Partida.** Replay de um round sobre o minimapa.
-- **Previsão.** Se as métricas explicam e preveem partidas sem usar o resultado.
+- **Previsão.** Se as medidas das conclusões explicam e preveem partidas sem usar o resultado.
+
+**Palavras usadas no painel**
+
+- **Round.** Uma rodada da partida. A equipe que vence 13 rounds vence a partida.
+- **Lado.** Ataque (precisa plantar a spike) ou defesa (precisa impedir ou desarmar). Os lados trocam na metade da partida.
+- **Abate e morte.** O mesmo evento visto por quem matou (abate) e por quem morreu (morte).
+- **Primeiro abate.** O primeiro abate do round. A equipe que o faz "abre o round".
+- **Troca.** Quando o jogador que matou alguém é morto por um aliado da vítima em até 5 segundos.
+- **Isolado.** Jogador que morre sem nenhum aliado vivo a menos de 10 metros (ajustável).
+- **Colapso.** Três jogadores da mesma equipe morrem em até 10 segundos sem matar ninguém nesse intervalo.
+- **Plant e defuse.** Plantar a spike (ataque) e desarmar a spike (defesa).
+- **Loadout.** Valor total, em créditos, das armas e escudos dos cinco jogadores no início do round.
+- **Esperado pelos vivos.** A taxa que seria normal para a mesma quantidade de jogadores vivos de cada lado. Serve para separar o efeito da posição ou do tempo do efeito de estar em vantagem numérica.
+- **Comparado com a equipe.** A taxa de vitória do round menos a taxa de rounds que a equipe venceu na partida inteira. Desconta equipes mais fortes ou mais fracas.
 """)
     maps_column, results_column = st.columns(2)
-    maps_column.markdown("**Partidas por mapa**")
+    maps_column.markdown("**Partidas em cada mapa**")
     maps_column.bar_chart(selected_matches["mapa"].value_counts(), horizontal=True, color=[NEUTRAL_COLOR], x_label="partidas", y_label="")
-    results_column.markdown("**Como os rounds terminam**")
+    results_column.markdown("**Como os rounds terminam** (spike desarmada, spike explodiu, equipe eliminada, tempo esgotado)")
     results_column.bar_chart(selected_rounds["resultado"].value_counts(), horizontal=True, color=[NEUTRAL_COLOR], x_label="rounds", y_label="")
     with st.expander("Lista de partidas"):
         st.dataframe(selected_matches.drop(columns=["match_id", "caminho", "mapa_interno", "mapa_do_arquivo"]), hide_index=True)
 
 with opening_tab:
-    st.markdown("Uma linha por round: quando aconteceu a primeira morte, qual lado abriu o placar e se o time que abriu venceu o round. O tempo conta a partir do round live, sem a fase de compra.")
+    st.markdown("Cada round entra uma vez: em que segundo aconteceu o primeiro abate, qual lado fez esse abate e se essa equipe venceu o round. O tempo começa quando o round fica ao vivo, depois da fase de compra.")
     first_blood = first_blood_rows()[first_blood_rows()["match_id"].isin(selected_ids)]
     rounds_col, median_col, opener_col = st.columns(3)
-    rounds_col.metric("Rounds com morte", len(first_blood))
-    median_col.metric("Mediana da primeira morte", f'{first_blood["segundos"].median():.1f} s')
-    opener_col.metric("Quem abre vence o round", f'{first_blood["abriu_venceu"].mean():.1%}')
+    rounds_col.metric("Rounds com pelo menos um abate", len(first_blood))
+    median_col.metric("Segundo típico do primeiro abate (mediana)", f'{first_blood["segundos"].median():.1f} s')
+    opener_col.metric("Quem faz o primeiro abate vence o round", f'{first_blood["abriu_venceu"].mean():.1%}')
 
-    st.subheader("1. Quem abre vence, e isso muda com o momento?")
+    st.subheader("1. Quem faz o primeiro abate vence o round? Isso muda conforme o segundo em que ele acontece?")
     rate_column, count_column = st.columns([3, 2])
-    rate_column.altair_chart(rate_chart(win_rate_by_time(first_blood), "faixa", "abriu_venceu", "rounds", "vitória do round de quem abriu", group_column="lado_abriu", group_colors=SIDE_COLORS, order=TIME_LABELS), use_container_width=True)
-    count_column.markdown("**Quando a primeira morte acontece, por lado de quem abriu**")
+    rate_column.altair_chart(rate_chart(win_rate_by_time(first_blood), "faixa", "abriu_venceu", "rounds", "% de rounds vencidos pela equipe que fez o primeiro abate", group_column="lado_abriu", group_colors=SIDE_COLORS, order=TIME_LABELS), use_container_width=True)
+    count_column.markdown("**Em que segundo o primeiro abate acontece**, separado pelo lado que fez o abate")
     count_column.bar_chart(pd.crosstab(first_blood["faixa"], first_blood["lado_abriu"]), color=[ATTACK_COLOR, DEFENSE_COLOR], stack=False, y_label="rounds", x_label="")
-    with st.expander("Antes ou depois do plant"):
+    with st.expander("Primeiro abate antes ou depois do plant"):
         st.dataframe(plant_summary(first_blood).rename(index={True: "antes do plant", False: "depois do plant"}, level="antes_do_plant"), use_container_width=False)
 
-    st.subheader("2. Por mapa: onde a abertura do ataque mais pesa")
-    st.caption("Impacto da abertura é a vitória do ataque quando ele abre menos a vitória do ataque quando a defesa abre. Ordenado por rounds, com o número no rótulo.")
+    st.subheader("2. Em que mapa o primeiro abate do ataque pesa mais?")
+    st.caption("A barra mostra a diferença entre duas taxas: quantos rounds o ataque vence quando a equipe atacante faz o primeiro abate, menos quantos vence quando a equipe defensora faz o primeiro abate. Barra maior significa que, naquele mapa, conseguir o primeiro abate muda mais o round. Mapas em ordem de quantidade de rounds, entre parênteses.")
     by_map = summary_by_map(first_blood).rename(index=map_name_by_internal)
     impact_column, table_column = st.columns([3, 2])
     impact_column.altair_chart(opening_impact_chart(by_map), use_container_width=True)
     table_column.dataframe(by_map[["rounds", "ataque_abriu", "ataque_vence", "ataque_vence_se_abre", "ataque_vence_se_defesa_abre"]], use_container_width=True)
 
-    st.subheader("3. Onde o ataque abre o placar")
+    st.subheader("3. Em que lugar do mapa o ataque faz o primeiro abate")
     chosen_internal, chosen_map_meta = map_selector("Mapa", by_map.index.map(internal_by_name), "opening_map")
     attack_openings = first_blood[(first_blood["mapa"] == chosen_internal) & (first_blood["lado_abriu"] == "ataque") & first_blood["antes_do_plant"]]
     if chosen_map_meta is None or attack_openings.empty:
-        st.info("Sem metadado de mapa ou sem aberturas neste recorte.")
+        st.info("Este mapa não tem imagem disponível ou não tem primeiros abates do ataque nos torneios escolhidos.")
     else:
         by_callout = openings_by_callout(attack_openings, chosen_map_meta)
         map_average = attack_openings["abriu_venceu"].mean()
-        st.caption(f"Só aberturas antes do plant, atribuídas à região (callout) mais próxima de onde o defensor morreu. Tamanho: aberturas. Cor: vitória do ataque ao abrir ali, centrada na média do mapa ({map_average:.0%}). Azul: abrir ali quase decide. Laranja: mesmo abrindo ali o round fica em aberto.")
+        st.caption(f"Cada bola é uma região do mapa (o nome que os jogadores usam para ela). Entram só os primeiros abates do ataque antes do plant, colocados na região mais próxima de onde o defensor morreu. Tamanho da bola: quantos primeiros abates aconteceram ali. Cor: quantos desses rounds o ataque venceu, em relação à média do mapa ({map_average:.0%}). Azul: matar um defensor ali quase garante o round. Laranja: mesmo matando ali, o round continua em aberto.")
         map_column, table_column = st.columns([3, 2])
-        if st.checkbox("Mostrar cada kill em vez das regiões"):
+        if st.checkbox("Mostrar cada abate em vez das regiões"):
             won = attack_openings[attack_openings["abriu_venceu"]]
             lost = attack_openings[~attack_openings["abriu_venceu"]]
             map_column.pyplot(draw_points(chosen_map_meta, [
@@ -425,40 +439,40 @@ with opening_tab:
             map_column.pyplot(draw_callout_summary(chosen_map_meta, by_callout, map_average))
         table_column.dataframe(by_callout[["aberturas", "ataque_venceu", "ic95"]], use_container_width=True)
 
-    st.subheader("4. Quem morre primeiro e quanto custa, por função do agente")
-    st.caption("Função vem da lista pública de agentes, só para dar nome ao characterId. Acima do time é a vitória do round menos a taxa de rounds que o time da vítima venceu na partida, o que desconta a força dos dois times.")
-    max_seconds = st.slider("Só primeiras mortes até este tempo do round (s)", 10, 150, 150, step=10, key="role_max_seconds")
+    st.subheader("4. Qual função de agente morre primeiro, e isso muda o custo do primeiro abate?")
+    st.caption("Função é a classe do agente: duelista, iniciador, controlador ou sentinela. Vem da lista pública de agentes, usada só para dar nome ao código do personagem.")
+    max_seconds = st.slider("Considerar só primeiros abates até este segundo do round", 10, 150, 150, step=10, key="role_max_seconds")
     role_deaths = deaths_table()[deaths_table()["match_id"].isin(selected_ids)]
     role_first = first_death_by_role(role_deaths, max_seconds)
     share_column, cost_column = st.columns(2)
-    share_column.markdown("**Quem morre primeiro.** Fração de cada função entre os escalados e entre as vítimas da primeira morte.")
+    share_column.markdown("**Quem morre primeiro.** Cinza: quanto cada função aparece nas escalações. Colorido: quanto cada função aparece entre as vítimas do primeiro abate, no ataque e na defesa. Barra colorida maior que a cinza significa que a função morre primeiro mais do que a escalação sugere.")
     share_column.bar_chart(role_share(role_deaths, max_seconds), color=[NEUTRAL_COLOR, ATTACK_COLOR, DEFENSE_COLOR], stack=False, y_label="fração", x_label="")
-    cost_column.markdown("**Quanto custa.** Vitória do time que perdeu o primeiro jogador, pela função dele.")
-    cost_column.altair_chart(rate_chart(role_first, "funcao", "vitoria_da_vitima", "rounds", "vitória do time da vítima", group_column="lado", group_colors=SIDE_COLORS, order=ROLE_ORDER), use_container_width=True)
+    cost_column.markdown("**Quanto custa.** Quantos rounds a equipe ainda vence depois de perder o primeiro jogador, separado pela função dele. Barras parecidas significam que a função de quem morreu não muda o custo.")
+    cost_column.altair_chart(rate_chart(role_first, "funcao", "vitoria_da_vitima", "rounds", "% de rounds vencidos pela equipe que perdeu o primeiro jogador", group_column="lado", group_colors=SIDE_COLORS, order=ROLE_ORDER), use_container_width=True)
     with st.expander("Tabelas por função, por troca e por agente"):
         st.dataframe(role_first, use_container_width=False)
-        st.markdown("**Trocada ou não.** A função importa quando ninguém troca?")
+        st.markdown("**Com ou sem troca.** A função de quem morreu importa quando ninguém vinga a morte?")
         st.dataframe(first_death_by_role_and_trade(role_deaths, max_seconds), use_container_width=False)
-        st.markdown("**Por agente**, 30 ou mais primeiras mortes. Diferenças entre agentes misturam o agente com quem costuma escolhê-lo.")
+        st.markdown("**Por agente**, só agentes com 30 ou mais primeiras mortes. Cuidado: a diferença entre agentes mistura o agente com o perfil de quem costuma escolhê-lo.")
         st.dataframe(first_death_by_agent(role_deaths, max_seconds), use_container_width=False)
 
-    st.subheader("5. Ao longo da partida: o tempo da primeira morte por round")
+    st.subheader("5. O primeiro abate fica mais cedo ou mais tarde ao longo da partida?")
     per_round = first_blood[first_blood["round"] <= 24].groupby("round")["segundos"].agg(
         rounds="size", p10=lambda seconds: seconds.quantile(0.10), p25=lambda seconds: seconds.quantile(0.25), mediana="median",
         p75=lambda seconds: seconds.quantile(0.75), p90=lambda seconds: seconds.quantile(0.90), media="mean", desvio_padrao="std",
     ).round(1)
-    st.caption("Linha: mediana. Banda escura: p25 a p75. Banda clara: p10 a p90. A distribuição é assimétrica à direita, por isso quantis em vez de média e desvio padrão.")
+    st.caption("Para cada round da partida (1 a 24), o segundo em que o primeiro abate acontece. Linha: valor típico (metade dos rounds abaixo, metade acima). Faixa escura: onde ficam os 50% centrais. Faixa clara: os 80% centrais. O gráfico ao lado mostra quantos rounds entraram em cada ponto.")
     band_column, count_column = st.columns([3, 2])
     band_column.altair_chart(quantile_band_chart(per_round), use_container_width=True)
-    count_column.bar_chart(per_round["rounds"], color=[NEUTRAL_COLOR], y_label="rounds na base", x_label="round")
+    count_column.bar_chart(per_round["rounds"], color=[NEUTRAL_COLOR], y_label="rounds contados", x_label="round da partida")
     with st.expander("Números por round"):
         st.dataframe(per_round, use_container_width=False)
 
 with trades_tab:
-    st.markdown("Para cada morte, a distância da vítima ao aliado vivo mais próximo, se a morte foi trocada (o killer morre em até 5 s) e se a troca era possível (um aliado a até 20 m do killer com o olhar a até 45 graus dele). A cadeia que a base mostra: isolamento tira a troca, e a troca é o que decide o round.")
+    st.markdown("Cada morte entra uma vez, com três perguntas. A que distância estava o aliado vivo mais próximo? A morte foi trocada, ou seja, quem matou foi morto por um aliado da vítima em até 5 segundos? A troca era possível, ou seja, havia um aliado a menos de 20 metros de quem matou, olhando para ele (até 45 graus de desvio)? O que os dados mostram: morrer longe dos aliados tira a chance de troca, e a troca é o que muda o resultado do round.")
     control_column, phase_column = st.columns(2)
-    solo_distance = control_column.slider("Limite de isolamento (unidades de jogo, cerca de 100 por metro)", 500, 3000, SOLO_DISTANCE, step=250)
-    phase = phase_column.radio("Fase do round", ["todas", "pré-plant", "pós-plant"], horizontal=True, help="Depois do plant a lógica de rotação inverte, a defesa precisa retomar o site.")
+    solo_distance = control_column.slider("Distância a partir da qual a morte conta como isolada (unidades do jogo, cerca de 100 por metro)", 500, 3000, SOLO_DISTANCE, step=250)
+    phase = phase_column.radio("Momento do round", ["todas", "pré-plant", "pós-plant"], horizontal=True, help="Depois do plant os papéis se invertem: a defesa precisa entrar no site para desarmar.")
     selected_deaths = deaths_table()[deaths_table()["match_id"].isin(selected_ids)]
     fights = fights_table()[fights_table()["match_id"].isin(selected_ids)]
     if phase != "todas":
@@ -469,219 +483,219 @@ with trades_tab:
     possible = fights[fights["troca_possivel"] == TRADE_POSSIBLE]
     deaths_col, traded_col, isolated_col, missed_col = st.columns(4)
     deaths_col.metric("Mortes", len(selected_deaths))
-    traded_col.metric("Trocadas", f"{selected_deaths['trocada'].mean():.0%}")
-    isolated_col.metric("Isoladas (com aliado vivo)", f"{deaths_with_allies['isolada'].mean():.0%}")
-    missed_col.metric("Troca possível e não feita", f"{1 - possible['trocada'].mean():.0%}")
+    traded_col.metric("Mortes trocadas", f"{selected_deaths['trocada'].mean():.0%}")
+    isolated_col.metric("Mortes isoladas (entre as que tinham aliado vivo)", f"{deaths_with_allies['isolada'].mean():.0%}")
+    missed_col.metric("Trocas possíveis que não aconteceram", f"{1 - possible['trocada'].mean():.0%}")
 
-    st.subheader("1. O que a troca e o aliado perto valem, com os vivos descontados")
-    st.caption("Cada célula é uma situação (aliados x inimigos vivos na hora da morte) com 60 mortes ou mais. O número é a vitória do round com a condição menos sem ela, e ao lado o total de mortes da célula. Comparar dentro da mesma situação separa o efeito da condição do efeito de estar em vantagem numérica. Azul: a condição ajuda. Vermelho: atrapalha.")
-    for flag, label in [("trocada", "Morte trocada"), ("aliado_perto", "Aliado perto (não isolada)")]:
+    st.subheader("1. Quanto vale trocar a morte, e quanto vale ter um aliado perto?")
+    st.caption("Cada quadrado é uma situação: quantos aliados e quantos inimigos estavam vivos no momento da morte (só situações com 60 mortes ou mais). O primeiro número é a diferença entre duas taxas de vitória do round: com troca menos sem troca (no primeiro par de mapas) ou com aliado perto menos sem aliado perto (no segundo par). O segundo número é quantas mortes entraram no quadrado. Comparar só dentro da mesma situação evita confundir o efeito da troca com o efeito de já estar em vantagem numérica. Azul: ajuda a vencer o round. Vermelho: atrapalha. Quase branco: não muda nada.")
+    for flag, label in [("trocada", "Morte trocada"), ("aliado_perto", "Aliado a menos do limite de isolamento")]:
         by_situation = win_rate_by_situation(deaths_with_allies, flag)
         weighted = (by_situation["diferenca"] * by_situation["mortes"]).groupby(by_situation["lado"]).sum() / by_situation.groupby("lado")["mortes"].sum()
-        st.markdown(f"**{label}.** Efeito médio ponderado pelas mortes: ataque {weighted.get('ataque', float('nan')):+.2f}, defesa {weighted.get('defesa', float('nan')):+.2f}.")
+        st.markdown(f"**{label}.** Somando todas as situações, pesadas pelo número de mortes, a diferença média na taxa de vitória do round é {weighted.get('ataque', float('nan')):+.0%} no ataque e {weighted.get('defesa', float('nan')):+.0%} na defesa.")
         attack_column, defense_column = st.columns(2)
-        attack_column.altair_chart(difference_heatmap(by_situation, "ataque", "com menos sem"), use_container_width=True)
-        defense_column.altair_chart(difference_heatmap(by_situation, "defesa", "com menos sem"), use_container_width=True)
-        with st.expander(f"Tabela por situação: {label.lower()}"):
+        attack_column.altair_chart(difference_heatmap(by_situation, "ataque", "diferença na vitória"), use_container_width=True)
+        defense_column.altair_chart(difference_heatmap(by_situation, "defesa", "diferença na vitória"), use_container_width=True)
+        with st.expander(f"Números de cada situação: {label.lower()}"):
             st.dataframe(by_situation, hide_index=True, use_container_width=False)
 
-    st.subheader("2. A troca era possível?")
-    trade_table = trade_possibility_summary(fights, ["lado"]).rename(index={TRADE_POSSIBLE: "aliado em alcance, olhando para o killer", "aliado em alcance olhando para outro lado": "aliado em alcance, olhando para outro lado"}, level="troca_possivel")
+    st.subheader("2. Quando a troca era possível, ela aconteceu?")
+    trade_table = trade_possibility_summary(fights, ["lado"]).rename(index={TRADE_POSSIBLE: "aliado a menos de 20 m, olhando para quem matou", "aliado em alcance olhando para outro lado": "aliado a menos de 20 m, olhando para outro lado", "sem aliado em alcance": "nenhum aliado a menos de 20 m"}, level="troca_possivel")
     traded_column, won_column = st.columns(2)
-    traded_column.markdown("**Fração trocada em cada condição**")
-    traded_column.altair_chart(rate_chart(trade_table, "troca_possivel", "trocada", "mortes", "fração trocada", group_column="lado", group_colors=SIDE_COLORS), use_container_width=True)
-    won_column.markdown("**Vitória do round do time da vítima em cada condição**")
-    won_column.altair_chart(rate_chart(trade_table, "troca_possivel", "venceu_round", "mortes", "vitória do round", group_column="lado", group_colors=SIDE_COLORS), use_container_width=True)
+    traded_column.markdown("**Quantas mortes foram trocadas**, conforme onde estava o aliado mais próximo de quem matou")
+    traded_column.altair_chart(rate_chart(trade_table, "troca_possivel", "trocada", "mortes", "% de mortes trocadas", group_column="lado", group_colors=SIDE_COLORS), use_container_width=True)
+    won_column.markdown("**Quantos rounds a equipe da vítima venceu**, nas mesmas três situações")
+    won_column.altair_chart(rate_chart(trade_table, "troca_possivel", "venceu_round", "mortes", "% de rounds vencidos pela equipe da vítima", group_column="lado", group_colors=SIDE_COLORS), use_container_width=True)
 
-    st.subheader("3. A distância ao aliado mais próximo")
-    st.caption("Por faixa de distância da vítima ao aliado vivo mais próximo: quantas mortes foram trocadas e quantas o time ainda venceu.")
+    st.subheader("3. A que distância do aliado mais próximo o jogador morreu?")
+    st.caption("Mortes agrupadas pela distância até o aliado vivo mais próximo, em unidades do jogo (100 unidades são cerca de 1 metro). Verde: quantas foram trocadas. Azul: quantos desses rounds a equipe da vítima ainda venceu.")
     for side_column, side in zip(st.columns(2), ["ataque", "defesa"]):
         side_deaths = deaths_with_allies[deaths_with_allies["lado"] == side]
-        side_column.markdown(f"**Vítima no {side}**")
-        side_column.bar_chart(summary_by_distance_band(side_deaths)[["fracao_trocadas", "venceu_round"]].rename(columns={"fracao_trocadas": "trocada", "venceu_round": "venceu o round"}), color=[TRADE_COLOR, WON_COLOR], stack=False, y_label="fração", x_label="distância ao aliado mais próximo (unidades)")
-    with st.expander("Resumo por lado e resultado do round, e a primeira morte isolada ou trocada"):
+        side_column.markdown(f"**Jogador que morreu estava no {side}**")
+        side_column.bar_chart(summary_by_distance_band(side_deaths)[["fracao_trocadas", "venceu_round"]].rename(columns={"fracao_trocadas": "morte trocada", "venceu_round": "equipe venceu o round"}), color=[TRADE_COLOR, WON_COLOR], stack=False, y_label="% das mortes", x_label="distância até o aliado mais próximo (unidades do jogo)")
+    with st.expander("Números por lado e resultado do round, e o primeiro abate separado em isolado ou trocado"):
         st.dataframe(summary_by_round_outcome(deaths_with_allies, ["lado"]).rename(index=ROUND_OUTCOME_LABELS, level="venceu_round"), use_container_width=False)
         for side_column, side in zip(st.columns(2), ["ataque", "defesa"]):
             first_deaths = first_death_summary(deaths_with_allies[deaths_with_allies["lado"] == side]).reset_index()
             first_deaths["isolada"] = first_deaths["isolada"].map({False: "acompanhada", True: "isolada"})
             first_deaths["trocada"] = first_deaths["trocada"].map({False: "não trocada", True: "trocada"})
-            side_column.markdown(f"**Primeira morte do round, vítima no {side}**")
+            side_column.markdown(f"**Primeira morte do round, jogador que morreu estava no {side}**")
             side_column.dataframe(first_deaths, hide_index=True, use_container_width=False)
 
-    st.subheader("4. Onde estavam os aliados e em que território a morte aconteceu")
-    st.caption("Contexto pela posição dos aliados vivos. Em grupo: algum aliado dentro do limite. Flanco: nenhum perto e todos na mesma área do mapa. Isolado: nenhum perto e aliados espalhados. Território pela fração do próprio lado entre as posições vivas da região nos primeiros 20 s dos rounds (próprio a partir de 65%, do adversário até 35%).")
+    st.subheader("4. Onde estavam os aliados, e a morte foi em área própria ou do adversário?")
+    st.caption("À esquerda, a posição dos aliados vivos no momento da morte. Em grupo: pelo menos um aliado dentro do limite de isolamento. Flanco: nenhum aliado perto e todos juntos em outra área do mapa. Isolado: nenhum aliado perto e os aliados espalhados. À direita, de quem costuma ser a região onde o jogador morreu, medido por quem fica ali nos primeiros 20 segundos dos rounds. Própria: 65% ou mais do próprio lado. Do adversário: 35% ou menos. Disputada: no meio.")
     context_column, territory_column = st.columns(2)
-    context_column.markdown("**Vitória do round pelo contexto da morte**")
-    context_column.altair_chart(rate_chart(context_summary(deaths_with_allies, ["lado"]), "contexto", "venceu_round", "mortes", "vitória do round", group_column="lado", group_colors=SIDE_COLORS, order=["em grupo", "flanco", "isolado", "último vivo"]), use_container_width=True)
-    territory_column.markdown("**Vitória do round pelo território**")
-    territory_column.altair_chart(rate_chart(territory_summary(deaths_with_allies[deaths_with_allies["territorio"] != "?"], ["lado"]), "territorio", "venceu_round", "mortes", "vitória do round", group_column="lado", group_colors=SIDE_COLORS, order=["próprio", "disputado", "do adversário"]), use_container_width=True)
-    with st.expander("Tabelas de contexto e território, e o isolamento por função do agente"):
+    context_column.markdown("**Quantos rounds a equipe venceu**, conforme onde estavam os aliados")
+    context_column.altair_chart(rate_chart(context_summary(deaths_with_allies, ["lado"]), "contexto", "venceu_round", "mortes", "% de rounds vencidos pela equipe da vítima", group_column="lado", group_colors=SIDE_COLORS, order=["em grupo", "flanco", "isolado", "último vivo"]), use_container_width=True)
+    territory_column.markdown("**Quantos rounds a equipe venceu**, conforme de quem é a região")
+    territory_column.altair_chart(rate_chart(territory_summary(deaths_with_allies[deaths_with_allies["territorio"] != "?"], ["lado"]), "territorio", "venceu_round", "mortes", "% de rounds vencidos pela equipe da vítima", group_column="lado", group_colors=SIDE_COLORS, order=["próprio", "disputado", "do adversário"]), use_container_width=True)
+    with st.expander("Números de posição dos aliados e de região, e o isolamento separado por função do agente"):
         st.dataframe(context_summary(deaths_with_allies, ["lado"]), use_container_width=False)
         st.dataframe(territory_summary(deaths_with_allies, ["lado"]), use_container_width=False)
-        st.markdown("**Por função do agente.** Acima do esperado desconta a situação de vivos. Custo do isolamento é a diferença entre morrer isolado e acompanhado, com o mesmo desconto.")
+        st.markdown("**Por função do agente.** Acima do esperado: taxa de vitória do round menos o esperado para a mesma quantidade de vivos. Custo do isolamento: essa mesma conta para mortes isoladas menos para mortes acompanhadas.")
         st.dataframe(death_cost_by_role(deaths_with_allies), use_container_width=False)
 
-    st.subheader("5. Por time: trocas possíveis convertidas")
-    st.caption("Só times com 150 ou mais mortes com posição do killer. Troca possível é a fração das mortes do time em que um aliado estava em condição de trocar. Convertida é quanto dessas foi trocada. Sem reação é a fração das mortes em que a vítima não feriu o killer. Kills em foco é a fração das kills do time com dois ou mais atirando.")
+    st.subheader("5. Por equipe: quantas trocas possíveis viraram troca?")
+    st.caption("Só equipes com 150 ou mais mortes. Troca possível: parte das mortes da equipe em que um aliado estava a menos de 20 m de quem matou, olhando para ele. Troca convertida: parte dessas em que a troca de fato saiu. Sem reação: parte das mortes em que o jogador morreu sem causar dano em quem o matou. Abates em foco: parte dos abates da equipe em que dois ou mais jogadores atiraram na vítima.")
     named_fights = fights.assign(time_killer=fights["time_vitima"].map({"Blue": "Red", "Red": "Blue"}))
     named_fights = with_team_names(with_team_names(named_fights, "time_vitima"), "time_killer", "nome_killer")
     st.dataframe(team_summary(named_fights), use_container_width=False)
 
 with collapse_tab:
-    st.markdown("Uma linha por round e time. Colapso: três mortes do time em 10 s sem nenhuma kill do time na janela. Estilo do ataque pelo tempo do plant: execução rápida até 40 s, default depois, sem plant quando o round acabou antes (quase sempre derrota, é mais resultado que estilo). Contato cedo: primeira morte do round até 20 s. Placar é o estado antes do round.")
+    st.markdown("Cada round entra duas vezes, uma para cada equipe. Colapso: três jogadores da equipe morrem em até 10 segundos sem que a equipe mate ninguém nesse intervalo. Ritmo do ataque, pelo segundo do plant: execução rápida quando a spike é plantada até 40 s, default quando é plantada depois disso, sem plant quando o round acabou antes de plantar (quase sempre derrota, por isso é mais resultado do que escolha). Contato cedo: o primeiro abate do round aconteceu até 20 s. Placar: quem estava na frente antes do round começar.")
     styles = round_styles_table()
     styles = styles[styles["match_id"].isin(selected_ids) & (styles["lado"] != "?")]
     rounds_col, collapse_col, fast_col = st.columns(3)
-    rounds_col.metric("Rounds por time", len(styles))
+    rounds_col.metric("Rounds contados (um por equipe)", len(styles))
     collapse_col.metric("Rounds com colapso", f"{styles['colapso'].mean():.0%}")
-    fast_col.metric("Ataques com execução rápida", f"{(styles.loc[styles['lado'] == 'ataque', 'estilo'] == 'execução rápida').mean():.0%}")
+    fast_col.metric("Rounds de ataque com plant até 40 s", f"{(styles.loc[styles['lado'] == 'ataque', 'estilo'] == 'execução rápida').mean():.0%}")
 
-    st.subheader("1. Colapso: quanto acontece e o que custa")
+    st.subheader("1. Colapso: com que frequência acontece e quanto custa?")
     by_side = collapse_summary(styles, ["lado"])
     side_column, map_column = st.columns([2, 3])
-    side_column.markdown("**Fração dos rounds com colapso, por lado**")
-    side_column.altair_chart(rate_chart(by_side, "lado", "colapsos", "rounds", "fração dos rounds", group_column="lado", group_colors=SIDE_COLORS, height=140), use_container_width=True)
-    side_column.markdown("**Vitória do round sem e com colapso**")
-    side_column.altair_chart(dumbbell_chart(by_side, "lado", "venceu_com_colapso", "venceu_sem_colapso", "com colapso", "sem colapso", "vitória do round", count_column="rounds", left_color=LOST_COLOR), use_container_width=True)
-    map_column.markdown("**Por mapa e lado**")
+    side_column.markdown("**Parte dos rounds com colapso**, em cada lado")
+    side_column.altair_chart(rate_chart(by_side, "lado", "colapsos", "rounds", "% dos rounds com colapso", group_column="lado", group_colors=SIDE_COLORS, height=140), use_container_width=True)
+    side_column.markdown("**Quantos rounds a equipe vence** quando colapsa (laranja) e quando não colapsa (azul)")
+    side_column.altair_chart(dumbbell_chart(by_side, "lado", "venceu_com_colapso", "venceu_sem_colapso", "com colapso", "sem colapso", "% de rounds vencidos", count_column="rounds", left_color=LOST_COLOR), use_container_width=True)
+    map_column.markdown("**Parte dos rounds com colapso em cada mapa**, por lado")
     by_map_side = collapse_summary(styles, ["mapa", "lado"]).rename(index=map_name_by_internal, level="mapa").sort_values("rounds", ascending=False)
-    map_column.altair_chart(rate_chart(by_map_side, "mapa", "colapsos", "rounds", "fração dos rounds com colapso", group_column="lado", group_colors=SIDE_COLORS), use_container_width=True)
-    collapse_internal, _ = map_selector("Regiões de colapso no mapa", styles["mapa"].value_counts().index, "collapse_map")
+    map_column.altair_chart(rate_chart(by_map_side, "mapa", "colapsos", "rounds", "% dos rounds com colapso", group_column="lado", group_colors=SIDE_COLORS), use_container_width=True)
+    collapse_internal, _ = map_selector("Em que regiões do mapa os colapsos acontecem", styles["mapa"].value_counts().index, "collapse_map")
     st.dataframe(collapse_regions(styles, collapse_internal), use_container_width=False)
 
-    st.subheader("2. Estilo do ataque e contato")
+    st.subheader("2. Ritmo do ataque: plantar rápido rende mais? E fazer contato cedo?")
     attack_styles, contact = style_summary(styles)
     style_column, contact_column = st.columns(2)
-    style_column.markdown("**Vitória do ataque por estilo**")
-    style_column.altair_chart(rate_chart(attack_styles, "estilo", "venceu", "rounds", "vitória do round", order=STYLE_ORDER, height=140), use_container_width=True)
-    contact_column.markdown("**Vitória por contato cedo ou tarde, por lado**")
-    contact_column.altair_chart(rate_chart(contact, "contato", "venceu", "rounds", "vitória do round", group_column="lado", group_colors=SIDE_COLORS, height=140), use_container_width=True)
+    style_column.markdown("**Quantos rounds o ataque vence** conforme o ritmo")
+    style_column.altair_chart(rate_chart(attack_styles, "estilo", "venceu", "rounds", "% de rounds vencidos pelo ataque", order=STYLE_ORDER, height=140), use_container_width=True)
+    contact_column.markdown("**Quantos rounds cada lado vence** quando o primeiro abate sai até 20 s (contato cedo) ou depois (contato tarde)")
+    contact_column.altair_chart(rate_chart(contact, "contato", "venceu", "rounds", "% de rounds vencidos", group_column="lado", group_colors=SIDE_COLORS, height=140), use_container_width=True)
 
-    st.subheader("3. O estilo muda com o placar?")
+    st.subheader("3. A equipe muda o ritmo quando está perdendo?")
     shares, wins, counts = style_by_score(styles)
     shares_column, wins_column = st.columns(2)
-    shares_column.markdown("**Fração de cada estilo conforme o placar antes do round**")
-    shares_column.altair_chart(share_chart(shares, counts, STYLE_COLORS, "fração dos rounds de ataque"), use_container_width=True)
-    wins_column.markdown("**Vitória de cada combinação**")
+    shares_column.markdown("**Como os rounds de ataque se dividem entre os ritmos**, conforme o placar antes do round")
+    shares_column.altair_chart(share_chart(shares, counts, STYLE_COLORS, "% dos rounds de ataque"), use_container_width=True)
+    wins_column.markdown("**Parte dos rounds vencidos** em cada combinação de placar e ritmo")
     wins_column.dataframe(wins, use_container_width=False)
 
-    st.subheader("4. Perfil por time, 40 ou mais rounds de ataque")
+    st.subheader("4. Perfil de cada equipe (equipes com 40 ou mais rounds de ataque)")
     profiles = team_profiles(styles)
-    st.caption("Só a metade dos times com mais rounds de ataque tem o nome escrito. Os outros aparecem no tooltip.")
-    st.altair_chart(team_scatter(profiles, "execução rápida", "vitoria_ataque", "rounds_ataque", "fração de execuções rápidas no ataque", "vitória no ataque"), use_container_width=True)
-    with st.expander("Tabela completa por time"):
+    st.caption("Cada bola é uma equipe. Para a direita, mais rounds com plant rápido. Para cima, mais rounds de ataque vencidos. Bola maior, mais rounds jogados. Só a metade das equipes com mais rounds tem o nome escrito. As outras aparecem ao passar o mouse.")
+    st.altair_chart(team_scatter(profiles, "execução rápida", "vitoria_ataque", "rounds_ataque", "% dos rounds de ataque com plant até 40 s", "% de rounds de ataque vencidos"), use_container_width=True)
+    with st.expander("Todos os números por equipe"):
         st.dataframe(profiles, use_container_width=True)
 
 with economy_tab:
-    st.markdown("Por round e por time: soma do loadout dos cinco jogadores, resultado e cerimônia. Rounds normais excluem pistol (1 e 13) e o segundo round (2 e 14). Vitória esperada pelo dinheiro é a taxa de vitória da faixa de diferença de loadout; o que sobra acima dela é o que não é dinheiro.")
+    st.markdown("Cada round entra uma vez para cada equipe, com o loadout (valor das armas e escudos dos cinco jogadores), o resultado e o tipo de vitória. Rounds normais são todos menos o pistol (rounds 1 e 13) e o segundo round de cada metade (2 e 14). Vitória esperada pelo dinheiro: a taxa de vitória normal para a mesma diferença de loadout entre as equipes. O que fica acima ou abaixo disso não é explicado pelo dinheiro.")
     economy_rounds = rounds_table()[rounds_table()["match_id"].isin(selected_ids)]
     close_rounds = economy_rounds[economy_rounds["match_id"].isin(close_match_ids(economy_rounds))]
     fights = fights_table()[fights_table()["match_id"].isin(selected_ids)]
 
-    st.subheader("1. Quanto o loadout compra de vitória")
+    st.subheader("1. Quanto o dinheiro gasto em armas compra de rounds?")
     own_table, difference_table = win_rate_by_loadout(economy_rounds)
     difference_column, full_buy_column = st.columns(2)
-    difference_column.markdown("**Pela diferença de loadout para o adversário**, todos os rounds")
-    difference_column.altair_chart(rate_chart(difference_table, "faixa_diferenca", "vitoria", "rounds", "vitória do round"), use_container_width=True)
-    full_buy_column.markdown("**Contra compra cheia (20k+)**, rounds normais")
-    full_buy_column.altair_chart(rate_chart(versus_full_buy(economy_rounds), "faixa_loadout", "vitoria", "rounds", "vitória do round"), use_container_width=True)
-    with st.expander("Tabelas: ganho por 1k, faixa própria e a matriz loadout x loadout do adversário"):
+    difference_column.markdown("**Pela diferença de loadout entre a equipe e o adversário**, todos os rounds. Acima de zero, a equipe gastou mais.")
+    difference_column.altair_chart(rate_chart(difference_table, "faixa_diferenca", "vitoria", "rounds", "% de rounds vencidos"), use_container_width=True)
+    full_buy_column.markdown("**Pelo loadout da equipe quando o adversário comprou tudo (20 mil ou mais)**, rounds normais")
+    full_buy_column.altair_chart(rate_chart(versus_full_buy(economy_rounds), "faixa_loadout", "vitoria", "rounds", "% de rounds vencidos"), use_container_width=True)
+    with st.expander("Números: ganho de vitória por 1.000 créditos a mais, loadout da equipe sem olhar o adversário, e o cruzamento loadout da equipe x loadout do adversário"):
         st.dataframe(versus_full_buy(economy_rounds), use_container_width=False)
         st.dataframe(own_table, use_container_width=False)
         rates, counts = win_rate_matrix(economy_rounds)
-        st.altair_chart(heatmap_chart(rates, counts, "loadout do adversário", "loadout do time", "vitória do round"), use_container_width=True)
+        st.altair_chart(heatmap_chart(rates, counts, "loadout do adversário", "loadout da equipe", "% de rounds vencidos"), use_container_width=True)
 
-    st.subheader("2. O round seguinte: perder abala?")
-    st.caption("Round fácil perdido é derrota num round em que o adversário fez clutch ou thrifty. Ponto cinza: vitória esperada pelo dinheiro do round seguinte. Ponto azul: vitória real. Quando os dois pontos se sobrepõem, o round anterior não acrescenta nada além do dinheiro que deixou.")
+    st.subheader("2. Perder um round abala a equipe no round seguinte?")
+    st.caption("Round fácil perdido: a equipe perdeu um round em que o adversário venceu em desvantagem (clutch ou thrifty). Ponto cinza: quantos rounds seguintes a equipe deveria vencer só pelo dinheiro que tinha. Ponto azul: quantos venceu de fato. Pontos juntos significam que o resultado do round anterior não mudou nada além do dinheiro que deixou.")
     all_column, close_column = st.columns(2)
     all_column.markdown("**Todas as partidas**")
     previous_labels = {"perdeu round fácil (clutch ou thrifty do adversário)": "perdeu round fácil"}
-    all_column.altair_chart(dumbbell_chart(after_previous_round(economy_rounds).rename(index=previous_labels), "anterior", "esperado_pelo_dinheiro", "vitoria", "esperado pelo dinheiro", "vitória real", "vitória do round seguinte", count_column="rounds", x_domain=[0.2, 0.7]), use_container_width=True)
+    all_column.altair_chart(dumbbell_chart(after_previous_round(economy_rounds).rename(index=previous_labels), "anterior", "esperado_pelo_dinheiro", "vitoria", "esperado pelo dinheiro", "venceu de fato", "% de rounds seguintes vencidos", count_column="rounds", x_domain=[0.2, 0.7]), use_container_width=True)
     close_column.markdown(f"**Só partidas equilibradas** (até 4 rounds de diferença no placar final, {close_rounds['match_id'].nunique()} partidas)")
-    close_column.altair_chart(dumbbell_chart(after_previous_round(close_rounds).rename(index=previous_labels), "anterior", "esperado_pelo_dinheiro", "vitoria", "esperado pelo dinheiro", "vitória real", "vitória do round seguinte", count_column="rounds", x_domain=[0.2, 0.7]), use_container_width=True)
+    close_column.altair_chart(dumbbell_chart(after_previous_round(close_rounds).rename(index=previous_labels), "anterior", "esperado_pelo_dinheiro", "vitoria", "esperado pelo dinheiro", "venceu de fato", "% de rounds seguintes vencidos", count_column="rounds", x_domain=[0.2, 0.7]), use_container_width=True)
     streak_all_column, streak_close_column = st.columns(2)
-    streak_all_column.markdown("**Derrotas seguidas antes do round**, todas as partidas")
-    streak_all_column.altair_chart(dumbbell_chart(after_streak(economy_rounds), "derrotas", "esperado_pelo_dinheiro", "vitoria", "esperado pelo dinheiro", "vitória real", "vitória do round", count_column="rounds", x_domain=[0.2, 0.7]), use_container_width=True)
-    streak_close_column.markdown("**Derrotas seguidas**, só partidas equilibradas")
-    streak_close_column.altair_chart(dumbbell_chart(after_streak(close_rounds), "derrotas", "esperado_pelo_dinheiro", "vitoria", "esperado pelo dinheiro", "vitória real", "vitória do round", count_column="rounds", x_domain=[0.2, 0.7]), use_container_width=True)
+    streak_all_column.markdown("**Quantos rounds seguidos a equipe tinha perdido antes deste**, todas as partidas")
+    streak_all_column.altair_chart(dumbbell_chart(after_streak(economy_rounds), "derrotas", "esperado_pelo_dinheiro", "vitoria", "esperado pelo dinheiro", "venceu de fato", "% de rounds vencidos", count_column="rounds", x_domain=[0.2, 0.7]), use_container_width=True)
+    streak_close_column.markdown("**Derrotas seguidas antes do round**, só partidas equilibradas")
+    streak_close_column.altair_chart(dumbbell_chart(after_streak(close_rounds), "derrotas", "esperado_pelo_dinheiro", "vitoria", "esperado pelo dinheiro", "venceu de fato", "% de rounds vencidos", count_column="rounds", x_domain=[0.2, 0.7]), use_container_width=True)
 
-    st.subheader("3. Pistol e round 2: eco ou force?")
+    st.subheader("3. Quem perde o pistol deve economizar ou comprar no round 2?")
     pistol_column, cycle_column = st.columns([1, 3])
-    pistol_column.markdown("**Pistol por lado**")
+    pistol_column.markdown("**Round pistol**, quantos cada lado vence")
     pistol_column.dataframe(pistol_by_side(economy_rounds), use_container_width=False)
     overall_cycle, cycle_by_side = second_round_cycle(economy_rounds)
-    cycle_column.markdown("**Perdedor do pistol: compra no round 2 e o que vem depois.** Força do time é a vitória de rounds do round 5 em diante, para ver quem escolhe cada compra.")
-    cycle_column.bar_chart(overall_cycle[["vitoria_round_2", "vitoria_round_3", "vitoria_round_4"]].rename(columns={"vitoria_round_2": "round 2", "vitoria_round_3": "round 3", "vitoria_round_4": "round 4"}), color=[WON_COLOR, TRADE_COLOR, NEUTRAL_COLOR], stack=False, y_label="vitória", x_label="compra do perdedor do pistol no round 2")
-    with st.expander("Tabelas do ciclo, no total e por lado"):
+    cycle_column.markdown("**Equipe que perdeu o pistol: o que ela gastou no round 2 e quantos dos rounds 2, 3 e 4 venceu.** Eco: até 4 mil. Leve: 4 a 8 mil. Force: 8 mil ou mais. Nas tabelas, força da equipe é a taxa de vitória do round 5 em diante, para ver se quem força é uma equipe melhor ou pior.")
+    cycle_column.bar_chart(overall_cycle[["vitoria_round_2", "vitoria_round_3", "vitoria_round_4"]].rename(columns={"vitoria_round_2": "round 2", "vitoria_round_3": "round 3", "vitoria_round_4": "round 4"}), color=[WON_COLOR, TRADE_COLOR, NEUTRAL_COLOR], stack=False, y_label="% de rounds vencidos", x_label="quanto a equipe gastou no round 2")
+    with st.expander("Números dos rounds 2 a 4, no total e por lado"):
         st.dataframe(overall_cycle, use_container_width=True)
         st.dataframe(cycle_by_side, use_container_width=True)
 
-    st.subheader("4. O peso econômico da morte e o save")
+    st.subheader("4. Perder o jogador mais caro custa mais? E sobreviver a um round perdido vale quanto?")
     expensive_column, operator_column = st.columns(2)
-    expensive_column.markdown("**Primeira morte do jogador mais caro do time** (loadout maior que o de todos os colegas). Acima do time desconta a taxa de rounds do time na partida.")
+    expensive_column.markdown("**Quando o primeiro a morrer é o jogador mais caro da equipe** (loadout maior que o de todos os colegas). A coluna acima do time compara com a média da equipe na partida.")
     expensive_column.dataframe(economic_first_death(fights, "mais_caro_do_time"), use_container_width=False)
-    operator_column.markdown("**Primeira morte de quem comprou Operator**")
+    operator_column.markdown("**Quando o primeiro a morrer tinha um Operator**")
     operator_column.dataframe(economic_first_death(fights.assign(operator=fights["arma_vitima"] == "Operator"), "operator"), use_container_width=False)
     saves = save_effect(economy_rounds, fights).loc[0:4]
     saves = saves[saves["rounds"] >= 20]
     save_loadout_column, save_win_column = st.columns(2)
-    save_loadout_column.markdown("**Save: loadout do round seguinte por sobreviventes de um round perdido** (fora dos rounds 12 e 24)")
+    save_loadout_column.markdown("**Quanto a equipe tem para gastar no round seguinte**, conforme quantos jogadores sobreviveram ao round perdido (sem os rounds 12 e 24, em que o dinheiro zera)")
     save_loadout_column.bar_chart(saves["loadout_seguinte"], color=[WON_COLOR], y_label="loadout do round seguinte", x_label="sobreviventes")
-    save_win_column.markdown("**Vitória do round seguinte por sobreviventes**")
-    save_win_column.altair_chart(rate_chart(saves, "sobreviventes", "venceu_seguinte", "rounds", "vitória do round seguinte", height=170), use_container_width=True)
+    save_win_column.markdown("**Quantos rounds seguintes a equipe vence**, conforme quantos sobreviveram")
+    save_win_column.altair_chart(rate_chart(saves, "sobreviventes", "venceu_seguinte", "rounds", "% de rounds seguintes vencidos", height=170), use_container_width=True)
 
 with plants_tab:
-    st.markdown("Uma linha por round plantado: onde a spike foi plantada, quantos de cada lado estavam vivos no plant e se foi defusada. Esperado pelos vivos é a taxa de defuse da mesma situação (ataque x defesa vivos no plant). Ponto cinza: esperado. Ponto azul: observado. A diferença é o que a posição, o tempo ou o setup acrescentam.")
+    st.markdown("Cada round em que a spike foi plantada entra uma vez: onde foi plantada, quantos jogadores de cada lado estavam vivos nesse momento e se a defesa desarmou. Esperado pelos vivos: a taxa de desarme normal para a mesma quantidade de vivos de cada lado. Nos gráficos de dois pontos, cinza é o esperado e azul é o que aconteceu. Quando o azul fica à direita do cinza, a defesa desarmou mais do que o número de vivos explica.")
     selected_plants = plants_table()[plants_table()["match_id"].isin(selected_ids)]
     plants_col, defuse_col, time_col = st.columns(3)
-    plants_col.metric("Rounds plantados", len(selected_plants))
-    defuse_col.metric("Defusados", f'{selected_plants["defusada"].mean():.1%}')
-    time_col.metric("Tempo mediano do plant", f'{selected_plants["segundos_plant"].median():.0f} s')
+    plants_col.metric("Rounds com spike plantada", len(selected_plants))
+    defuse_col.metric("Desarmados pela defesa", f'{selected_plants["defusada"].mean():.1%}')
+    time_col.metric("Segundo típico do plant (mediana)", f'{selected_plants["segundos_plant"].median():.0f} s')
 
-    st.subheader("1. Quem está vivo no plant decide")
+    st.subheader("1. Quantos estão vivos no momento do plant é o que mais decide")
     rates, counts = situation_matrix(selected_plants)
-    st.altair_chart(heatmap_chart(rates, counts, "defesa vivos no plant", "ataque vivos no plant", "taxa de defuse"), use_container_width=True)
+    st.altair_chart(heatmap_chart(rates, counts, "defensores vivos no momento do plant", "atacantes vivos no momento do plant", "% de spikes desarmadas"), use_container_width=True)
 
-    st.subheader("2. Tempo do plant e site, contra o esperado pelos vivos")
+    st.subheader("2. O segundo do plant e o site mudam a chance de desarme?")
     time_column, site_column = st.columns(2)
-    time_column.markdown("**Por tempo do plant**")
+    time_column.markdown("**Pelo segundo em que a spike foi plantada**")
     by_time = summary_by_plant_time(selected_plants)
-    time_column.altair_chart(dumbbell_chart(by_time[by_time["plants"] >= 20], "faixa_tempo", "esperado_pelos_vivos", "defuse", "esperado pelos vivos", "defuse observado", "taxa de defuse", count_column="plants", x_domain=[0, 0.6]), use_container_width=True)
+    time_column.altair_chart(dumbbell_chart(by_time[by_time["plants"] >= 20], "faixa_tempo", "esperado_pelos_vivos", "defuse", "esperado pelos vivos", "desarmado de fato", "% de spikes desarmadas", count_column="plants", x_domain=[0, 0.6]), use_container_width=True)
     by_site = summary_by_site(selected_plants).rename(index=map_name_by_internal, level="mapa")
     by_site_named = by_site[by_site["plants"] >= 100].reset_index()
     by_site_named["mapa_site"] = by_site_named["mapa"] + " " + by_site_named["site"]
-    site_column.markdown("**Por mapa e site**, 100 ou mais plants")
-    site_column.altair_chart(dumbbell_chart(by_site_named.set_index("mapa_site"), "mapa_site", "esperado_pelos_vivos", "defuse", "esperado pelos vivos", "defuse observado", "taxa de defuse", count_column="plants", x_domain=[0, 0.6]), use_container_width=True)
-    with st.expander("Tabela por mapa e site"):
+    site_column.markdown("**Por mapa e site**, sites com 100 ou mais plants")
+    site_column.altair_chart(dumbbell_chart(by_site_named.set_index("mapa_site"), "mapa_site", "esperado_pelos_vivos", "defuse", "esperado pelos vivos", "desarmado de fato", "% de spikes desarmadas", count_column="plants", x_domain=[0, 0.6]), use_container_width=True)
+    with st.expander("Números por mapa e site"):
         st.dataframe(by_site, use_container_width=False)
 
-    st.subheader("3. Onde a spike é plantada e quanto cada posição é defusada")
+    st.subheader("3. Onde a spike é plantada, e quais posições a defesa desarma mais")
     plant_map_internal, plant_map_meta = map_selector("Mapa", selected_plants["mapa"].value_counts().index, "plant_map")
     if plant_map_meta is None:
-        st.info("Sem metadado de mapa para este mapId.")
+        st.info("Este mapa não tem imagem disponível.")
     else:
         cells = cells_for_map(selected_plants, plant_map_internal)
         map_defuse = selected_plants[selected_plants["mapa"] == plant_map_internal]["defusada"].mean()
-        st.caption(f"Plants agrupados em células de 400 unidades (cerca de 4 m) e só células com 5 ou mais, um recorte por site. Tamanho: plants. Cor: taxa de defuse, centrada na média do mapa ({map_defuse:.0%}). Azul é bom para a defesa.")
+        st.caption(f"Cada bola junta os plants feitos num quadrado de cerca de 4 metros, só quadrados com 5 ou mais plants, com uma imagem por site. Tamanho da bola: quantos plants. Cor: quantos foram desarmados, em relação à média do mapa ({map_defuse:.0%}). Azul: a defesa desarma mais do que a média ali. Vermelho: menos.")
         sites = sorted(cells["site"].unique())
         for site_column, site in zip(st.columns(len(sites)), sites):
             site_cells = cells[cells["site"] == site]
-            site_column.markdown(f"**Site {site}** ({int(site_cells['plants'].sum())} plants em células com 5+)")
+            site_column.markdown(f"**Site {site}** ({int(site_cells['plants'].sum())} plants nos quadrados mostrados)")
             site_column.pyplot(draw_rate_markers(plant_map_meta, site_cells, "plants", "defuse", map_defuse, "taxa de defuse", label_min_count=10, size_per_unit=3, zoom_padding=90))
-        with st.expander("Células do mapa"):
+        with st.expander("Números de cada quadrado"):
             st.dataframe(cells[["site", "plants", "defuse", "esperado_pelos_vivos", "acima_do_esperado"]], use_container_width=False)
 
-    st.subheader("4. Setup no plant e retake")
-    st.caption("Posições e olhar no momento do plant. Atacantes no site: a até 15 m da spike. Olhando para fora: fração dos aliados do planter com o olhar a mais de 90 graus da spike, ou seja, vigiando entradas. Distância da defesa: mediana dos defensores vivos até a spike. Tudo contra o esperado pelos vivos.")
+    st.subheader("4. O posicionamento no momento do plant muda o desarme? E como a defesa retoma o site?")
+    st.caption("Três medidas tiradas no instante do plant, todas comparadas com o esperado pelos vivos. Atacantes no site: quantos estavam a menos de 15 metros da spike. Olhando para fora: parte dos aliados de quem plantou que estava de costas para a spike, ou seja, vigiando as entradas. Distância da defesa: a que distância da spike estava o defensor do meio (metade mais perto, metade mais longe).")
     selected_setups = setups_table()[setups_table()["match_id"].isin(selected_ids)]
     on_site_column, watching_column, defense_column = st.columns(3)
-    on_site_column.markdown("**Atacantes a até 15 m da spike**")
-    on_site_column.altair_chart(dumbbell_chart(defuse_by(selected_setups, "atacantes_no_site"), "atacantes_no_site", "esperado_pelos_vivos", "defuse", "esperado pelos vivos", "defuse observado", "taxa de defuse", count_column="plants", x_domain=[0, 0.6]), use_container_width=True)
-    watching_column.markdown("**Aliados do planter olhando para fora**")
-    watching_column.altair_chart(dumbbell_chart(defuse_by(selected_setups, watching_bands(selected_setups)), "olhando_para_fora", "esperado_pelos_vivos", "defuse", "esperado pelos vivos", "defuse observado", "taxa de defuse", count_column="plants", x_domain=[0, 0.6]), use_container_width=True)
-    defense_column.markdown("**Distância mediana da defesa no plant**")
-    defense_column.altair_chart(dumbbell_chart(defuse_by(selected_setups, "faixa_defesa"), "faixa_defesa", "esperado_pelos_vivos", "defuse", "esperado pelos vivos", "defuse observado", "taxa de defuse", count_column="plants", x_domain=[0, 0.6]), use_container_width=True)
-    st.markdown("**Retake: atacantes vivos quando a spike foi defusada e distância do mais próximo**")
+    on_site_column.markdown("**Atacantes a menos de 15 m da spike**")
+    on_site_column.altair_chart(dumbbell_chart(defuse_by(selected_setups, "atacantes_no_site"), "atacantes_no_site", "esperado_pelos_vivos", "defuse", "esperado pelos vivos", "desarmado de fato", "% de spikes desarmadas", count_column="plants", x_domain=[0, 0.6]), use_container_width=True)
+    watching_column.markdown("**Parte dos aliados de quem plantou olhando para fora do site**")
+    watching_column.altair_chart(dumbbell_chart(defuse_by(selected_setups, watching_bands(selected_setups)), "olhando_para_fora", "esperado_pelos_vivos", "defuse", "esperado pelos vivos", "desarmado de fato", "% de spikes desarmadas", count_column="plants", x_domain=[0, 0.6]), use_container_width=True)
+    defense_column.markdown("**Distância da defesa até a spike no momento do plant**")
+    defense_column.altair_chart(dumbbell_chart(defuse_by(selected_setups, "faixa_defesa"), "faixa_defesa", "esperado_pelos_vivos", "defuse", "esperado pelos vivos", "desarmado de fato", "% de spikes desarmadas", count_column="plants", x_domain=[0, 0.6]), use_container_width=True)
+    st.markdown("**Retomada do site: quando a defesa desarmou, quantos atacantes ainda estavam vivos e a que distância da spike estava o mais próximo**")
     st.dataframe(retake_summary(selected_setups), use_container_width=False)
 
 with match_tab:
@@ -690,7 +704,7 @@ with match_tab:
     match = load_match(Path(chosen_match["caminho"]))
     st.write(f'{chosen_match["torneio"]} · {chosen_match["mapa"]} · Blue {chosen_match["rounds_blue"]} x {chosen_match["rounds_red"]} Red')
 
-    st.subheader("Mapa do round")
+    st.subheader("Posições no minimapa a cada abate, plant e desarme")
     name_by_puuid = {player["puuid"]: f'{player["gameName"]}#{player["tagLine"]}' for player in match["players"]}
     team_by_puuid = {player["puuid"]: player["teamId"] for player in match["players"]}
     player_column, round_column = st.columns(2)
@@ -701,42 +715,42 @@ with match_tab:
     events = round_events(round_result)
     map_meta = maps_by_url().get(match["matchInfo"]["mapId"])
     if map_meta is None:
-        st.info("Sem metadado de mapa para este mapId.")
+        st.info("Este mapa não tem imagem disponível.")
     elif not events:
-        st.info("Este round não tem kill, plant nem defuse, então não há posição registrada.")
+        st.info("Este round não tem abate, plant nem desarme, então não há posição registrada.")
     else:
         event_index = st.slider("Momento", 0, len(events) - 1, 0, format="evento %d") if len(events) > 1 else 0
         st.caption(describe_event(events[event_index], name_by_puuid, round_result))
         map_column, _ = st.columns([4, 1])
         map_column.pyplot(draw_round_map(map_meta, events, event_index, selected_puuid, team_by_puuid, name_by_puuid))
 
-    st.subheader("Primeira morte por round")
+    st.subheader("Primeiro abate de cada round")
     st.dataframe(first_blood_per_round_table(first_blood_rows()[first_blood_rows()["match_id"] == chosen_match["match_id"]]), hide_index=True)
 
-    st.subheader("Mortes isoladas e trades por round")
+    st.subheader("Mortes isoladas e trocas em cada round")
     match_deaths = with_solo_flag(deaths_table()[deaths_table()["match_id"] == chosen_match["match_id"]], SOLO_DISTANCE)
     st.dataframe(deaths_per_round_table(match_deaths, match["roundResults"]), hide_index=True)
 
-    with st.expander("Jogadores, rounds e matchInfo bruto"):
+    with st.expander("Jogadores, rounds e dados brutos da partida"):
         match_players = players[players["match_id"] == chosen_match["match_id"]].drop(columns=["match_id", "puuid"])
         st.dataframe(match_players.sort_values(["time", "score"], ascending=[True, False]), hide_index=True)
         st.dataframe(rounds[rounds["match_id"] == chosen_match["match_id"]].drop(columns=["match_id"]), hide_index=True)
         st.json(match["matchInfo"])
 
 with prediction_tab:
-    st.markdown("As métricas das conclusões, sem nenhum resultado dentro delas, explicam e preveem partidas? O lado de cada round vem de quem planta a spike na metade, não há contagem de rounds, placar nem ordem, e o rótulo é só o vencedor da partida. Times vêm do nome do arquivo. Esta aba ignora o filtro de torneios.")
+    st.markdown("As medidas das conclusões (primeiro abate, troca, isolamento) explicam e preveem quem vence a partida, sem usar nenhum resultado no caminho? O lado de cada round vem de quem planta a spike na metade, sem contagem de rounds, placar nem ordem, e o único rótulo é quem venceu a partida. Os nomes das equipes vêm do nome do arquivo. Esta aba ignora o filtro de torneios.")
     prediction = prediction_tables()
     chance_median, chance_95 = prediction["acaso"]
-    st.subheader("1. Dentro da partida, rounds embaralhados")
-    st.caption(f"O time com a métrica melhor na própria partida venceu? Acaso com rótulos embaralhados: mediana {chance_median:.1%}, percentil 95 {chance_95:.1%}.")
+    st.subheader("1. Dentro da mesma partida, com os rounds embaralhados")
+    st.caption(f"A equipe com a medida melhor na própria partida foi a vencedora? Para comparar, embaralhando quem venceu ao acaso o acerto típico é {chance_median:.1%} e chega a {chance_95:.1%} em 5% das vezes.")
     st.dataframe(prediction["dentro"], hide_index=True, use_container_width=False)
-    st.subheader("2. Previsão com o perfil do time nas outras partidas do campeonato")
-    st.caption("Pelo menos duas outras partidas para cada time. A última linha é a base de comparação: a taxa de vitória do time nas outras partidas.")
+    st.subheader("2. Previsão usando o perfil da equipe nas outras partidas do campeonato")
+    st.caption("Só equipes com pelo menos duas outras partidas. A última linha é a comparação: prever pela taxa de vitória da equipe nas outras partidas.")
     st.dataframe(prediction["outras"], hide_index=True, use_container_width=False)
-    st.subheader("3. Previsão só com partidas anteriores no tempo")
+    st.subheader("3. Previsão usando só partidas anteriores no calendário")
     st.dataframe(prediction["anteriores"], hide_index=True, use_container_width=False)
-    st.subheader("4. Ranking por campeonato: perfil combinado contra taxa de vitória")
-    st.caption("Times com 3 ou mais partidas. Perfil é a soma padronizada das métricas com o sinal de cada uma. Spearman é a correlação de postos entre perfil e taxa de vitória.")
+    st.subheader("4. Ranking de cada campeonato: perfil combinado contra taxa de vitória")
+    st.caption("Equipes com 3 ou mais partidas. Perfil: soma das medidas, cada uma padronizada e com o sinal de bom ou ruim. Spearman: quanto a ordem das equipes pelo perfil coincide com a ordem pela taxa de vitória (1 é igual, 0 é sem relação).")
     for tournament_column, (tournament, table) in zip(st.columns(2) + st.columns(2), prediction["rankings"].items()):
         tournament_column.markdown(f"**{tournament}** (Spearman {table['spearman'].iloc[0]})")
         tournament_column.dataframe(table.drop(columns=["spearman"]), use_container_width=True)
@@ -745,9 +759,9 @@ with conclusions_tab:
     st.markdown((Path(__file__).parent / "CONCLUSOES.md").read_text(encoding="utf-8"))
 
 with explore_tab:
-    st.markdown("Fora do macro game, mantido como exploração: a arma e a distância de cada morte, a reação da vítima, estatísticas individuais de combate e o dicionário de campos dos JSONs.")
+    st.markdown("Fora do escopo de decisões de equipe, guardado como exploração: a arma e a distância de cada morte, se a vítima reagiu, números individuais de combate e o dicionário de campos dos arquivos.")
     fights = fights_table()[fights_table()["match_id"].isin(selected_ids)]
-    st.subheader("Disciplina de distância: a arma da vítima e a distância do killer")
+    st.subheader("Arma da vítima e distância de quem matou")
     summary_column, matrix_column = st.columns(2)
     summary_column.dataframe(distance_summary(fights), use_container_width=False)
     matrix_column.dataframe(distance_matrix(fights), use_container_width=False)
@@ -759,17 +773,17 @@ with explore_tab:
     sniper_column.markdown("**Por jogador: mortes com sniper em duelo curto (até 10 m)**, 10 ou mais mortes")
     sniper_column.dataframe(sniper_table, hide_index=True, use_container_width=False)
 
-    st.subheader("Luta ou execução: a vítima reagiu?")
-    st.caption("Duelo quando a vítima feriu o killer no round, foco quando dois ou mais inimigos feriram a vítima, sem reação no resto.")
+    st.subheader("A vítima reagiu antes de morrer?")
+    st.caption("Duelo: a vítima causou dano em quem a matou. Foco: dois ou mais inimigos causaram dano na vítima. Sem reação: nenhum dos dois.")
     st.dataframe(fight_class_summary(fights, ["lado"]), use_container_width=False)
 
-    st.subheader("Jogadores: kills, mortes e score")
+    st.subheader("Jogadores: abates, mortes e pontuação")
     st.dataframe(players_summary(selected_players), hide_index=True)
 
-    st.subheader("Campos dos JSONs")
+    st.subheader("Campos dos arquivos de partida")
     relevant_fields, irrelevant_fields = build_field_tables()
     field_filter = st.text_input("Filtrar campo")
     st.dataframe(relevant_fields[relevant_fields["campo"].str.contains(field_filter, regex=False)], hide_index=True)
     with st.container(border=True):
-        st.markdown("**Dados irrelevantes.** Campos com um único valor em toda a base e sem subcampos.")
+        st.markdown("**Campos sem informação.** Têm o mesmo valor em todas as partidas.")
         st.dataframe(irrelevant_fields.drop(columns=["distintos"]).rename(columns={"mais_frequentes": "valor"}), hide_index=True)
