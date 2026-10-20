@@ -622,7 +622,6 @@ with collapse_tab:
 
     st.subheader("4. Perfil de cada equipe (equipes com 40 ou mais rounds de ataque)")
     profiles = team_profiles(styles)
-    st.caption("Cada bola é uma equipe. Para a direita, mais rounds com plant rápido. Para cima, mais rounds de ataque vencidos. Bola maior, mais rounds jogados. Só a metade das equipes com mais rounds tem o nome escrito. As outras aparecem ao passar o mouse.")
     st.altair_chart(team_scatter(profiles, "execução rápida", "vitoria_ataque", "rounds_ataque", "% dos rounds de ataque com plant até 40 s", "% de rounds de ataque vencidos"), use_container_width=True)
     with st.expander("Todos os números por equipe"):
         st.dataframe(profiles, use_container_width=True)
