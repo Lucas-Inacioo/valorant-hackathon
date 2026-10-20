@@ -767,7 +767,7 @@ with plants_tab:
             st.dataframe(cells[["site", "plants", "defuse", "esperado_pelos_vivos", "acima_do_esperado"]], use_container_width=False)
 
     st.subheader("4. O posicionamento no momento do plant muda o desarme? E como a defesa retoma o site?")
-    st.caption("Três medidas tiradas no instante do plant, todas comparadas com o esperado pelos vivos. Atacantes no site: quantos estavam a menos de 15 metros da spike. Olhando para fora: parte dos aliados de quem plantou que estava de costas para a spike, ou seja, vigiando as entradas. Distância da defesa: a que distância da spike estava o defensor do meio (metade mais perto, metade mais longe).")
+    st.caption("No instante do plant, comparado com o esperado pelos vivos. Atacantes no site mostra quantos estavam a menos de 15 metros da spike. Olhando para fora a parte dos aliados de quem plantou que estava de costas para a spike, ou seja, vigiando as entradas. Distância da defesa é a mediana da distância dos defensores até a spike.")
     selected_setups = setups_table()[setups_table()["match_id"].isin(selected_ids)]
     on_site_column, watching_column, defense_column = st.columns(3)
     on_site_column.markdown("**Atacantes a menos de 15 m da spike**")
