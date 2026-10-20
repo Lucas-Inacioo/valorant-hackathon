@@ -405,29 +405,29 @@ with overview_tab:
         st.dataframe(selected_matches.drop(columns=["match_id", "caminho", "mapa_interno", "mapa_do_arquivo"]), hide_index=True)
 
 with opening_tab:
-    st.markdown("Cada round entra uma vez: em que segundo aconteceu o primeiro abate, qual lado fez esse abate e se essa equipe venceu o round. O tempo começa quando o round fica ao vivo, depois da fase de compra.")
+    st.markdown("Cada round entra uma vez: em que momento aconteceu o primeiro abate, qual lado conseguiu esse abate e se essa equipe venceu o round. O tempo começa quando o round fica ao vivo, depois da fase de compra.")
     first_blood = first_blood_rows()[first_blood_rows()["match_id"].isin(selected_ids)]
     rounds_col, median_col, opener_col = st.columns(3)
     rounds_col.metric("Rounds com pelo menos um abate", len(first_blood))
     median_col.metric("Segundo típico do primeiro abate (mediana)", f'{first_blood["segundos"].median():.1f} s')
-    opener_col.metric("Quem faz o primeiro abate vence o round", f'{first_blood["abriu_venceu"].mean():.1%}')
+    opener_col.metric("Quem consegue o primeiro abate vence o round", f'{first_blood["abriu_venceu"].mean():.1%}')
 
-    st.subheader("1. Quem faz o primeiro abate vence o round? Isso muda conforme o segundo em que ele acontece?")
+    st.subheader("1. Quem consegue o primeiro abate vence o round? Isso muda conforme o tempo em que ele acontece?")
     rate_column, count_column = st.columns([3, 2])
-    rate_column.altair_chart(rate_chart(win_rate_by_time(first_blood), "faixa", "abriu_venceu", "rounds", "% de rounds vencidos pela equipe que fez o primeiro abate", group_column="lado_abriu", group_colors=SIDE_COLORS, order=TIME_LABELS), use_container_width=True)
+    rate_column.altair_chart(rate_chart(win_rate_by_time(first_blood), "faixa", "abriu_venceu", "rounds", "% de rounds vencidos pela equipe que conseguiu o primeiro abate", group_column="lado_abriu", group_colors=SIDE_COLORS, order=TIME_LABELS), use_container_width=True)
     count_column.markdown("**Em que segundo o primeiro abate acontece**, separado pelo lado que fez o abate")
     count_column.bar_chart(pd.crosstab(first_blood["faixa"], first_blood["lado_abriu"]), color=[ATTACK_COLOR, DEFENSE_COLOR], stack=False, y_label="rounds", x_label="")
     with st.expander("Primeiro abate antes ou depois do plant"):
         st.dataframe(plant_summary(first_blood).rename(index={True: "antes do plant", False: "depois do plant"}, level="antes_do_plant"), use_container_width=False)
 
     st.subheader("2. Em que mapa o primeiro abate do ataque pesa mais?")
-    st.caption("A barra mostra a diferença entre duas taxas: quantos rounds o ataque vence quando a equipe atacante faz o primeiro abate, menos quantos vence quando a equipe defensora faz o primeiro abate. Barra maior significa que, naquele mapa, conseguir o primeiro abate muda mais o round. Mapas em ordem de quantidade de rounds, entre parênteses.")
+    st.caption("A barra mostra a diferença entre duas taxas: quantos rounds o ataque vence quando a equipe atacante consegue o primeiro abate, menos quantos vence quando a equipe defensora consegue o primeiro abate. Barra maior significa que, naquele mapa, conseguir o primeiro abate muda mais o round. Mapas em ordem de quantidade de rounds, entre parênteses.")
     by_map = summary_by_map(first_blood).rename(index=map_name_by_internal)
     impact_column, table_column = st.columns([3, 2])
     impact_column.altair_chart(opening_impact_chart(by_map), use_container_width=True)
     table_column.dataframe(by_map[["rounds", "ataque_abriu", "ataque_vence", "ataque_vence_se_abre", "ataque_vence_se_defesa_abre"]], use_container_width=True)
 
-    st.subheader("3. Em que lugar do mapa o ataque faz o primeiro abate")
+    st.subheader("3. Em que lugar do mapa o ataque consegue o primeiro abate")
     chosen_internal, chosen_map_meta = map_selector("Mapa", by_map.index.map(internal_by_name), "opening_map")
     attack_openings = first_blood[(first_blood["mapa"] == chosen_internal) & (first_blood["lado_abriu"] == "ataque") & first_blood["antes_do_plant"]]
     if chosen_map_meta is None or attack_openings.empty:
