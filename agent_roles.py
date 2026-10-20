@@ -2,6 +2,8 @@
 
 Uso: python agent_roles.py
 """
+import math
+
 import pandas as pd
 
 from first_blood import wilson_interval
@@ -14,8 +16,8 @@ MIN_ROUNDS_PER_AGENT = 30
 
 
 def with_interval(table, rate_column, count_column):
-    """Acrescenta o intervalo de 95% (Wilson) da taxa em duas colunas numéricas."""
-    intervals = [wilson_interval(round(rate * count), count) for rate, count in zip(table[rate_column], table[count_column])]
+    """Wilson descritivo; dependência entre rounds não é incorporada."""
+    intervals = [wilson_interval(round(rate * count), count) if pd.notna(rate) and pd.notna(count) and count > 0 else (math.nan, math.nan) for rate, count in zip(table[rate_column], table[count_column])]
     table["ic95_baixo"] = [low for low, _ in intervals]
     table["ic95_alto"] = [high for _, high in intervals]
     return table
@@ -26,10 +28,11 @@ def known_roles(deaths):
 
 
 def first_deaths(deaths, max_seconds=None):
-    first = known_roles(deaths[deaths["ordem_da_morte"] == 1]).copy()
+    first_flag = deaths["primeira_vitima_unica"].eq(True) if "primeira_vitima_unica" in deaths else deaths["ordem_da_morte"].eq(1)
+    first = known_roles(deaths[first_flag]).copy()
     if max_seconds is not None:
         first = first[first["segundos"] <= max_seconds]
-    first["acima_do_time"] = first["venceu_round"].astype(float) - first["rounds_do_time"]
+    first["acima_do_time"] = first["venceu_round"].astype(float) - (first["rounds_do_time_sem_round"] if "rounds_do_time_sem_round" in first else first["rounds_do_time"])
     return first
 
 
@@ -39,11 +42,12 @@ def role_share(deaths, max_seconds=None):
     shares = pd.DataFrame({"escalações": picks})
     for side, side_first in first_deaths(deaths, max_seconds).groupby("lado"):
         shares[f"primeira morte {SIDE_PHRASE[side]}"] = side_first["funcao"].value_counts(normalize=True)
-    return shares.reindex(ROLE_ORDER).round(3)
+    columns = ["escalações", "primeira morte no ataque", "primeira morte na defesa"]
+    return shares.reindex(index=ROLE_ORDER, columns=columns).round(3)
 
 
 def first_death_by_role(deaths, max_seconds=None):
-    """Por lado e função da vítima: rounds, troca, vitória do time da vítima com intervalo, e a mesma vitória descontada a taxa de rounds do time na partida."""
+    """Por lado e função da vítima: rounds, troca, vitória do time da vítima com intervalo, e desvio descritivo da taxa do time nos demais rounds da mesma partida; não é controle independente."""
     table = first_deaths(deaths, max_seconds).groupby(["lado", "funcao"]).agg(rounds=("vitima", "size"), trocada=("trocada", "mean"), vitoria_da_vitima=("venceu_round", "mean"), acima_do_time=("acima_do_time", "mean"))
     return with_interval(table.reindex(SIDE_ROLE_INDEX), "vitoria_da_vitima", "rounds").round(3)
 
@@ -67,7 +71,7 @@ def death_cost_by_role(deaths_with_allies):
     expected = deaths_with_allies.groupby(["lado", "aliados_vivos", "inimigos_vivos"])["venceu_round"].transform("mean")
     deaths_with_allies["acima_do_esperado"] = deaths_with_allies["venceu_round"].astype(float) - expected
     table = deaths_with_allies.groupby(["lado", "funcao"]).agg(mortes=("vitima", "size"), isolada=("isolada", "mean"), trocada=("trocada", "mean"), acima_do_esperado=("acima_do_esperado", "mean"))
-    by_isolation = deaths_with_allies.groupby(["lado", "funcao", "isolada"])["acima_do_esperado"].mean().unstack("isolada")
+    by_isolation = deaths_with_allies.groupby(["lado", "funcao", "isolada"])["acima_do_esperado"].mean().unstack("isolada").reindex(columns=[False, True])
     table["acompanhada"] = by_isolation[False]
     table["isolada_acima_do_esperado"] = by_isolation[True]
     table["custo_do_isolamento"] = table["isolada_acima_do_esperado"] - table["acompanhada"]

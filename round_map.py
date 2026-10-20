@@ -3,52 +3,35 @@ import matplotlib
 import numpy as np
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.colors import TwoSlopeNorm
+from matplotlib.colors import Normalize, TwoSlopeNorm
 from matplotlib.patheffects import withStroke
 from matplotlib.lines import Line2D
 from PIL import Image
 
 from maps import game_to_image_fraction, minimap_file
+from match_events import alive_puuids, round_events
 
 ALLY_COLOR = "#1f77b4"
 ENEMY_COLOR = "#d62728"
 
 
-def round_events(round_result):
-    """Kills, plant e defuse em ordem de tempo. Cada evento traz a posição de quem estava vivo logo depois dele."""
-    events = []
-    for player_stats in round_result["playerStats"]:
-        for kill in player_stats["kills"]:
-            events.append({
-                "time_ms": kill["timeSinceRoundStartMillis"],
-                "kind": "kill",
-                "actor": kill["killer"],
-                "victim": kill["victim"],
-                "victim_location": kill["victimLocation"],
-                "locations": kill["playerLocations"] or [],
-                "assistants": kill["assistants"] or [],
-                "finishing": kill["finishingDamage"],
-            })
-    if round_result["bombPlanter"]:
-        events.append({"time_ms": round_result["plantRoundTime"], "kind": "plant", "actor": round_result["bombPlanter"], "locations": round_result["plantPlayerLocations"] or []})
-    if round_result["bombDefuser"]:
-        events.append({"time_ms": round_result["defuseRoundTime"], "kind": "defuse", "actor": round_result["bombDefuser"], "locations": round_result["defusePlayerLocations"] or []})
-    return sorted(events, key=lambda event: event["time_ms"])
-
-
 def describe_event(event, name_by_puuid, round_result):
     seconds = event["time_ms"] / 1000
-    actor = name_by_puuid[event["actor"]]
+    actor = name_by_puuid.get(event["actor"], "autor desconhecido")
+    suffix = " (após decisão do round)" if event.get("after_decision") else ""
     if event["kind"] == "kill":
-        return f"{seconds:.1f} s: {actor} eliminou {name_by_puuid[event['victim']]}"
+        victim = name_by_puuid.get(event['victim'], 'jogador desconhecido')
+        action = "morreu" if event["actor"] == event["victim"] else f"eliminou {victim}"
+        return f"{seconds:.1f} s: {actor} {action}{suffix}"
     if event["kind"] == "plant":
-        return f"{seconds:.1f} s: {actor} plantou a spike no site {round_result['plantSite']}"
-    return f"{seconds:.1f} s: {actor} desarmou a spike"
+        return f"{seconds:.1f} s: {actor} plantou a spike no site {round_result['plantSite']}{suffix}"
+    return f"{seconds:.1f} s: {actor} desarmou a spike{suffix}"
 
 
 def draw_round_map(map_meta, events, event_index, selected_puuid, team_by_puuid, name_by_puuid):
     """Desenha o momento event_index: aliados como círculo, inimigos como triângulo, vivos cheios e mortos vazados."""
-    image = Image.open(minimap_file(map_meta))
+    with Image.open(minimap_file(map_meta)) as source:
+        image = source.copy()
     width, height = image.size
     ally_team = team_by_puuid[selected_puuid]
 
@@ -64,12 +47,14 @@ def draw_round_map(map_meta, events, event_index, selected_puuid, team_by_puuid,
 
     figure, axes = plt.subplots(figsize=(7, 7))
     axes.imshow(image)
-    dead_locations = {event["victim"]: event["victim_location"] for event in events[:event_index + 1] if event["kind"] == "kill"}
+    current_alive = alive_puuids(events[event_index])
+    dead_locations = {event["victim"]: event["victim_location"] for event in events[:event_index + 1]
+                      if event["kind"] == "kill" and event["victim"] not in current_alive}
     for puuid, location in dead_locations.items():
         draw_player(axes, to_pixels(location), color_of(puuid), marker_of(puuid), name_by_puuid[puuid], puuid == selected_puuid, alive=False)
     for player_location in events[event_index]["locations"]:
         puuid = player_location["puuid"]
-        if puuid not in dead_locations:
+        if puuid in current_alive:
             draw_player(axes, to_pixels(player_location["location"]), color_of(puuid), marker_of(puuid), name_by_puuid[puuid], puuid == selected_puuid)
     trail = [to_pixels(player_location["location"]) for event in events[:event_index + 1] for player_location in event["locations"] if player_location["puuid"] == selected_puuid]
     if selected_puuid in dead_locations:
@@ -79,21 +64,25 @@ def draw_round_map(map_meta, events, event_index, selected_puuid, team_by_puuid,
     axes.legend(handles=legend_handles(), loc="lower right", fontsize=8)
     axes.axis("off")
     figure.tight_layout()
+    plt.close(figure)
     return figure
 
 
 def draw_points(map_meta, series):
     """Pontos sobre o minimapa. series é uma lista de (rótulo, cor, marcador, [(x, y), ...]) em coordenadas de jogo."""
-    image = Image.open(minimap_file(map_meta))
+    with Image.open(minimap_file(map_meta)) as source:
+        image = source.copy()
     width, height = image.size
     figure, axes = plt.subplots(figsize=(7, 7))
     axes.imshow(image)
     for label, color, marker, points in series:
         fractions = [game_to_image_fraction(x, y, map_meta) for x, y in points]
         axes.scatter([fx * width for fx, _ in fractions], [fy * height for _, fy in fractions], s=12, c=color, marker=marker, alpha=0.6, linewidths=0.8, label=f"{label} ({len(points)})")
-    axes.legend(loc="lower right", fontsize=8)
+    if series:
+        axes.legend(loc="lower right", fontsize=9)
     axes.axis("off")
     figure.tight_layout()
+    plt.close(figure)
     return figure
 
 
@@ -101,14 +90,17 @@ def draw_rate_markers(map_meta, rows, count_column, rate_column, center_rate, co
     """Um marcador por linha (x, y em coordenadas de jogo): tamanho pela contagem, cor pela taxa, centrada em center_rate. Círculo acima do centro, quadrado abaixo.
 
     Com zoom_padding (em pixels) a imagem é recortada ao redor dos marcadores."""
-    image = Image.open(minimap_file(map_meta))
+    with Image.open(minimap_file(map_meta)) as source:
+        image = source.copy()
     width, height = image.size
     figure, axes = plt.subplots(figsize=(7, 7))
     axes.imshow(image)
     fractions = [game_to_image_fraction(x, y, map_meta) for x, y in zip(rows["x"], rows["y"])]
     pixel_xs = [fx * width for fx, _ in fractions]
     pixel_ys = [fy * height for _, fy in fractions]
-    norm = TwoSlopeNorm(vcenter=center_rate, vmin=max(0.0, center_rate - 0.3), vmax=min(1.0, center_rate + 0.3))
+    center_rate = float(center_rate) if np.isfinite(center_rate) else 0.5
+    norm = (TwoSlopeNorm(vcenter=center_rate, vmin=max(0.0, center_rate - 0.3), vmax=min(1.0, center_rate + 0.3))
+            if 0 < center_rate < 1 else Normalize(vmin=0, vmax=1))
     sizes = 20 + size_per_unit * rows[count_column].to_numpy()
     rates = rows[rate_column].to_numpy()
     xs, ys = np.array(pixel_xs), np.array(pixel_ys)
@@ -129,6 +121,7 @@ def draw_rate_markers(map_meta, rows, count_column, rate_column, center_rate, co
         axes.set_ylim(min(height, max(pixel_ys) + zoom_padding), max(0, min(pixel_ys) - zoom_padding))
     axes.axis("off")
     figure.tight_layout()
+    plt.close(figure)
     return figure
 
 

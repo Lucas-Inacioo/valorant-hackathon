@@ -13,15 +13,39 @@ TIME_LABELS = ["0-10 s", "10-20 s", "20-30 s", "30-45 s", "45-60 s", "60-80 s", 
 OPPOSITE_SIDE = {"ataque": "defesa", "defesa": "ataque"}
 
 
+FIRST_COLUMNS = ["match_id", "arquivo", "mapa", "round", "segundos", "faixa", "lado_abriu", "time_abriu", "vitima", "vitima_x", "vitima_y", "killer_x", "killer_y", "trocada", "antes_do_plant", "abriu_venceu", "venceu_partida", "abertura_simultanea"]
+
+
 def first_blood_table(deaths):
-    """Uma linha por round com a primeira morte vista pelo lado de quem matou (quem abriu o placar)."""
-    first = deaths[deaths["ordem_da_morte"] == 1].copy()
+    """Uma linha por abertura adversária com equipe definida.
+
+    Empates entre equipes são contabilizados em attrs e omitidos das taxas.
+    Múltiplos abates da mesma equipe no primeiro instante definem a equipe,
+    mas não uma vítima/localização ou trade individual arbitrários.
+    """
+    valid = deaths["abertura_valida"].eq(True) if "abertura_valida" in deaths else deaths["ordem_da_morte"].eq(1)
+    valid = valid & deaths["lado"].isin(["ataque", "defesa"])
+    first = deaths[valid].copy().sort_values(["match_id", "round", "segundos", "vitima"])
+    first = first.drop_duplicates(["match_id", "round"])
     first["lado_abriu"] = first["lado"].map(OPPOSITE_SIDE)
-    first["time_abriu"] = first["time_vitima"].map({"Blue": "Red", "Red": "Blue"})
-    first["abriu_venceu"] = ~first["venceu_round"]
+    first["time_abriu"] = first["time_killer"] if "time_killer" in first else first["time_vitima"].map({"Blue": "Red", "Red": "Blue"})
+    first["abriu_venceu"] = ~first["venceu_round"].astype(bool)
+    first["venceu_partida"] = ~first["venceu_partida"].astype(bool)
     first["antes_do_plant"] = first["segundos_plant"].isna() | (first["segundos"] < first["segundos_plant"])
-    first["faixa"] = pd.cut(first["segundos"], TIME_BINS, labels=TIME_LABELS)
-    return first[["match_id", "arquivo", "mapa", "round", "segundos", "faixa", "lado_abriu", "time_abriu", "vitima", "vitima_x", "vitima_y", "killer_x", "killer_y", "trocada", "antes_do_plant", "abriu_venceu", "venceu_partida"]]
+    first["faixa"] = pd.cut(first["segundos"], TIME_BINS, labels=TIME_LABELS, include_lowest=True)
+    if "abertura_simultanea" not in first:
+        first["abertura_simultanea"] = False
+    multiple = first["abertura_simultanea"].eq(True)
+    for column in ["vitima_x", "vitima_y", "killer_x", "killer_y", "trocada"]:
+        first[column] = first[column].astype(float)
+    first.loc[multiple, ["vitima_x", "vitima_y", "killer_x", "killer_y", "trocada"]] = math.nan
+    first.loc[multiple, "vitima"] = None
+    result = first.reindex(columns=FIRST_COLUMNS)
+    ambiguous = deaths[deaths["abertura_ambigua"].eq(True)][["match_id", "round"]].drop_duplicates() if "abertura_ambigua" in deaths else deaths.iloc[:0]
+    result.attrs["rounds_abertura_ambigua"] = len(ambiguous)
+    result.attrs["rounds_com_mortes"] = len(deaths[["match_id", "round"]].drop_duplicates())
+    result.attrs["rounds_sem_abertura_valida"] = result.attrs["rounds_com_mortes"] - len(result)
+    return result
 
 
 def win_rate_by_time(first):
@@ -36,8 +60,8 @@ def who_opens_by_time(first):
 
 
 def wilson_interval(successes, total, z=1.96):
-    """Intervalo de 95% de uma proporção, que se comporta bem com poucas amostras."""
-    if total == 0:
+    """Wilson descritivo sob independência; não cobre agrupamento por partida."""
+    if not math.isfinite(total) or not math.isfinite(successes) or total <= 0:
         return math.nan, math.nan
     proportion = successes / total
     denominator = 1 + z * z / total
@@ -48,7 +72,7 @@ def wilson_interval(successes, total, z=1.96):
 
 def difference_interval(proportion_a, total_a, proportion_b, total_b, z=1.96):
     """Intervalo de 95% da diferença entre duas proporções, aproximação normal."""
-    if total_a == 0 or total_b == 0:
+    if not all(math.isfinite(value) for value in [proportion_a, total_a, proportion_b, total_b]) or total_a <= 0 or total_b <= 0:
         return math.nan, math.nan
     half_width = z * math.sqrt(proportion_a * (1 - proportion_a) / total_a + proportion_b * (1 - proportion_b) / total_b)
     return proportion_a - proportion_b - half_width, proportion_a - proportion_b + half_width
@@ -78,7 +102,8 @@ def summary_by_map(first):
             "impacto_ic95_baixo": impact_low,
             "impacto_ic95_alto": impact_high,
         })
-    return pd.DataFrame(rows).sort_values("rounds", ascending=False).set_index("mapa").round(3)
+    columns = ["mapa", "rounds", "mediana_segundos", "ataque_abriu", "ataque_abriu_ic95", "ataque_vence", "ataque_vence_se_abre", "ataque_vence_se_defesa_abre", "impacto_da_abertura", "impacto_ic95_baixo", "impacto_ic95_alto"]
+    return pd.DataFrame(rows, columns=columns).sort_values("rounds", ascending=False).set_index("mapa").round(3)
 
 
 def plant_summary(first):

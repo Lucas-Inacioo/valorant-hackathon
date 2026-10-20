@@ -1,11 +1,14 @@
 """Minimapas, conversão de coordenada de jogo para a imagem e nomes de agentes, com metadados públicos da valorant-api.com.
 
-A imagem e as quatro constantes de cada mapa e a lista de agentes são baixadas uma vez para data/maps/. Não é dado de partida.
+A imagem, constantes e listas são lidas localmente de data/maps/. Atualização
+remota exige executar explicitamente ``python maps.py --download``. Estes são
+metadados atuais, sem associação garantida à versão histórica da partida.
 """
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
-from download_data import fetch
+from download_data import atomic_write_json, fetch
 
 MAPS_DIR = Path(__file__).parent / "data" / "maps"
 MAPS_METADATA_URL = "https://valorant-api.com/v1/maps"
@@ -15,40 +18,38 @@ WEAPON_CATEGORY_LABELS = {"Rifles": "rifle", "Pistols": "pistola", "SMGs": "SMG"
 ROLE_LABELS = {"Duelist": "duelista", "Initiator": "iniciador", "Controller": "controlador", "Sentinel": "sentinela"}
 
 
+def _read_metadata(name):
+    metadata_file = MAPS_DIR / name
+    if not metadata_file.exists():
+        raise FileNotFoundError(f"Metadados ausentes: {metadata_file}. Execute explicitamente: python maps.py --download")
+    payload = json.loads(metadata_file.read_text(encoding="utf-8"))
+    if not isinstance(payload.get("data"), list):
+        raise ValueError(f"Metadados inválidos: {metadata_file}")
+    return payload["data"]
+
+
 def load_maps_by_url():
     """Metadados indexados por mapUrl, que é o matchInfo.mapId dos JSONs."""
-    metadata_file = MAPS_DIR / "maps.json"
-    if not metadata_file.exists():
-        MAPS_DIR.mkdir(parents=True, exist_ok=True)
-        metadata_file.write_bytes(fetch(MAPS_METADATA_URL))
-    all_maps = json.loads(metadata_file.read_text(encoding="utf-8"))["data"]
+    all_maps = _read_metadata("maps.json")
     return {map_meta["mapUrl"]: map_meta for map_meta in all_maps}
 
 
 def load_agents_by_id():
     """Nome e função (duelista, iniciador, controlador, sentinela) indexados pelo characterId dos JSONs."""
-    metadata_file = MAPS_DIR / "agents.json"
-    if not metadata_file.exists():
-        MAPS_DIR.mkdir(parents=True, exist_ok=True)
-        metadata_file.write_bytes(fetch(AGENTS_METADATA_URL))
-    agents = json.loads(metadata_file.read_text(encoding="utf-8"))["data"]
-    return {agent["uuid"]: {"agente": agent["displayName"], "funcao": ROLE_LABELS[agent["role"]["displayName"]]} for agent in agents}
+    agents = _read_metadata("agents.json")
+    return {agent["uuid"]: {"agente": agent["displayName"], "funcao": ROLE_LABELS.get((agent.get("role") or {}).get("displayName"), "desconhecida")} for agent in agents}
 
 
 def load_weapons_by_id():
     """Nome, custo e categoria indexados pelo id de arma dos JSONs (economy.weapon e finishingDamage.damageItem), em maiúsculas."""
-    metadata_file = MAPS_DIR / "weapons.json"
-    if not metadata_file.exists():
-        MAPS_DIR.mkdir(parents=True, exist_ok=True)
-        metadata_file.write_bytes(fetch(WEAPONS_METADATA_URL))
-    weapons = json.loads(metadata_file.read_text(encoding="utf-8"))["data"]
+    weapons = _read_metadata("weapons.json")
     return {weapon["uuid"].upper(): {"arma": weapon["displayName"], "custo": weapon["shopData"]["cost"] if weapon["shopData"] else 0, "categoria": WEAPON_CATEGORY_LABELS.get(weapon["shopData"]["category"] if weapon["shopData"] else "", "outra")} for weapon in weapons}
 
 
 def minimap_file(map_meta):
     image_file = MAPS_DIR / f"{map_meta['displayName']}.png"
     if not image_file.exists():
-        image_file.write_bytes(fetch(map_meta["displayIcon"]))
+        raise FileNotFoundError(f"Minimapa ausente: {image_file}. Execute explicitamente: python maps.py --download")
     return image_file
 
 
@@ -79,3 +80,38 @@ def super_region(game_x, game_y, map_meta):
         return "?"
     closest = min(callouts, key=lambda callout: (callout["location"]["x"] - game_x) ** 2 + (callout["location"]["y"] - game_y) ** 2)
     return closest["superRegionName"]
+
+
+def download_metadata(target_dir=MAPS_DIR):
+    """Atualização explícita dos metadados atuais; não identifica a versão histórica do jogo."""
+    target = Path(target_dir)
+    target.mkdir(parents=True, exist_ok=True)
+    urls = {"maps.json": MAPS_METADATA_URL, "agents.json": AGENTS_METADATA_URL, "weapons.json": WEAPONS_METADATA_URL}
+    origins = {}
+    for name, url in urls.items():
+        payload = json.loads(fetch(url))
+        if not isinstance(payload.get("data"), list):
+            raise ValueError(f"Resposta inválida em {url}")
+        atomic_write_json(target / name, payload)
+        origins[f"maps/{name}"] = {"origin": url, "downloaded_at_utc": datetime.now(timezone.utc).isoformat()}
+    for meta in json.loads((target / "maps.json").read_text(encoding="utf-8"))["data"]:
+        if meta.get("displayIcon"):
+            image_file = target / f"{meta['displayName']}.png"
+            if not image_file.exists():
+                raw = fetch(meta["displayIcon"])
+                from io import BytesIO
+                from PIL import Image
+                Image.open(BytesIO(raw)).verify()
+                temporary = image_file.with_suffix(".png.tmp")
+                temporary.write_bytes(raw)
+                temporary.replace(image_file)
+    from data_quality import write_manifest
+    write_manifest(target.parent.parent / "data-manifest.json", target.parent, origins)
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--download", action="store_true", help="Baixar/atualizar metadados e minimapas explicitamente")
+    if parser.parse_args().download:
+        download_metadata()

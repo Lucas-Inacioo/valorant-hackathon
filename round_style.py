@@ -7,6 +7,7 @@ import math
 import pandas as pd
 
 from economy import build_rounds_table
+from explore_fields import DEFAULT_DATA_DIR, find_match_files, load_match
 from predict import load_matches
 from solo_deaths import build_deaths_table
 
@@ -14,37 +15,55 @@ COLLAPSE_WINDOW_S = 10
 COLLAPSE_DEATHS = 3
 FAST_PLANT_S = 40
 EARLY_CONTACT_S = 20
-STYLE_ORDER = ["execução rápida", "default", "sem plant"]
+STYLE_ORDER = ["execução rápida", "default", "sem plant", "plant excluído"]
+
+
+COLLAPSE_COLUMNS = ["match_id", "round", "time", "tres_em_10s", "tres_com_abate", "colapso", "inicio_colapso", "regiao_colapso", "fase_colapso"]
+
+
+def tactical_deaths(deaths):
+    return deaths[deaths["diagnostico_tatico"].eq(True)] if "diagnostico_tatico" in deaths else deaths
 
 
 def collapse_of(team_deaths, enemy_times):
-    """Três mortes do time em 10 s. Colapso quando o time não fez nenhuma kill nessa janela. Retorna a primeira janela encontrada."""
-    team_deaths = team_deaths.sort_values("segundos")
+    """Três vítimas distintas em até 10 s; sem abate adversário pela equipe na janela."""
+    team_deaths = tactical_deaths(team_deaths).sort_values(["segundos", "vitima"])
     times = list(team_deaths["segundos"])
-    result = {"tres_em_10s": False, "colapso": False, "inicio_colapso": math.nan, "regiao_colapso": "", "fase_colapso": ""}
-    for start in range(len(times) - COLLAPSE_DEATHS + 1):
-        end = start + COLLAPSE_DEATHS - 1
-        if times[end] - times[start] > COLLAPSE_WINDOW_S:
-            continue
-        result["tres_em_10s"] = True
-        if any(times[start] <= time <= times[end] for time in enemy_times):
-            continue
-        window = team_deaths.iloc[start:end + 1]
-        return {"tres_em_10s": True, "colapso": True, "inicio_colapso": times[start], "regiao_colapso": window["regiao"].mode().iloc[0], "fase_colapso": window["fase"].iloc[0]}
+    result = {"tres_em_10s": False, "tres_com_abate": False, "colapso": False,
+              "inicio_colapso": math.nan, "regiao_colapso": "", "fase_colapso": ""}
+    for start in range(len(times)):
+        victims = set()
+        for end in range(start, len(times)):
+            if times[end] - times[start] > COLLAPSE_WINDOW_S:
+                break
+            victims.add(team_deaths.iloc[end]["vitima"])
+            if len(victims) < COLLAPSE_DEATHS:
+                continue
+            result["tres_em_10s"] = True
+            if any(times[start] <= time <= times[end] for time in enemy_times):
+                result["tres_com_abate"] = True
+            elif not result["colapso"]:
+                window = team_deaths.iloc[start:end + 1]
+                regions = set(window["regiao"].dropna())
+                result.update(colapso=True, inicio_colapso=times[start],
+                              regiao_colapso=next(iter(regions)) if len(regions) == 1 else "múltiplas regiões",
+                              fase_colapso=window["fase"].iloc[0])
+            break
     return result
 
 
 def collapse_rows(deaths):
     rows = []
+    deaths = tactical_deaths(deaths)
     for (match_id, round_number), round_deaths in deaths.groupby(["match_id", "round"]):
         for team, team_deaths in round_deaths.groupby("time_vitima"):
             enemy_times = round_deaths.loc[round_deaths["time_vitima"] != team, "segundos"]
             rows.append({"match_id": match_id, "round": round_number, "time": team, **collapse_of(team_deaths, enemy_times)})
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=COLLAPSE_COLUMNS)
 
 
 def attack_style(plant_seconds):
-    if math.isnan(plant_seconds):
+    if pd.isna(plant_seconds):
         return "sem plant"
     return "execução rápida" if plant_seconds <= FAST_PLANT_S else "default"
 
@@ -55,23 +74,53 @@ def score_state(difference):
     return "na frente" if difference > 0 else "empate"
 
 
-def build_round_styles(deaths=None, rounds=None, matches=None):
-    """Uma linha por round e time com colapso, estilo do ataque, contato e placar antes do round."""
-    deaths = build_deaths_table() if deaths is None else deaths
-    rounds = build_rounds_table() if rounds is None else rounds
-    matches = load_matches() if matches is None else matches
-    per_round = deaths.groupby(["match_id", "round"]).agg(primeira_morte=("segundos", "min"), segundos_plant=("segundos_plant", "first"), mapa=("mapa", "first"))
+def raw_round_metadata(match_ids=None, data_dir=DEFAULT_DATA_DIR):
+    """Plant e mapa diretamente dos campos de round, inclusive rounds sem mortes."""
+    rows = []
+    for match_file in find_match_files(data_dir):
+        match = load_match(match_file)
+        info = match["matchInfo"]
+        if match_ids is not None and info["matchId"] not in match_ids:
+            continue
+        for rr in match["roundResults"]:
+            seconds = rr.get("plantRoundTime", 0) / 1000 if rr.get("bombPlanter") else math.nan
+            rows.append({"match_id": info["matchId"], "round": rr["roundNum"] + 1,
+                         "mapa": info["mapId"].rsplit("/", 1)[-1], "segundos_plant": seconds})
+    return pd.DataFrame(rows, columns=["match_id", "round", "mapa", "segundos_plant"])
+
+
+def build_round_styles(deaths=None, rounds=None, matches=None, match_ids=None):
+    """Descrição observada do plant e das mortes; não identifica intenção tática."""
+    deaths = build_deaths_table(match_ids=match_ids) if deaths is None else deaths
+    rounds = build_rounds_table(match_ids=match_ids) if rounds is None else rounds.copy()
+    matches = load_matches(match_ids=match_ids) if matches is None else matches
+    if match_ids is not None:
+        deaths = deaths[deaths["match_id"].isin(match_ids)]
+        rounds = rounds[rounds["match_id"].isin(match_ids)]
+    per_round = tactical_deaths(deaths).groupby(["match_id", "round"]).agg(primeira_morte=("segundos", "min"))
     styles = rounds.merge(per_round, left_on=["match_id", "round"], right_index=True, how="left")
-    styles = styles.merge(collapse_rows(deaths), on=["match_id", "round", "time"], how="left").fillna({"colapso": False, "tres_em_10s": False, "regiao_colapso": "", "fase_colapso": ""})
-    styles["colapso"] = styles["colapso"].astype(bool)
-    styles["tres_em_10s"] = styles["tres_em_10s"].astype(bool)
+    if "mapa" not in styles and "mapa_interno" in styles:
+        styles["mapa"] = styles["mapa_interno"].str.rsplit("/", n=1).str[-1]
+    if "mapa" not in styles or "segundos_plant" not in styles:
+        raw = raw_round_metadata(set(rounds["match_id"]))
+        styles = styles.merge(raw, on=["match_id", "round"], how="left", suffixes=("", "_raw"))
+        for column in ["mapa", "segundos_plant"]:
+            if f"{column}_raw" in styles:
+                styles[column] = styles.pop(f"{column}_raw")
+    styles = styles.merge(collapse_rows(deaths), on=["match_id", "round", "time"], how="left")
+    styles = styles.fillna({"colapso": False, "tres_em_10s": False, "tres_com_abate": False, "regiao_colapso": "", "fase_colapso": ""})
+    for column in ["colapso", "tres_em_10s", "tres_com_abate"]:
+        styles[column] = styles[column].astype(bool)
     styles["estilo"] = styles["segundos_plant"].map(attack_style)
-    styles["contato"] = styles["primeira_morte"].map(lambda seconds: "contato cedo" if seconds <= EARLY_CONTACT_S else "contato tarde")
+    if "plant_valido" in styles:
+        styles.loc[styles["segundos_plant"].notna() & ~styles["plant_valido"].eq(True), "estilo"] = "plant excluído"
+    styles["contato"] = styles["primeira_morte"].map(lambda sec: "sem abate adversário" if pd.isna(sec) else ("contato cedo" if sec <= EARLY_CONTACT_S else "contato tarde"))
     styles = styles.sort_values(["match_id", "time", "round"])
-    by_team = styles.groupby(["match_id", "time"])
-    wins_before = by_team["venceu"].cumsum() - styles["venceu"]
-    rounds_before = styles["round"] - 1
-    styles["placar"] = (2 * wins_before - rounds_before).map(score_state)
+    if styles.empty:
+        styles["placar"] = pd.Series(dtype=str)
+    else:
+        wins_before = styles.groupby(["match_id", "time"])["venceu"].cumsum() - styles["venceu"]
+        styles["placar"] = (2 * wins_before - (styles["round"] - 1)).map(score_state)
     name_by_match_team = {(row.match_id, color): getattr(row, f"nome_{color.lower()}") for row in matches.itertuples() for color in ["Blue", "Red"]}
     styles["nome_time"] = [name_by_match_team.get((match_id, team), team) for match_id, team in zip(styles["match_id"], styles["time"])]
     return styles
@@ -84,8 +133,9 @@ def collapse_summary(styles, group_columns=()):
     for key, group in groups:
         key = key if isinstance(key, tuple) else (key,)
         collapsed = group[group["colapso"]]
-        rows.append({**dict(zip(group_columns, key)), "rounds": len(group), "tres_em_10s": group["tres_em_10s"].mean(), "colapsos": group["colapso"].mean(), "venceu_sem_colapso": group.loc[~group["colapso"], "venceu"].mean(), "venceu_com_colapso": collapsed["venceu"].mean(), "inicio_mediano": collapsed["inicio_colapso"].median()})
-    table = pd.DataFrame(rows)
+        rows.append({**dict(zip(group_columns, key)), "rounds": len(group), "tres_em_10s": group["tres_em_10s"].mean(), "tres_com_abate": group["tres_com_abate"].mean(), "colapsos": group["colapso"].mean(), "venceu_sem_colapso": group.loc[~group["colapso"], "venceu"].mean(), "venceu_com_colapso": collapsed["venceu"].mean(), "inicio_mediano": collapsed["inicio_colapso"].median()})
+    columns = [*group_columns, "rounds", "tres_em_10s", "tres_com_abate", "colapsos", "venceu_sem_colapso", "venceu_com_colapso", "inicio_mediano"]
+    table = pd.DataFrame(rows, columns=columns)
     return (table.set_index(list(group_columns)) if group_columns else table).round(3)
 
 
@@ -124,12 +174,13 @@ def team_profiles(styles, min_attack_rounds=40):
             style_rounds = attack[attack["estilo"] == style]
             row[f"{style}"] = len(style_rounds) / len(attack)
             row[f"vence {style}"] = style_rounds["venceu"].mean() if len(style_rounds) else math.nan
-        row["rápida quando atrás"] = (attack.loc[attack["placar"] == "atrás", "estilo"] == "execução rápida").mean()
-        row["rápida na frente"] = (attack.loc[attack["placar"] == "na frente", "estilo"] == "execução rápida").mean()
+        row["rápida quando atrás"] = (attack.loc[(attack["placar"] == "atrás") & attack["estilo"].isin(STYLE_ORDER[:2]), "estilo"] == "execução rápida").mean()
+        row["rápida na frente"] = (attack.loc[(attack["placar"] == "na frente") & attack["estilo"].isin(STYLE_ORDER[:2]), "estilo"] == "execução rápida").mean()
         row["colapsos por round"] = team_rounds["colapso"].mean()
         row["contato cedo na defesa"] = (defense["contato"] == "contato cedo").mean()
         rows.append(row)
-    return pd.DataFrame(rows).set_index("time").sort_values("rounds_ataque", ascending=False).round(3)
+    columns = ["time", "partidas", "rounds_ataque", "vitoria_ataque", *[column for style in STYLE_ORDER for column in [style, f"vence {style}"]], "rápida quando atrás", "rápida na frente", "colapsos por round", "contato cedo na defesa"]
+    return pd.DataFrame(rows, columns=columns).set_index("time").sort_values("rounds_ataque", ascending=False).round(3)
 
 
 def main():

@@ -2,38 +2,55 @@
 
 Uso: python economy.py
 """
+import math
+
 import pandas as pd
 
 from explore_fields import DEFAULT_DATA_DIR, find_match_files, load_match
 from predict import attacking_team_by_round
 
 OTHER_TEAM = {"Blue": "Red", "Red": "Blue"}
-LOADOUT_BINS = [-1, 4000, 8000, 12000, 16000, 20000, 40000]
-LOADOUT_LABELS = ["0-4k", "4-8k", "8-12k", "12-16k", "16-20k", "20k+"]
-DIFF_BINS = [-40000, -10000, -5000, -2000, 2000, 5000, 10000, 40000]
-DIFF_LABELS = ["< -10k", "-10k a -5k", "-5k a -2k", "-2k a 2k", "2k a 5k", "5k a 10k", "> 10k"]
+LOADOUT_BINS = [-math.inf, 4000, 8000, 12000, 16000, 20000, math.inf]
+LOADOUT_LABELS = ["até 4k", "(4k, 8k]", "(8k, 12k]", "(12k, 16k]", "(16k, 20k]", "> 20k"]
+DIFF_BINS = [-math.inf, -10000, -5000, -2000, 2000, 5000, 10000, math.inf]
+DIFF_LABELS = ["≤ -10k", "(-10k, -5k]", "(-5k, -2k]", "(-2k, 2k]", "(2k, 5k]", "(5k, 10k]", "> 10k"]
 EASY_LOSS_CEREMONIES = {"CeremonyClutch", "CeremonyThrifty"}
 
 
 def round_rows(match, match_file):
     """Uma linha por round e time: loadout, gasto, sobra, resultado, cerimônia e lado."""
     team_by_puuid = {player["puuid"]: player["teamId"] for player in match["players"]}
-    attacking = attacking_team_by_round(match)
+    from match_events import attacking_team, round_events, alive_puuids, final_alive_puuids
+    from plants import plant_exclusion
+    attacking = {rr["roundNum"] + 1: attacking_team(rr) for rr in match["roundResults"]}
     rows = []
     for round_result in match["roundResults"]:
         totals = {"Blue": {"loadout": 0, "spent": 0, "remaining": 0}, "Red": {"loadout": 0, "spent": 0, "remaining": 0}}
         for player_stats in round_result["playerStats"]:
             economy = player_stats["economy"]
-            team = totals[team_by_puuid[player_stats["puuid"]]]
+            color = team_by_puuid.get(player_stats["puuid"])
+            if color not in totals:
+                continue
+            team = totals[color]
             team["loadout"] += economy["loadoutValue"]
             team["spent"] += economy["spent"]
             team["remaining"] += economy["remaining"]
         round_number = round_result["roundNum"] + 1
+        events = round_events(round_result, team_by_puuid)
+        plant = next((event for event in events if event["kind"] == "plant"), None)
+        attack = attacking.get(round_number)
+        plant_valid = bool(plant and not plant_exclusion(round_result, team_by_puuid))
+        alive_final = final_alive_puuids(round_result, team_by_puuid)
         for team in ["Blue", "Red"]:
             rows.append({
                 "match_id": match["matchInfo"]["matchId"],
                 "arquivo": match_file.name,
                 "round": round_number,
+                "mapa_interno": match["matchInfo"]["mapId"],
+                "segundos_plant": round_result.get("plantRoundTime", 0) / 1000 if round_result.get("bombPlanter") else math.nan,
+                "plantou_bruto": bool(round_result.get("bombPlanter")),
+                "plant_valido": plant_valid,
+                "sobreviventes": sum(team_by_puuid.get(p) == team for p in alive_final),
                 "time": team,
                 "lado": "?" if attacking.get(round_number) is None else ("ataque" if attacking[round_number] == team else "defesa"),
                 "loadout": totals[team]["loadout"],
@@ -47,21 +64,27 @@ def round_rows(match, match_file):
     return rows
 
 
-def build_rounds_table(data_dir=DEFAULT_DATA_DIR):
+def build_rounds_table(data_dir=DEFAULT_DATA_DIR, match_ids=None):
+    from data_quality import eligible_match_ids
+    allowed = eligible_match_ids(data_dir) if match_ids is None else set(match_ids)
     rows = []
     for match_file in find_match_files(data_dir):
-        rows += round_rows(load_match(match_file), match_file)
-    rounds = pd.DataFrame(rows).sort_values(["match_id", "time", "round"])
+        match = load_match(match_file)
+        if match["matchInfo"]["matchId"] in allowed:
+            rows += round_rows(match, match_file)
+    columns = ["match_id", "arquivo", "round", "time", "lado", "loadout", "loadout_adversario", "gasto", "sobra", "venceu", "cerimonia", "resultado", "mapa_interno", "segundos_plant", "plantou_bruto", "plant_valido", "sobreviventes"]
+    rounds = pd.DataFrame(rows, columns=columns).sort_values(["match_id", "time", "round"])
     rounds["diferenca"] = rounds["loadout"] - rounds["loadout_adversario"]
     rounds["faixa_loadout"] = pd.cut(rounds["loadout"], LOADOUT_BINS, labels=LOADOUT_LABELS)
     rounds["faixa_diferenca"] = pd.cut(rounds["diferenca"], DIFF_BINS, labels=DIFF_LABELS)
     rounds["tipo"] = rounds["round"].map(round_type)
-    by_team = rounds.groupby(["match_id", "time"])
+    rounds["metade"] = rounds["round"].map(lambda n: "primeira" if n <= 12 else ("segunda" if n <= 24 else f"OT {n - 24}"))
+    by_team = rounds.groupby(["match_id", "time", "metade"])
     rounds["venceu_anterior"] = by_team["venceu"].shift(1)
     rounds["cerimonia_anterior"] = by_team["cerimonia"].shift(1)
     rounds["derrotas_seguidas"] = by_team["venceu"].transform(losing_streak_before)
     rounds["perdeu_round_facil"] = (rounds["venceu_anterior"] == False) & rounds["cerimonia_anterior"].isin(EASY_LOSS_CEREMONIES)
-    expected = rounds.groupby("faixa_diferenca", observed=True)["venceu"].mean()
+    expected = rounds[rounds["tipo"] == "outro"].groupby("faixa_diferenca", observed=True)["venceu"].mean()
     rounds["esperado_pelo_dinheiro"] = rounds["faixa_diferenca"].map(expected).astype(float)
     rounds["acima_do_esperado"] = rounds["venceu"].astype(float) - rounds["esperado_pelo_dinheiro"]
     return rounds
@@ -109,13 +132,13 @@ def versus_full_buy(rounds):
 
 
 def close_match_ids(rounds, max_gap=4):
-    """Partidas com placar final de até max_gap rounds de diferença, para separar abalo de time mais fraco."""
+    """Estrato retrospectivo por placar final; não é controle de força nem teste de abalo."""
     final = rounds.groupby(["match_id", "time"])["venceu"].sum().unstack()
     return set(final[(final["Blue"] - final["Red"]).abs() <= max_gap].index)
 
 
 def after_previous_round(rounds):
-    """Vitória no round seguinte a uma vitória, a uma derrota comum e a uma derrota em round fácil, descontando o dinheiro."""
+    """Vitória no round seguinte a uma vitória, a uma derrota comum e a uma derrota em round fácil, comparando uma referência descritiva de loadout."""
     following = rounds[rounds["venceu_anterior"].notna() & (rounds["tipo"] == "outro")].copy()
     following["anterior"] = "venceu"
     following.loc[following["venceu_anterior"] == False, "anterior"] = "perdeu"
@@ -124,7 +147,7 @@ def after_previous_round(rounds):
 
 
 def after_streak(rounds):
-    """Vitória por número de derrotas seguidas antes do round, descontando o dinheiro."""
+    """Vitória por número de derrotas seguidas antes do round, comparando uma referência descritiva de loadout."""
     normal = rounds[rounds["tipo"] == "outro"].copy()
     normal["derrotas"] = normal["derrotas_seguidas"].clip(upper=4).astype(str).replace("4", "4+")
     return normal.groupby("derrotas").agg(rounds=("venceu", "size"), vitoria=("venceu", "mean"), esperado_pelo_dinheiro=("esperado_pelo_dinheiro", "mean"), acima_do_esperado=("acima_do_esperado", "mean"), diferenca_media=("diferenca", "mean")).round(3)
@@ -136,21 +159,34 @@ def pistol_by_side(rounds):
 
 
 def second_round_cycle(rounds):
-    """Perdedor do pistol: o que a compra do round 2 (eco, leve ou force) faz com os rounds 2, 3 e 4, e a força do time no resto."""
+    """Ciclos após perder o pistol; soma somente coortes completas, com censura explícita.
+
+    O agrupamento geral e por lado mostra as metades separadamente. As taxas por
+    offset e a soma usam os mesmos ciclos completos nos três offsets.
+    A taxa prévia é apenas descritiva e nunca inclui o horizonte 2–4/14–16.
+    """
     second = rounds[(rounds["tipo"] == "segundo") & (rounds["venceu_anterior"] == False)].copy()
-    second["compra"] = pd.cut(second["loadout"], [-1, 4000, 8000, 40000], labels=["eco (até 4k)", "leve (4-8k)", "force (8k+)"])
+    second["metade"] = second["round"].map({2: "primeira", 14: "segunda"})
+    second["compra"] = pd.cut(second["loadout"], [-math.inf, 4000, 8000, math.inf], labels=["eco (até 4k)", "leve (4-8k)", "force (> 8k)"])
     later = rounds[["match_id", "time", "round", "venceu", "loadout"]]
     for offset, name in [(1, "3"), (2, "4")]:
         shifted = later.copy()
-        shifted["round"] = shifted["round"] - offset
+        shifted["round"] -= offset
         second = second.merge(shifted.rename(columns={"venceu": f"venceu_round_{name}", "loadout": f"loadout_round_{name}"}), on=["match_id", "time", "round"], how="left")
-    strength = rounds[rounds["round"] > 4].groupby(["match_id", "time"])["venceu"].mean().rename("vitoria_do_round_5_em_diante")
-    second = second.merge(strength, on=["match_id", "time"], how="left")
-    aggregations = dict(rounds=("venceu", "size"), loadout_medio=("loadout", "mean"), vitoria_round_2=("venceu", "mean"), vitoria_round_3=("venceu_round_3", "mean"), vitoria_round_4=("venceu_round_4", "mean"), loadout_round_3=("loadout_round_3", "mean"), forca_do_time=("vitoria_do_round_5_em_diante", "mean"))
-    overall = second.groupby("compra", observed=True).agg(**aggregations)
-    by_side = second[second["lado"] != "?"].groupby(["lado", "compra"], observed=True).agg(**aggregations)
+    second["completo"] = second[["venceu_round_3", "venceu_round_4"]].notna().all(axis=1)
+    for name, column in [("2", "venceu"), ("3", "venceu_round_3"), ("4", "venceu_round_4")]:
+        second[f"vitoria_completa_{name}"] = second[column].astype(float).where(second["completo"])
+    second["ganhos_completos"] = (second["venceu"].astype(float) + second["venceu_round_3"].astype(float) + second["venceu_round_4"].astype(float)).where(second["completo"])
+    prior = []
+    for row in second.itertuples():
+        past = rounds[(rounds["match_id"] == row.match_id) & (rounds["time"] == row.time) & (rounds["round"] < row.round - 1)]
+        prior.append(past["venceu"].mean())
+    second["vitoria_anterior_ao_pistol"] = prior
+    aggregations = dict(rounds=("venceu", "size"), disponiveis_round_2=("venceu", "count"), disponiveis_round_3=("venceu_round_3", "count"), disponiveis_round_4=("venceu_round_4", "count"), ciclos_completos=("completo", "sum"), loadout_medio=("loadout", "mean"), vitoria_disponiveis_round_2=("venceu", "mean"), vitoria_disponiveis_round_3=("venceu_round_3", "mean"), vitoria_disponiveis_round_4=("venceu_round_4", "mean"), vitoria_round_2=("vitoria_completa_2", "mean"), vitoria_round_3=("vitoria_completa_3", "mean"), vitoria_round_4=("vitoria_completa_4", "mean"), loadout_round_3=("loadout_round_3", "mean"), taxa_previa=("vitoria_anterior_ao_pistol", "mean"), rounds_ganhos_2_a_4=("ganhos_completos", "mean"))
+    overall = second.groupby(["metade", "compra"], observed=True).agg(**aggregations)
+    by_side = second[second["lado"] != "?"].groupby(["metade", "lado", "compra"], observed=True).agg(**aggregations)
     for table in (overall, by_side):
-        table["rounds_ganhos_2_a_4"] = table["vitoria_round_2"] + table["vitoria_round_3"] + table["vitoria_round_4"]
+        table["ciclos_censurados"] = table["rounds"] - table["ciclos_completos"]
     return overall.round(3), by_side.round(3)
 
 
