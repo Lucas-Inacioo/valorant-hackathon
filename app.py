@@ -582,8 +582,27 @@ with collapse_tab:
     map_column.markdown("**Parte dos rounds com colapso em cada mapa**, por lado")
     by_map_side = collapse_summary(styles, ["mapa", "lado"]).rename(index=map_name_by_internal, level="mapa").sort_values("rounds", ascending=False)
     map_column.altair_chart(rate_chart(by_map_side, "mapa", "colapsos", "rounds", "% dos rounds com colapso", group_column="lado", group_colors=SIDE_COLORS), use_container_width=True)
-    collapse_internal, _ = map_selector("Em que regiões do mapa os colapsos acontecem", styles["mapa"].value_counts().index, "collapse_map")
-    st.dataframe(collapse_regions(styles, collapse_internal), use_container_width=False)
+    collapse_internal, collapse_map_meta = map_selector("Em que regiões do mapa os colapsos acontecem", styles["mapa"].value_counts().index, "collapse_map")
+    regions = collapse_regions(styles, collapse_internal)
+    if collapse_map_meta is None or regions.empty:
+        st.info("Este mapa não tem imagem disponível ou não tem colapsos suficientes.")
+    else:
+        location_by_name = {callout_name(callout): (callout["location"]["x"], callout["location"]["y"]) for callout in collapse_map_meta["callouts"]}
+        regions = regions.reset_index()
+        regions["x"] = regions["regiao_colapso"].map(lambda name: location_by_name.get(name, (None, None))[0])
+        regions["y"] = regions["regiao_colapso"].map(lambda name: location_by_name.get(name, (None, None))[1])
+        regions = regions.dropna(subset=["x", "y"])
+        map_pre_plant = regions["pre_plant"].mean()
+        st.caption(f"Cada círculo é uma região do mapa, só regiões com 5 ou mais colapsos. O tamanho mostra quantos colapsos aconteceram ali. A cor mostra quando: azul, a maior parte antes do plant; vermelho, a maior parte depois do plant, em relação à média do mapa ({map_pre_plant:.0%} antes do plant).")
+        for side_column, side in zip(st.columns(2), ["ataque", "defesa"]):
+            side_regions = regions[regions["lado"] == side].set_index("regiao_colapso")
+            side_column.markdown(f"**Colapsos da equipe {SIDE_PHRASES[side].replace('no ', 'de ').replace('na ', 'de ')}** ({int(side_regions['colapsos'].sum())} colapsos)")
+            if side_regions.empty:
+                side_column.info("Sem colapsos com volume neste lado.")
+            else:
+                side_column.pyplot(draw_rate_markers(collapse_map_meta, side_regions, "colapsos", "pre_plant", map_pre_plant, "parte dos colapsos antes do plant", label_min_count=10**9, size_per_unit=6))
+        with st.expander("Números por região"):
+            st.dataframe(regions.drop(columns=["x", "y"]), hide_index=True, use_container_width=False)
 
     st.subheader("2. Ritmo do ataque: plantar rápido rende mais? E fazer contato cedo?")
     attack_styles, contact = style_summary(styles)
