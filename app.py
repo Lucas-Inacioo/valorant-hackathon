@@ -757,7 +757,7 @@ with plants_tab:
     else:
         cells = cells_for_map(selected_plants, plant_map_internal)
         map_defuse = selected_plants[selected_plants["mapa"] == plant_map_internal]["defusada"].mean()
-        st.caption(f"Cada bola junta os plants feitos num quadrado de cerca de 4 metros, só quadrados com 5 ou mais plants, com uma imagem por site. Tamanho da bola: quantos plants. Cor e forma: quantos foram desarmados, em relação à média do mapa ({map_defuse:.0%}). Círculo: a defesa desarma mais do que a média ali. Quadrado: menos.")
+        st.caption("Cada marca junta os plants feitos num quadrado de cerca de 4 metros, só quadrados com 5 ou mais plants, com uma imagem por site. Tamanho da bola é maior de acordo com a quantidade de plants. Cor e forma mostram quantos foram desarmados, em relação à média do mapa")
         sites = sorted(cells["site"].unique())
         for site_column, site in zip(st.columns(len(sites)), sites):
             site_cells = cells[cells["site"] == site]
