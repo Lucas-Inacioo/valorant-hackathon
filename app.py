@@ -564,7 +564,7 @@ with trades_tab:
     st.dataframe(team_summary(named_fights).drop(columns=["kills_em_foco"]), use_container_width=False)
 
 with collapse_tab:
-    st.markdown("Cada round entra duas vezes, uma para cada equipe. Colapso: três jogadores da equipe morrem em até 10 segundos sem que a equipe mate ninguém nesse intervalo. Ritmo do ataque, pelo segundo do plant: execução rápida quando a spike é plantada até 40 s, default quando é plantada depois disso, sem plant quando o round acabou antes de plantar (quase sempre derrota, por isso é mais resultado do que escolha). Contato cedo: o primeiro abate do round aconteceu até 20 s. Placar: quem estava na frente antes do round começar.")
+    st.markdown("Colapso foi definido como três jogadores da equipe morrendo em até 10 segundos sem que a equipe mate ninguém nesse intervalo. Execução rápida é quando a spike é plantada em até 40 s, default quando é plantada depois disso, sem plant quando o round acabou antes de plantar. Contato cedo é quando o primeiro abate do round aconteceu em até 20 s. Por fim, placar é quem estava na frente antes do round começar.")
     styles = round_styles_table()
     styles = styles[styles["match_id"].isin(selected_ids) & (styles["lado"] != "?")]
     rounds_col, collapse_col, fast_col = st.columns(3)
