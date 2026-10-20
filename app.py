@@ -421,7 +421,7 @@ with opening_tab:
         st.dataframe(plant_summary(first_blood).rename(index={True: "antes do plant", False: "depois do plant"}, level="antes_do_plant"), use_container_width=False)
 
     st.subheader("2. Em que mapa o primeiro abate do ataque pesa mais?")
-    st.caption("A barra mostra a diferença entre duas taxas: quantos rounds o ataque vence quando a equipe atacante consegue o primeiro abate, menos quantos vence quando a equipe defensora consegue o primeiro abate. Barra maior significa que, naquele mapa, conseguir o primeiro abate muda mais o round. Mapas em ordem de quantidade de rounds, entre parênteses.")
+    st.caption("Diferença entre quantos rounds o ataque vence quando a equipe atacante consegue o primeiro abate e quantos vence quando a equipe defensora consegue o primeiro abate. Barra maior significa que, naquele mapa, conseguir o primeiro abate muda mais o round. Mapas em ordem de quantidade de rounds, entre parênteses.")
     by_map = summary_by_map(first_blood).rename(index=map_name_by_internal)
     impact_column, table_column = st.columns([3, 2])
     impact_column.altair_chart(opening_impact_chart(by_map), use_container_width=True)
