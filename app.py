@@ -497,16 +497,16 @@ with trades_tab:
     missed_col.metric("Trocas possíveis que não aconteceram", f"{1 - possible['trocada'].mean():.0%}")
 
     st.subheader("1. Quanto vale trocar abates, e quanto vale ter um aliado perto?")
-    st.caption("Cada barra é a diferença na taxa de vitória do round entre mortes trocadas e não trocadas (ou entre mortes com aliado perto e sem), comparando só mortes com o mesmo número de aliados e de inimigos vivos logo depois dela. Assim a troca não leva o crédito de a equipe já estar em vantagem. Acima de zero, ajuda a vencer o round.")
+    st.caption("O eixo mostra quantos aliados da vítima ainda estavam vivos no instante em que ela morreu, sem contar a vítima e antes de qualquer troca. Por exemplo, a barra 1 reúne mortes em que a equipe tinha 2 vivos e ficou com 1. Cada barra compara a taxa de vitória do round entre mortes trocadas e não trocadas (ou entre mortes com aliado perto e sem). A comparação só junta mortes com o mesmo número de aliados e de inimigos vivos nesse instante, para a troca não levar o crédito de a equipe já estar em vantagem. Acima de zero, ajuda a vencer o round.")
     for flag, label in [("trocada", "Morte trocada"), ("aliado_perto", "Aliado a menos do limite de isolamento")]:
         by_situation = win_rate_by_situation(deaths_with_allies, flag)
-        by_situation["aliados vivos depois da morte"] = by_situation["situacao"].str.split("v").str[0].astype(int)
+        by_situation["aliados vivos no instante da morte"] = by_situation["situacao"].str.split("v").str[0].astype(int)
         weighted = (by_situation["diferenca"] * by_situation["mortes"]).groupby(by_situation["lado"]).sum() / by_situation.groupby("lado")["mortes"].sum()
-        by_allies = (by_situation["diferenca"] * by_situation["mortes"]).groupby([by_situation["aliados vivos depois da morte"], by_situation["lado"]]).sum() / by_situation.groupby(["aliados vivos depois da morte", "lado"])["mortes"].sum()
+        by_allies = (by_situation["diferenca"] * by_situation["mortes"]).groupby([by_situation["aliados vivos no instante da morte"], by_situation["lado"]]).sum() / by_situation.groupby(["aliados vivos no instante da morte", "lado"])["mortes"].sum()
         st.markdown(f"**{label}.** Juntando todas as situações, a diferença média na taxa de vitória do round é {weighted.get('ataque', float('nan')):+.0%} no ataque e {weighted.get('defesa', float('nan')):+.0%} na defesa.")
-        st.bar_chart(by_allies.unstack("lado"), color=[ATTACK_COLOR, DEFENSE_COLOR], stack=False, y_label="diferença na vitória", x_label="aliados vivos depois da morte", height=260)
+        st.bar_chart(by_allies.unstack("lado"), color=[ATTACK_COLOR, DEFENSE_COLOR], stack=False, y_label="diferença na vitória", x_label="aliados da vítima vivos no instante da morte", height=260)
         with st.expander(f"Números de cada situação (aliados x inimigos vivos): {label.lower()}"):
-            st.dataframe(by_situation.drop(columns=["aliados vivos depois da morte"]), hide_index=True, use_container_width=False)
+            st.dataframe(by_situation.drop(columns=["aliados vivos no instante da morte"]), hide_index=True, use_container_width=False)
 
     st.subheader("2. Quando a troca era possível, ela aconteceu?")
     trade_table = trade_possibility_summary(fights, ["lado"]).rename(index={TRADE_POSSIBLE: "aliado a menos de 20 m, olhando para quem matou", "aliado em alcance olhando para outro lado": "aliado a menos de 20 m, olhando para outro lado", "sem aliado em alcance": "nenhum aliado a menos de 20 m"}, level="troca_possivel")
