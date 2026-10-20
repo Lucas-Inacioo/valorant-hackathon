@@ -445,7 +445,8 @@ with opening_tab:
                 ("ataque perdeu o round", LOST_COLOR, list(zip(lost["vitima_x"], lost["vitima_y"]))),
             ]))
         else:
-            map_column.pyplot(draw_callout_summary(chosen_map_meta, by_callout, map_average))
+            # Sem nomes sobre o mapa: a tabela ao lado traz as regiões
+            map_column.pyplot(draw_callout_summary(chosen_map_meta, by_callout, map_average, label_min_count=10**9))
         table_column.dataframe(by_callout[["aberturas", "ataque_venceu", "ic95"]], use_container_width=True)
 
     st.subheader("4. Qual função de agente morre primeiro, e isso muda o custo do primeiro abate?")
@@ -690,7 +691,7 @@ with plants_tab:
         for site_column, site in zip(st.columns(len(sites)), sites):
             site_cells = cells[cells["site"] == site]
             site_column.markdown(f"**Site {site}** ({int(site_cells['plants'].sum())} plants nos quadrados mostrados)")
-            site_column.pyplot(draw_rate_markers(plant_map_meta, site_cells, "plants", "defuse", map_defuse, "taxa de defuse", label_min_count=10, size_per_unit=3, zoom_padding=90))
+            site_column.pyplot(draw_rate_markers(plant_map_meta, site_cells, "plants", "defuse", map_defuse, "taxa de defuse", label_min_count=10**9, size_per_unit=3, zoom_padding=90))
         with st.expander("Números de cada quadrado"):
             st.dataframe(cells[["site", "plants", "defuse", "esperado_pelos_vivos", "acima_do_esperado"]], use_container_width=False)
 
