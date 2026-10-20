@@ -510,7 +510,7 @@ with trades_tab:
     st.subheader("2. Quando a troca era possível, ela aconteceu?")
     trade_table = trade_possibility_summary(fights, ["lado"]).rename(index={TRADE_POSSIBLE: "aliado a menos de 20 m, olhando para quem matou", "aliado em alcance olhando para outro lado": "aliado a menos de 20 m, olhando para outro lado", "sem aliado em alcance": "nenhum aliado a menos de 20 m"}, level="troca_possivel")
     traded_column, won_column = st.columns(2)
-    traded_column.markdown("**Quantas mortes foram trocadas**, conforme onde estava o aliado mais próximo de quem matou")
+    traded_column.markdown("**Quantas mortes foram trocadas**, considerando onde estava o aliado mais próximo de quem matou. Trocar é atirar em quem matou, por isso a distância é até ele.")
     traded_column.altair_chart(rate_chart(trade_table, "troca_possivel", "trocada", "mortes", "% de mortes trocadas", group_column="lado", group_colors=SIDE_COLORS), use_container_width=True)
     won_column.markdown("**Quantos rounds a equipe da vítima venceu**, nas mesmas três situações")
     won_column.altair_chart(rate_chart(trade_table, "troca_possivel", "venceu_round", "mortes", "% de rounds vencidos pela equipe da vítima", group_column="lado", group_colors=SIDE_COLORS), use_container_width=True)
