@@ -4,13 +4,12 @@ from importlib import import_module
 
 SECTIONS = {
     "Visão geral": "overview",
-    "Revisar um round": "review_round",
+    "Análise pós-jogo": "post_match",
     "Primeiro abate": "opening",
     "Trocas e isolamento": "trades",
     "Ritmo dos rounds": "round_patterns",
     "Economia": "economy",
     "Plant e desarme": "spike",
-    "Acompanhar partida": "match",
     "Previsão": "prediction",
     "Conclusões": "conclusions",
     "Explorar dados": "exploration",

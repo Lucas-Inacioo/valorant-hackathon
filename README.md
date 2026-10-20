@@ -36,7 +36,11 @@ valorant/
     presentation.py         Nomes de colunas e formatos exibidos
     tables.py               Preparo de tabelas de consulta
     controls.py             Seletores compartilhados
-    replay.py               Consulta de um round e seus eventos
+    post_match_selection.py Seleção de partida e saltos para lances
+    post_match_views.py     Visões de equipe, jogadores e lances
+    state_comparison.py     Comparação com situações parecidas
+    association_comparison.py Comparação histórica das ocorrências
+    replay.py               Botões por evento e consulta das posições
     round_map.py            Desenho do minimapa
   report.py                 Geração das 15 seções de conclusões
 tests/                     Testes de dados, cálculos, figuras e interface
@@ -57,7 +61,13 @@ Os eventos originais são preservados. `valorant/analysis/events.py` trata simul
 
 Trocas contam abates do autor da morte em até cinco segundos, incluindo o mesmo instante. Esse intervalo não comprova reação. Proximidade e direção do olhar também não comprovam que seria possível atirar. As classes de dano usam o total do round e a arma da vítima corresponde ao equipamento inicial.
 
-Em **Revisar um round**, as ocorrências são contagens, sem soma de pontos por jogador. A consulta de situações parecidas usa outras partidas da seleção e combina vivos, fase, equipamento inicial e tempo. Ela exige pelo menos 20 rounds de cinco outras partidas. Quando faltam casos, o valor fica indisponível.
+Em **Análise pós-jogo**, você começa pela partida e pela equipe. As visões Equipe e Jogadores mostram padrões, sua frequência e os rounds que os sustentam. A visão Lances abre a sequência de eventos. Cada evento tem um botão, e o mapa usa símbolos sem nomes sobre os jogadores. Estrela indica quem abateu e X indica quem morreu naquele instante. A legenda fica abaixo da imagem e os nomes aparecem no texto e na tabela.
+
+As observações saem de `valorant/analysis/post_match.py`. Cada padrão tem uma base de oportunidades definida. O resumo conta rounds distintos e separa ações individuais das situações da equipe. Informações de equipamento, posição compatível com troca e ataque sem plant continuam como contexto. As situações coletivas em que um jogador participou aparecem separadas de suas próprias ações.
+
+Os botões dos padrões abrem os lances correspondentes. O estado da navegação é separado por partida e round, para uma troca de seleção não abrir um evento inválido. As análises da partida usam somente os dados daquela partida e os detalhes adicionais são carregados quando você os abre.
+
+A consulta opcional de situações parecidas usa outras partidas da seleção e combina vivos, fase, equipamento inicial e tempo. Ela exige pelo menos 20 rounds de cinco outras partidas. Quando faltam casos, o valor fica indisponível. As associações históricas e os detalhes de arma inicial, distância e dano do round continuam disponíveis como apoio à revisão.
 
 Em **Previsão**, a avaliação com jogos anteriores usa apenas o histórico disponível antes de cada partida. As regras e o histórico são comparados nos mesmos jogos. A comparação retrospectiva também pode usar jogos posteriores e aparece separada. As análises não demonstram o efeito de uma decisão individual nem validam uma estratégia de compra ou posição.
 
@@ -84,4 +94,4 @@ PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR=/tmp/valorant-mpl .venv/bin/python -B -m 
 VALORANT_RUN_APPTEST=1 PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR=/tmp/valorant-mpl .venv/bin/python -B -m unittest discover -s tests -p test_app.py -v
 ```
 
-Os testes de interface precisam das partidas e dos metadados em `data/`. Eles percorrem as 12 seções e os filtros que apresentavam falhas, além de conferir as duas formas de revisar um round.
+Os testes de interface precisam das partidas e dos metadados em `data/`. Eles percorrem as 11 seções e os filtros que apresentavam falhas, além de conferir as três visões do pós-jogo, saltos para lances e os botões dos eventos.

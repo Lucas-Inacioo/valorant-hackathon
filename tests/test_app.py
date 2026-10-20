@@ -39,7 +39,7 @@ class AppIntegrationTests(unittest.TestCase):
         report, failures = [], []
         source_before = source_digest()
         app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=180)
-        log_path = Path("/tmp/valorant-readable-apptest-stderr.log")
+        log_path = Path("/tmp/valorant-postmatch-apptest-stderr.log")
         log = log_path.open("w", encoding="utf-8")
 
         def save():
@@ -81,13 +81,94 @@ class AppIntegrationTests(unittest.TestCase):
             filename = app.selectbox(key="pos_match").value
             return next((ROOT / "data").rglob(filename))
 
+        def selected_team_players():
+            match = json.loads(selected_match_file().read_text(encoding="utf-8"))
+            team_id = app.selectbox(key="review_team").value
+            self.assertIn(team_id, {team["teamId"] for team in match["teams"]})
+            return {
+                player["puuid"]
+                for player in match["players"]
+                if not player["isObserver"] and player["teamId"] == team_id
+            }
+
+        def check_team_summary():
+            match = json.loads(selected_match_file().read_text(encoding="utf-8"))
+            team_id = app.selectbox(key="review_team").value
+            wins = sum(result["winningTeam"] == team_id for result in match["roundResults"])
+            losses = len(match["roundResults"]) - wins
+            metrics = {item.label: item.value for item in app.metric}
+            self.assertEqual(str(wins), metrics["Rounds vencidos"])
+            self.assertEqual(str(losses), metrics["Rounds perdidos"])
+            self.assertLessEqual(int(metrics["Rounds perdidos com pontos para rever"]), losses)
+            self.assertFalse(any(item.key in {"pos_player", "pos_round"} for item in app.selectbox))
+
+        def check_widget_reset_sent(key):
+            selector = app.selectbox(key=key)
+            self.assertTrue(selector.proto.set_value, f"O reset de {key} não foi enviado ao navegador")
+            self.assertEqual(selector.format_func(selector.value), selector.proto.raw_value)
+
+        def check_changed_match_summary():
+            check_team_summary()
+            check_widget_reset_sent("review_team")
+
+        def check_team_players():
+            participants = selected_team_players()
+            player = app.selectbox(key="pos_player")
+            expected_options = {player.format_func(player_id) for player_id in participants}
+            if app.radio(key="review_view").value == "Lances":
+                expected_options.add(player.format_func("Todos"))
+            self.assertEqual(
+                expected_options,
+                set(player.options),
+            )
+            self.assertIn(player.value, participants | {"Todos"})
+
         def check_selected_round_and_player():
             match = json.loads(selected_match_file().read_text(encoding="utf-8"))
             self.assertIn(app.selectbox(key="pos_round").value, range(len(match["roundResults"])))
-            participants = {
-                player["puuid"] for player in match["players"] if not player["isObserver"]
-            }
-            self.assertIn(app.selectbox(key="pos_player").value, participants)
+            check_team_players()
+
+        def event_buttons():
+            return [
+                button
+                for button in app.button
+                if button.key and button.key.startswith("postmatch_event_")
+            ]
+
+        def check_event_selection(index, count):
+            buttons = event_buttons()
+            self.assertEqual(count, len(buttons))
+            self.assertEqual("primary", buttons[index].proto.type)
+            self.assertEqual(1, sum(button.proto.type == "primary" for button in buttons))
+            self.assertTrue(
+                any(item.value == f"Evento {index + 1} de {count}" for item in app.caption)
+            )
+            self.assertEqual(0, len(app.slider))
+
+        def check_new_round_selection():
+            check_selected_round_and_player()
+            self.assertTrue(event_buttons())
+            check_event_selection(0, len(event_buttons()))
+
+        def check_new_match_selection():
+            check_new_round_selection()
+            for key in ["review_team", "pos_player", "review_pattern", "pos_round"]:
+                check_widget_reset_sent(key)
+
+        def check_pattern_jump():
+            self.assertEqual("Lances", app.radio(key="review_view").value)
+            self.assertNotEqual("all", app.selectbox(key="review_pattern").value)
+            check_selected_round_and_player()
+            self.assertTrue(event_buttons())
+
+        def open_first_pattern():
+            buttons = [
+                button
+                for button in app.button
+                if button.key and button.key.startswith("review_pattern_")
+            ]
+            self.assertTrue(buttons, "A visão da equipe não mostrou padrões com exemplos")
+            buttons[0].click()
 
         def check_round_eight_references():
             self.assertEqual(7, app.selectbox(key="pos_round").value)
@@ -115,51 +196,87 @@ class AppIntegrationTests(unittest.TestCase):
             all_versions = list(widget("multiselect", "Versões do jogo").options)
             sections = list(app.selectbox(key="section").options)
             self.assertEqual(list(SECTIONS), sections)
-            self.assertEqual(12, len(sections))
+            self.assertEqual(11, len(sections))
             report.append(f"Torneios disponíveis: {all_tournaments}")
             for name in sections:
                 run(f"Seção {name}", lambda name=name: section(name))
 
-            run("Abrir revisão de round", lambda: section("Revisar um round"))
+            run("Abrir análise da partida", lambda: section("Análise pós-jogo"))
             run(
-                "Revisão com situações parecidas",
-                lambda: widget(
-                    "radio",
-                    "Visualização",
-                ).set_value("Situações parecidas"),
+                "Visão da equipe começa sem exigir round ou jogador",
+                lambda: app.radio(key="review_view").set_value("Equipe"),
+                check_team_summary,
             )
             recorded_files = list(app.selectbox(key="pos_match").options)
             regression_file = next(
                 filename for filename in recorded_files if filename.startswith("RUSH2_007_")
             )
             run(
-                "Revisão após mudar para RUSH2_007",
+                "Análise da equipe após mudar para RUSH2_007",
                 lambda: app.selectbox(
                     key="pos_match",
                 ).select(regression_file),
+                check_changed_match_summary,
+            )
+            run(
+                "Abrir os rounds de um padrão da equipe",
+                open_first_pattern,
+                check_pattern_jump,
+            )
+            run(
+                "Visão dos jogadores usa somente os integrantes da equipe",
+                lambda: app.radio(key="review_view").set_value("Jogadores"),
+                check_team_players,
+            )
+            run(
+                "Trocar equipe também muda os jogadores disponíveis",
+                lambda: app.selectbox(
+                    key="review_team",
+                ).select("Red" if app.selectbox(key="review_team").value == "Blue" else "Blue"),
+                check_team_players,
+            )
+            run(
+                "Abrir os rounds de um padrão individual",
+                open_first_pattern,
+                check_pattern_jump,
+            )
+            run(
+                "Lances de todos os jogadores e padrões",
+                lambda: (
+                    app.selectbox(key="pos_player").select("Todos"),
+                    app.selectbox(key="review_pattern").select("all"),
+                ),
                 check_selected_round_and_player,
             )
             run(
-                "Round 8 com ressurreição e oito eventos",
-                lambda: app.selectbox(
-                    key="pos_round",
-                ).set_value(7),
+                "Round 8 com ressurreição oferece oito botões de eventos",
+                lambda: app.selectbox(key="pos_round").set_value(7),
+                lambda: check_event_selection(0, 8),
+            )
+            run(
+                "Saltar diretamente para o último evento",
+                lambda: event_buttons()[-1].click(),
+                lambda: check_event_selection(7, 8),
+            )
+            run(
+                "Voltar diretamente ao primeiro evento",
+                lambda: event_buttons()[0].click(),
+                lambda: check_event_selection(0, 8),
+            )
+            run(
+                "Comparar situações parecidas no round com ressurreição",
+                lambda: app.checkbox(key="review_references").check(),
                 check_round_eight_references,
             )
             run(
-                "Ocorrências no mesmo round com ressurreição",
-                lambda: widget(
-                    "radio",
-                    "Visualização",
-                ).set_value("Ocorrências da partida"),
+                "Ocultar comparação mantém a revisão do mesmo round",
+                lambda: app.checkbox(key="review_references").uncheck(),
                 check_selected_round_and_player,
             )
             run(
                 "Selecionar o último round de RUSH2_007",
-                lambda: app.selectbox(
-                    key="pos_round",
-                ).set_value(17),
-                check_selected_round_and_player,
+                lambda: app.selectbox(key="pos_round").set_value(17),
+                check_new_round_selection,
             )
             shorter_file = next(
                 filename for filename in recorded_files if filename.startswith("RUSH2_021_")
@@ -169,15 +286,7 @@ class AppIntegrationTests(unittest.TestCase):
                 lambda: app.selectbox(
                     key="pos_match",
                 ).select(shorter_file),
-                check_selected_round_and_player,
-            )
-            run(
-                "Sortear partida, round e jogador válidos",
-                lambda: widget(
-                    "button",
-                    "Sortear partida, round e jogador",
-                ).click(),
-                check_selected_round_and_player,
+                check_new_match_selection,
             )
 
             run(
@@ -322,6 +431,9 @@ class AppIntegrationTests(unittest.TestCase):
             report.append(
                 f"Código permaneceu igual durante a execução: {source_before == source_after}"
             )
+            if source_before != source_after:
+                failures.append("O código do aplicativo mudou durante a execução dos cenários")
+                report.append(f"FAIL | {failures[-1]}")
             passed = sum(line.startswith("PASS |") for line in report)
             report.append(f"Resultado: {len(failures)} falhas e {passed} cenários aprovados")
             save()

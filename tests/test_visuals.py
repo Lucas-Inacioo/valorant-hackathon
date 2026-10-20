@@ -71,6 +71,117 @@ class VisualRegressionTests(unittest.TestCase):
             self.assertGreater(len(output.getvalue()), 100)
         self.assertEqual(set(plt.get_fignums()), before)
 
+    def test_round_map_has_no_player_labels_and_legend_stays_outside_map(self):
+        events = [
+            {
+                "kind": "kill",
+                "actor": "a",
+                "victim": "b",
+                "time_ms": 12000,
+                "victim_location": {"x": 10, "y": 20},
+                "locations": [{"puuid": "a", "location": {"x": 1, "y": 2}}],
+                "alive_after": ["a"],
+            }
+        ]
+        figure = round_map.draw_round_map(
+            self.meta,
+            events,
+            0,
+            "a",
+            {"a": "Blue", "b": "Red"},
+            {"a": "Um nome de jogador muito longo", "b": "Outro nome muito longo"},
+        )
+        axes = figure.axes[0]
+        self.assertEqual([], list(axes.texts))
+        self.assertIsNone(axes.get_legend())
+        self.assertEqual(1, len(figure.legends))
+        figure.canvas.draw()
+        legend_box = figure.legends[0].get_window_extent()
+        map_box = axes.get_window_extent()
+        self.assertLess(legend_box.y1, map_box.y0)
+        self.assertEqual([], list(axes.lines))
+
+    def test_simultaneous_killer_and_victim_keep_both_roles_without_duplicate_player(self):
+        events = [
+            {
+                "kind": "kill",
+                "actor": "a",
+                "victim": "b",
+                "time_ms": 1000,
+                "victim_location": {"x": 2, "y": 3},
+                "locations": [{"puuid": "c", "location": {"x": 7, "y": 8}}],
+                "alive_after": ["c"],
+            },
+            {
+                "kind": "kill",
+                "actor": "b",
+                "victim": "a",
+                "time_ms": 1000,
+                "victim_location": {"x": 4, "y": 5},
+                "locations": [{"puuid": "c", "location": {"x": 7, "y": 8}}],
+                "alive_after": ["c"],
+            },
+        ]
+        with patch("valorant.ui.round_map.draw_player", wraps=round_map.draw_player) as draw:
+            round_map.draw_round_map(
+                self.meta,
+                events,
+                0,
+                "a",
+                {"a": "Blue", "b": "Red", "c": "Blue"},
+                {"a": "A", "b": "B", "c": "C"},
+            )
+        calls = {call.args[4]: call for call in draw.call_args_list}
+        self.assertEqual(3, len(draw.call_args_list))
+        for name in ["A", "B"]:
+            self.assertFalse(calls[name].kwargs["alive"])
+            self.assertTrue(calls[name].kwargs["is_killer"])
+            self.assertTrue(calls[name].kwargs["is_victim"])
+
+    def test_missing_killer_position_is_not_invented_and_environment_has_no_killer_marker(self):
+        events = [
+            {
+                "kind": "kill",
+                "actor": "a",
+                "victim": "b",
+                "time_ms": 1000,
+                "victim_location": {"x": 2, "y": 3},
+                "locations": [],
+                "alive_after": ["a"],
+            }
+        ]
+        teams, names = {"a": "Blue", "b": "Red"}, {"a": "A", "b": "B"}
+        with patch("valorant.ui.round_map.draw_player", wraps=round_map.draw_player) as draw:
+            round_map.draw_round_map(self.meta, events, 0, "a", teams, names)
+        self.assertEqual(["B"], [call.args[4] for call in draw.call_args_list])
+        events[0]["finishing"] = {"damageType": "Bomb"}
+        events[0]["locations"] = [{"puuid": "a", "location": {"x": 5, "y": 6}}]
+        with patch("valorant.ui.round_map.draw_player", wraps=round_map.draw_player) as draw:
+            round_map.draw_round_map(self.meta, events, 0, "a", teams, names)
+        self.assertFalse(any(call.kwargs["is_killer"] for call in draw.call_args_list))
+        self.assertIn("explosão da spike", round_map.describe_event(events[0], names, {}))
+
+    def test_team_view_does_not_mark_an_arbitrary_selected_player(self):
+        events = [
+            {
+                "kind": "plant",
+                "locations": [{"puuid": "a", "location": {"x": 2, "y": 3}}],
+                "alive_after": ["a"],
+            }
+        ]
+        with patch("valorant.ui.round_map.draw_player", wraps=round_map.draw_player) as draw:
+            figure = round_map.draw_round_map(
+                self.meta,
+                events,
+                0,
+                "a",
+                {"a": "Blue"},
+                {"a": "A"},
+                highlight_selected=False,
+            )
+        self.assertFalse(draw.call_args.args[5])
+        self.assertNotIn("jogador escolhido", [text.get_text() for text in figure.legends[0].texts])
+
 
 class PresentationRegressionTests(unittest.TestCase):
     def test_categorical_groups_keep_labels_and_counts_in_comparison_chart(self):

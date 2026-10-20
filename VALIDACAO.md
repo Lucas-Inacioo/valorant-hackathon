@@ -1,28 +1,34 @@
-# Validação da reorganização
+# Validação da análise pós-jogo
 
-Conferência feita em 20 de outubro de 2026, a partir das correções do commit `8641112`. Os dados e os metadados locais foram preservados.
+Conferência feita em 20 de outubro de 2026, sobre a reorganização do commit `8e7fd39`.
 
-## Código e interface
+## Mudanças conferidas
 
-- 47 testes unitários passaram. A descoberta encontra 48 testes e deixa a integração completa como execução separada.
-- 44 cenários de integração passaram nas 12 seções. Eles incluem as duas consultas de round, ressurreição no round 8 de RUSH2_007, troca para uma partida mais curta, sorteio, filtros vazios, três torneios no pós-plant e quatro seleções sem quadrados de plant suficientes.
-- Os limites de isolamento de 500 e 3.000 unidades mudaram os grupos e conservaram as 40.207 mortes com aliado vivo usadas nessa comparação.
-- Duas regressões de apresentação receberam testes próprios. Categorias ordenadas de tempo continuam formando rótulos de gráficos, e a tradução das tabelas preserva contagens enquanto formata taxas.
-- A seção Economia também foi conferida em processo novo após os ajustes finais. O gráfico de sobreviventes inclui casos com cinco jogadores vivos.
-- No Chromium, a visão geral, o plant e o round 8 com ressurreição abriram sem exceções nem erros de JavaScript. A tela de 390 pixels manteve largura de conteúdo de 390 pixels.
-- Os comandos de metadados e de geração do relatório funcionam nos novos caminhos. `pip check` não encontrou dependências quebradas.
+A navegação reúne a partida inteira em Análise pós-jogo, com as visões Equipe, Jogadores e Lances. Os resumos têm bases de comparação próprias e abrem os rounds e eventos correspondentes. A participação em situações coletivas fica separada das ações individuais.
 
-O teste completo de interface foi executado enquanto terminavam ajustes de apresentação. Por isso, seu relatório registra assinaturas de código diferentes no início e no fim. As verificações seguintes de gráficos, Economia e navegador usam o código final.
+A navegação de eventos usa um botão para cada registro, com seleção destacada e estado separado por partida e round. O mapa não escreve nomes sobre os jogadores. Usa estrela para quem fez um abate e X para quem morreu naquele instante, incluindo eventos simultâneos. A legenda fica fora da imagem e a tabela preserva a identificação dos jogadores.
+
+A troca de partida também reenvia os valores dos seletores ao navegador. Isso evita que uma equipe da partida anterior continue exibida ou que a escolha de um round deixe o mapa no round anterior.
+
+Os dados originais e o relatório de conclusões não foram alterados nesta etapa.
+
+## Verificações automáticas
+
+- 73 testes passaram na execução padrão, incluindo testes de navegação com Streamlit. A descoberta encontra 74 testes e deixa a integração completa como execução separada.
+- O domínio tem 18 testes de pós-jogo. Eles conferem oportunidades por padrão, autoria das trocas, rounds únicos, abertura simultânea, ressurreições, perda de vantagem entre registros, coordenadas ausentes e exclusão de eventos após a decisão.
+- Os testes de mapa conferem a ausência de nomes, os destaques de autor e vítima, eventos simultâneos, ressurreição e posições ausentes.
+- Quatro testes de navegação conferem os botões, o foco inicial, a escolha preservada, a separação entre partidas e rounds e a ausência de eventos.
+- 50 cenários de integração passaram nas 11 seções, com o código estável durante toda a execução. A assinatura do aplicativo e módulos permaneceu `3d881e2de1a6c929a69d22a98cf11970b434da502636b137021217a4154b797b`.
+- A integração percorre as três visões, troca de equipe e jogador, saltos de padrões para seus lances, oito eventos do round 8 de RUSH2_007, comparação opcional, troca para uma partida mais curta, filtros vazios e as regressões anteriores de isolamento e plant.
+- A conferência no Chromium percorreu as três visões, trocou de partida, abriu o round 8 e alternou entre seus oito botões. Também abriu os detalhes e as associações históricas. Não houve exceção na tela nem erro de JavaScript. A página coube na largura móvel de 390 pixels.
 
 ## Dados e conclusões
 
-A assinatura continua sendo `df71e403d1d939578ca48bb0dac73aa709a99ef6a7593af24576a1d2ee0ffcb9`, igual à do manifesto. O manifesto contém 340 JSONs, incluindo quatro arquivos de metadados.
+A assinatura continua sendo `df71e403d1d939578ca48bb0dac73aa709a99ef6a7593af24576a1d2ee0ffcb9`, igual à do manifesto. Ele contém 340 JSONs, incluindo quatro arquivos de metadados.
 
 A base completa tem 336 partidas, 6.618 rounds, 46.753 mortes, 411 jogadores e dois observadores exclusivos. A seleção padrão mantém 335 partidas, 6.588 rounds, 46.708 mortes registradas, 46.187 mortes usadas nas análises de posição e troca, e 4.436 plants válidos.
 
-O relatório foi gerado por `python -m valorant.report --output CONCLUSOES.md`. As 15 seções foram mantidas e os 756 valores numéricos das 25 tabelas anteriores foram conferidos após a reescrita. A tabela adicional de cobertura organiza informações que antes apareciam como um dicionário.
-
-A revisão anterior também percorreu 52.755 eventos do corpus sem encontrar exceção ou quantidade de vivos fora de zero a cinco. A reorganização preserva essas regras de análise e seus testes.
+O documento CONCLUSOES.md continua com as 15 seções da revisão anterior. Os 756 valores numéricos de suas 25 tabelas originais haviam sido conferidos após a reescrita. Esta etapa não recalculou nem alterou esse documento.
 
 ## Reproduzir as verificações
 
@@ -30,13 +36,12 @@ A revisão anterior também percorreu 52.755 eventos do corpus sem encontrar exc
 PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR=/tmp/valorant-mpl .venv/bin/python -B -m unittest discover -s tests -v
 VALORANT_RUN_APPTEST=1 PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR=/tmp/valorant-mpl .venv/bin/python -B -m unittest discover -s tests -p test_app.py -v
 .venv/bin/python -m valorant.data.quality
-.venv/bin/python -m valorant.report --output CONCLUSOES.md
 ```
 
-O teste de interface precisa da base local em `data/`. Ele grava um relatório em `/tmp/valorant-app-validation.txt`, ou no caminho definido por `VALORANT_APP_REPORT`.
+A integração precisa da base local em `data/`. Ela grava um relatório em `/tmp/valorant-app-validation.txt`, ou no caminho definido por `VALORANT_APP_REPORT`.
 
 ## Limites dos dados
 
-Os testes verificam o comportamento do código. Eles não demonstram o efeito de decisões individuais, a qualidade de previsões futuras ou a completude da pasta remota. Os registros também não mostram toda a linha de tiro ou a intenção dos jogadores.
+As observações ajudam a localizar lances para rever. Elas não demonstram que uma pessoa causou a derrota ou que uma situação próxima no mapa permitiria atirar. Os registros mostram alguns instantes, sem trajetória contínua ou linha de tiro. A arma registrada é a inicial e o dano é agregado por round.
 
-Há 127 mortes analisadas mais de 45 segundos após o plant sem um instante final de decisão observável. A conferência mantém essa limitação em vez de inventar um horário. Jogos das mesmas equipes e rounds da mesma partida compartilham condições. Os intervalos mostrados não resumem toda a incerteza das comparações.
+Há 127 mortes analisadas mais de 45 segundos após o plant sem um instante final de decisão observável. A qualidade mantém essa limitação. Os intervalos das comparações históricas também não resumem toda a incerteza de jogos entre as mesmas equipes ou rounds da mesma partida.

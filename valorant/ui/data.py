@@ -201,12 +201,35 @@ def load_predictions(signature, match_ids):
     }
 
 
+@st.cache_data(show_spinner=False)
+def load_match_review(signature, match_ids, match):
+    from valorant.analysis.post_match import build_match_review
+
+    match_id = match["matchInfo"]["matchId"]
+    if match_id not in match_ids:
+        raise ValueError("A partida está fora da seleção atual")
+    scoped_ids = (match_id,)
+    return build_match_review(
+        match,
+        load_analysis_table(signature, scoped_ids, "fights"),
+        load_analysis_table(signature, scoped_ids, "rounds"),
+    )
+
+
 class AnalysisData:
     """Fornece as tabelas de uma seleção sem depender de variáveis globais."""
 
     def __init__(self, data_version: str, match_ids: tuple[str, ...]):
         self.data_version = data_version
         self.match_ids = match_ids
+
+    def match_table(self, match_id, name):
+        if match_id not in self.match_ids:
+            raise ValueError("A partida está fora da seleção atual")
+        return load_analysis_table(self.data_version, (match_id,), name)
+
+    def match_review(self, match):
+        return load_match_review(self.data_version, self.match_ids, match)
 
     def table(self, name):
         return load_analysis_table(self.data_version, self.match_ids, name)
