@@ -435,7 +435,7 @@ with opening_tab:
     else:
         by_callout = openings_by_callout(attack_openings, chosen_map_meta)
         map_average = attack_openings["abriu_venceu"].mean()
-        st.caption(f"Cada bola é uma região do mapa (o nome que os jogadores usam para ela). Entram só os primeiros abates do ataque antes do plant, colocados na região mais próxima de onde o defensor morreu. Tamanho da bola: quantos primeiros abates aconteceram ali. Cor: quantos desses rounds o ataque venceu, em relação à média do mapa ({map_average:.0%}). Azul: matar um defensor ali quase garante o round. Laranja: mesmo matando ali, o round continua em aberto.")
+        st.caption(f"Cada círculo é uma região do mapa, com o nome que os jogadores usam para ela. Só foram considerados o primeiro abate de cada round do ataque, antes do plant, e agrupados na região mais próxima de onde o defensor morreu. O tamanho do círculo mostra quantos primeiros abates aconteceram ali, enquanto a cor quantos desses rounds o ataque venceu, em relação à média do mapa ({map_average:.0%}). Quanto mais azul, mais matar um defensor ali quase garante o round. Quanto mais laranja, mesmo matando ali, o round continua em aberto.")
         map_column, table_column = st.columns([3, 2])
         if st.checkbox("Mostrar cada abate em vez das regiões"):
             won = attack_openings[attack_openings["abriu_venceu"]]
