@@ -726,7 +726,7 @@ with economy_tab:
         st.dataframe(exchange, use_container_width=False)
 
 with plants_tab:
-    st.markdown("Esperado pelos vivos é a taxa de desarme normal para a mesma quantidade de vivos de cada lado.")
+    st.markdown("Esperado pelos vivos é a taxa de desarme normal para a mesma quantidade de vivos em cada um dos lados, considerando todos os mapas e sites.")
     selected_plants = plants_table()[plants_table()["match_id"].isin(selected_ids)]
     plants_col, defuse_col, time_col = st.columns(3)
     plants_col.metric("Rounds com spike plantada", len(selected_plants))
