@@ -1,4 +1,5 @@
 """Cobertura, anomalias e proveniência local; importar este módulo não grava arquivos."""
+
 import argparse
 from collections import Counter
 from datetime import datetime, timezone
@@ -7,7 +8,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from explore_fields import DEFAULT_DATA_DIR, find_match_files, load_match
+from valorant.data.fields import DEFAULT_DATA_DIR, find_match_files, load_match
 
 
 @lru_cache(maxsize=2048)
@@ -30,8 +31,14 @@ def data_signature(data_dir=DEFAULT_DATA_DIR):
     records = []
     for path in sorted(root.rglob("*.json")):
         stat = path.stat()
-        records.append((str(path.relative_to(root)), stat.st_size, stat.st_mtime_ns,
-                        _file_hash(str(path.resolve()), stat.st_size, stat.st_mtime_ns)))
+        records.append(
+            (
+                str(path.relative_to(root)),
+                stat.st_size,
+                stat.st_mtime_ns,
+                _file_hash(str(path.resolve()), stat.st_size, stat.st_mtime_ns),
+            )
+        )
     return hashlib.sha256(json.dumps(records, ensure_ascii=False).encode()).hexdigest()
 
 
@@ -48,7 +55,11 @@ def _empty_timer_prefix(match):
     count = 0
     for result in match.get("roundResults", []):
         deaths = [k for s in result.get("playerStats", []) for k in s.get("kills", [])]
-        if result.get("roundResult") == "Round timer expired" and not deaths and not result.get("bombPlanter"):
+        if (
+            result.get("roundResult") == "Round timer expired"
+            and not deaths
+            and not result.get("bombPlanter")
+        ):
             count += 1
         else:
             break
@@ -66,22 +77,37 @@ def inspect_quality(match, source=None):
     initial_empty_timers = _empty_timer_prefix(match)
     anomalies = []
     if initial_empty_timers >= 12:
-        anomalies.append(f"{initial_empty_timers} rounds iniciais por tempo, sem mortes nem plant; causa não determinada")
+        anomalies.append(
+            f"{initial_empty_timers} rounds iniciais por tempo, sem mortes nem plant; causa não determinada"
+        )
     raw_plants = [r for r in rounds if r.get("bombPlanter")]
     invalid_timer = sum(r.get("roundResult") == "Round timer expired" for r in raw_plants)
     plants_without_defenders = sum(
         bool(r.get("plantPlayerLocations"))
-        and not any(teams.get(p["puuid"]) not in {teams.get(r["bombPlanter"]), None, "Neutral"}
-                    for p in r.get("plantPlayerLocations") or [])
-        for r in raw_plants)
-    after_defuse = sum(k["timeSinceRoundStartMillis"] > r.get("defuseRoundTime", 0)
-                       for r in rounds if r.get("bombDefuser")
-                       for s in r.get("playerStats", []) for k in s.get("kills", []))
+        and not any(
+            teams.get(p["puuid"]) not in {teams.get(r["bombPlanter"]), None, "Neutral"}
+            for p in r.get("plantPlayerLocations") or []
+        )
+        for r in raw_plants
+    )
+    after_defuse = sum(
+        k["timeSinceRoundStartMillis"] > r.get("defuseRoundTime", 0)
+        for r in rounds
+        if r.get("bombDefuser")
+        for s in r.get("playerStats", [])
+        for k in s.get("kills", [])
+    )
     same_team = sum(teams.get(k.get("killer")) == teams.get(k.get("victim")) for k in kills)
-    killer_positions = sum(any(p["puuid"] == k.get("killer") for p in k.get("playerLocations") or []) for k in kills)
-    duplicates = sum(len(s.get("damage", [])) - len({h["receiver"] for h in s.get("damage", [])})
-                     for r in rounds for s in r.get("playerStats", []))
-    from match_events import round_events
+    killer_positions = sum(
+        any(p["puuid"] == k.get("killer") for p in k.get("playerLocations") or []) for k in kills
+    )
+    duplicates = sum(
+        len(s.get("damage", [])) - len({h["receiver"] for h in s.get("damage", [])})
+        for r in rounds
+        for s in r.get("playerStats", [])
+    )
+    from valorant.analysis.events import round_events
+
     event_coverage = Counter()
     for result in rounds:
         events = round_events(result, teams)
@@ -96,37 +122,64 @@ def inspect_quality(match, source=None):
                 continue
             event_coverage["tactical_deaths"] += 1
             event_coverage["tactical_deaths_with_snapshot"] += event["snapshot_available"]
-            event_coverage["tactical_deaths_with_killer_position"] += any(p["puuid"] == event["actor"] for p in event["locations"])
-            if result.get("bombPlanter") and result.get("plantRoundTime") is not None and event["time_ms"] > result["plantRoundTime"] + 45000:
-                event_coverage["tactical_deaths_over_45s_after_plant_without_observed_decision"] += 1
+            event_coverage["tactical_deaths_with_killer_position"] += any(
+                p["puuid"] == event["actor"] for p in event["locations"]
+            )
+            if (
+                result.get("bombPlanter")
+                and result.get("plantRoundTime") is not None
+                and event["time_ms"] > result["plantRoundTime"] + 45000
+            ):
+                event_coverage[
+                    "tactical_deaths_over_45s_after_plant_without_observed_decision"
+                ] += 1
     return {
-        "match_id": info["matchId"], "source": str(source) if source is not None else None,
-        "map_id": info.get("mapId"), "game_version": info.get("gameVersion"),
-        "game_start_millis": info.get("gameStartMillis"), "rounds": len(rounds),
-        "deaths": len(kills), "participants": len(participants),
+        "match_id": info["matchId"],
+        "source": str(source) if source is not None else None,
+        "map_id": info.get("mapId"),
+        "game_version": info.get("gameVersion"),
+        "game_start_millis": info.get("gameStartMillis"),
+        "rounds": len(rounds),
+        "deaths": len(kills),
+        "participants": len(participants),
         "participant_ids": sorted(participants),
-        "observer_ids": sorted({p["puuid"] for p in players if p.get("isObserver") and p["puuid"] not in participants}),
-        "anomalous": bool(anomalies), "anomalies": anomalies,
+        "observer_ids": sorted(
+            {p["puuid"] for p in players if p.get("isObserver") and p["puuid"] not in participants}
+        ),
+        "anomalous": bool(anomalies),
+        "anomalies": anomalies,
         "initial_empty_timer_rounds": initial_empty_timers,
-        "coverage": {"deaths_with_killer_position": killer_positions,
-                     "deaths_with_snapshot": sum(bool(k.get("playerLocations")) for k in kills),
-                     "plants_with_snapshot": sum(bool(r.get("plantPlayerLocations")) for r in raw_plants),
-                     "round_player_stats": sum(len(r.get("playerStats", [])) for r in rounds),
-                     "round_player_stats_without_initial_weapon": sum(not s.get("economy", {}).get("weapon") for r in rounds for s in r.get("playerStats", [])),
-                     "raw_plants": len(raw_plants), "raw_defuses": sum(bool(r.get("bombDefuser")) for r in rounds),
-                     **dict(event_coverage)},
-        "exclusions": {"plants_timer_expired": invalid_timer,
-                       "plants_without_defenders": plants_without_defenders,
-                       "deaths_after_defuse": after_defuse,
-                       "same_team_deaths": same_team,
-                       "suicides": sum(k.get("killer") == k.get("victim") for k in kills)},
+        "coverage": {
+            "deaths_with_killer_position": killer_positions,
+            "deaths_with_snapshot": sum(bool(k.get("playerLocations")) for k in kills),
+            "plants_with_snapshot": sum(bool(r.get("plantPlayerLocations")) for r in raw_plants),
+            "round_player_stats": sum(len(r.get("playerStats", [])) for r in rounds),
+            "round_player_stats_without_initial_weapon": sum(
+                not s.get("economy", {}).get("weapon")
+                for r in rounds
+                for s in r.get("playerStats", [])
+            ),
+            "raw_plants": len(raw_plants),
+            "raw_defuses": sum(bool(r.get("bombDefuser")) for r in rounds),
+            **dict(event_coverage),
+        },
+        "exclusions": {
+            "plants_timer_expired": invalid_timer,
+            "plants_without_defenders": plants_without_defenders,
+            "deaths_after_defuse": after_defuse,
+            "same_team_deaths": same_team,
+            "suicides": sum(k.get("killer") == k.get("victim") for k in kills),
+        },
         "repeated_damage_entries": duplicates,
     }
 
 
 def dataset_quality(data_dir=DEFAULT_DATA_DIR, match_ids=None):
     """Resumo reutilizável pela UI, incluindo denominadores e exclusões explícitas."""
-    records = [inspect_quality(match, path.name) for path, match in iter_selected_matches(data_dir, match_ids)]
+    records = [
+        inspect_quality(match, path.name)
+        for path, match in iter_selected_matches(data_dir, match_ids)
+    ]
     participants = {p for row in records for p in row.pop("participant_ids")}
     observers = {p for row in records for p in row.pop("observer_ids")}
     observers -= participants  # Observador exclusivo, não participante em outra partida.
@@ -139,18 +192,30 @@ def dataset_quality(data_dir=DEFAULT_DATA_DIR, match_ids=None):
         exclusions.update(row["exclusions"])
         map_rounds[row["map_id"]] += row["rounds"]
         version_rounds[row["game_version"]] += row["rounds"]
-    return {"totals": {"matches": len(records), "rounds": sum(r["rounds"] for r in records),
-                       "deaths": sum(r["deaths"] for r in records),
-                       "participants": len(participants), "observers": len(observers)},
-            "coverage": dict(coverage), "exclusions": dict(exclusions),
-            "anomalies": [r for r in records if r["anomalous"]],
-            "map_rounds": dict(map_rounds), "version_rounds": dict(version_rounds), "matches": records,
-            "source_note": "Arquivos locais; completude em relação à pasta remota não verificada."}
+    return {
+        "totals": {
+            "matches": len(records),
+            "rounds": sum(r["rounds"] for r in records),
+            "deaths": sum(r["deaths"] for r in records),
+            "participants": len(participants),
+            "observers": len(observers),
+        },
+        "coverage": dict(coverage),
+        "exclusions": dict(exclusions),
+        "anomalies": [r for r in records if r["anomalous"]],
+        "map_rounds": dict(map_rounds),
+        "version_rounds": dict(version_rounds),
+        "matches": records,
+        "source_note": "Arquivos locais; completude em relação à pasta remota não verificada.",
+    }
 
 
 def eligible_match_ids(data_dir=DEFAULT_DATA_DIR, include_anomalous=False):
-    return {match["matchInfo"]["matchId"] for _, match in iter_selected_matches(data_dir)
-            if include_anomalous or _empty_timer_prefix(match) < 12}
+    return {
+        match["matchInfo"]["matchId"]
+        for _, match in iter_selected_matches(data_dir)
+        if include_anomalous or _empty_timer_prefix(match) < 12
+    }
 
 
 def write_manifest(output_path, data_dir=DEFAULT_DATA_DIR, origins=None):
@@ -160,7 +225,10 @@ def write_manifest(output_path, data_dir=DEFAULT_DATA_DIR, origins=None):
     previous = {}
     if output.exists():
         try:
-            previous = {row["path"]: row for row in json.loads(output.read_text(encoding="utf-8")).get("files", [])}
+            previous = {
+                row["path"]: row
+                for row in json.loads(output.read_text(encoding="utf-8")).get("files", [])
+            }
         except (ValueError, KeyError):
             pass
     files = []
@@ -179,8 +247,12 @@ def write_manifest(output_path, data_dir=DEFAULT_DATA_DIR, origins=None):
             record.update({key: old[key] for key in ("origin", "downloaded_at_utc") if key in old})
         record.setdefault("origin", "arquivo local; origem remota não verificada")
         files.append(record)
-    manifest = {"generated_at_utc": datetime.now(timezone.utc).isoformat(),
-                "signature": data_signature(root), "files": files, "quality": dataset_quality(root)}
+    manifest = {
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "signature": data_signature(root),
+        "files": files,
+        "quality": dataset_quality(root),
+    }
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     return manifest
@@ -191,7 +263,11 @@ def main():
     parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
     parser.add_argument("--manifest", type=Path, help="Gravar manifesto neste caminho explícito")
     args = parser.parse_args()
-    report = write_manifest(args.manifest, args.data_dir)["quality"] if args.manifest else dataset_quality(args.data_dir)
+    report = (
+        write_manifest(args.manifest, args.data_dir)["quality"]
+        if args.manifest
+        else dataset_quality(args.data_dir)
+    )
     print(json.dumps(report, ensure_ascii=False, indent=2))
 
 

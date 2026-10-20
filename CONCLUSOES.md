@@ -1,330 +1,389 @@
-# Conclusões revisadas
+# O que os dados mostram
 
-Gerado em 20/10/2026 com `python analysis_report.py --output CONCLUSOES.md`. Assinatura dos dados/metadados: `df71e403d1d939578ca48bb0dac73aa709a99ef6a7593af24576a1d2ee0ffcb9`.
+Relatório gerado em 20/10/2026 com `python -m valorant.report --output CONCLUSOES.md`.
 
-Base bruta local: **336 partidas, 6,618 rounds, 46,753 mortes, 411 participantes e 2 observadores exclusivos**. Base analítica padrão: **335 partidas e 6,588 rounds**. Uma partida com 24 rounds iniciais de tempo esgotado sem combate/plant é sinalizada e excluída por padrão, sem presumir sua causa. Os arquivos brutos não foram modificados.
+A base local tem **336 partidas, 6.618 rounds, 46.753 mortes e 411 participantes**. Há também 2 observadores que não jogaram. A análise usa por padrão **335 partidas e 6.588 rounds**.
 
-No recorte padrão: 46,708 mortes brutas, 46,187 mortes táticas, 6,578 rounds com abridor definido e 4,436 plants válidos. A qualidade e as perdas por métrica estão em `data-manifest.json` e na seção Qualidade dos dados.
+Uma partida fica fora da análise padrão porque seus primeiros 24 rounds terminam por tempo, sem combate ou plant. O motivo desse registro é desconhecido. Os arquivos originais foram preservados.
 
-**Como interpretar.** Percentuais decimais nas tabelas são proporções (0,70 = 70%). Todos os resultados são observacionais. Associação, resíduo e sobreposição de intervalos não identificam efeito causal, equivalência nem ausência de mecanismos. Tabelas por morte ponderam cada round pelo número de eventos; contagens não equivalem a rounds independentes. Intervalos Wilson e aproximações normais são descritivos sob independência; o ranking de associações e as referências por estado usam reamostragem por partida. Comparações exploratórias não têm correção por multiplicidade. Não há limiar universal de 60 casos nem validação de uma política de decisão.
+Na seleção padrão, há 46.708 mortes registradas, 46.187 mortes usadas na análise de combate, 6.578 rounds com equipe de abertura definida e 4.436 plants válidos. O arquivo `data-manifest.json` e a página Qualidade dos dados detalham as exclusões.
 
-## 1. Abertura e troca temporal
+As taxas nas tabelas vão de zero a um. Por exemplo, 0,700 corresponde a 70%. Uma diferença de 0,050 corresponde a cinco pontos percentuais. As tabelas descrevem as partidas registradas e não mostram, por si só, o que causou uma vitória.
 
-A equipe com abertura definida vence 71.3% dos rounds nesta definição. Abertura exige abate adversário antes da decisão observável. Empates entre equipes no mesmo timestamp não recebem abridor: 3 rounds excluídos por esse motivo. Abates simultâneos da mesma equipe definem a equipe, mas não uma vítima/localização individual.
+Cada morte conta como uma observação nas tabelas por morte. Assim, um round com mais mortes pesa mais nessas tabelas. Os rounds da mesma partida também compartilham condições e não são observações independentes. As comparações servem para levantar perguntas. Não houve ajuste estatístico para o grande número de comparações feitas.
 
-| lado_abriu | faixa | rounds | abriu_venceu | trocada |
+A assinatura dos dados e metadados é `df71e403d1d939578ca48bb0dac73aa709a99ef6a7593af24576a1d2ee0ffcb9`.
+
+## 1. Abertura e troca de abates
+
+Abertura é o primeiro abate de um adversário antes do encerramento observável do round. Se as duas equipes abatem no mesmo instante, a abertura fica indefinida. Se só uma equipe faz abates simultâneos, sabemos quem abriu, mas não escolhemos uma vítima ou posição individual.
+
+A equipe que faz a abertura vence 71,3% dos rounds com abertura definida. Ficaram fora dessa comparação 3 rounds com abertura simultânea entre equipes.
+
+Troca em até cinco segundos ocorre quando a equipe da vítima abate o autor da morte nessa janela. Ela inclui abates simultâneos e, por isso, não comprova uma reação ao primeiro abate. Mortes por ambiente, fogo amigo ou após o encerramento observável ficam fora.
+
+| Lado que fez a abertura | Tempo da abertura | Rounds | Vitória de quem abriu | Troca em até 5 s |
 | --- | --- | --- | --- | --- |
-| ataque | 0-10 s | 905 | 0.767 | 0.154 |
-| ataque | 10-20 s | 902 | 0.748 | 0.152 |
-| ataque | 20-30 s | 493 | 0.769 | 0.159 |
-| ataque | 30-45 s | 365 | 0.718 | 0.198 |
-| ataque | 45-60 s | 197 | 0.782 | 0.132 |
-| ataque | 60-80 s | 112 | 0.679 | 0.143 |
-| ataque | 80+ s | 28 | 0.857 | 0.214 |
-| defesa | 0-10 s | 1152 | 0.691 | 0.198 |
-| defesa | 10-20 s | 1059 | 0.692 | 0.254 |
-| defesa | 20-30 s | 531 | 0.653 | 0.245 |
-| defesa | 30-45 s | 430 | 0.663 | 0.241 |
-| defesa | 45-60 s | 217 | 0.668 | 0.302 |
-| defesa | 60-80 s | 147 | 0.653 | 0.279 |
-| defesa | 80+ s | 40 | 0.625 | 0.231 |
+| ataque | 0-10 s | 905 | 0,767 | 0,154 |
+| ataque | 10-20 s | 902 | 0,748 | 0,152 |
+| ataque | 20-30 s | 493 | 0,769 | 0,159 |
+| ataque | 30-45 s | 365 | 0,718 | 0,198 |
+| ataque | 45-60 s | 197 | 0,782 | 0,132 |
+| ataque | 60-80 s | 112 | 0,679 | 0,143 |
+| ataque | 80+ s | 28 | 0,857 | 0,214 |
+| defesa | 0-10 s | 1152 | 0,691 | 0,198 |
+| defesa | 10-20 s | 1059 | 0,692 | 0,254 |
+| defesa | 20-30 s | 531 | 0,653 | 0,245 |
+| defesa | 30-45 s | 430 | 0,663 | 0,241 |
+| defesa | 45-60 s | 217 | 0,668 | 0,302 |
+| defesa | 60-80 s | 147 | 0,653 | 0,279 |
+| defesa | 80+ s | 40 | 0,625 | 0,231 |
 
-Troca temporal significa o autor do abate ser abatido pela equipe adversária em até cinco segundos. Inclui simultaneidade e não prova reação ao primeiro abate; mortes ambientais, friendly fire e eventos posteriores à decisão não são trocas.
+A tabela seguinte separa os plants válidos sem nenhuma morte anterior ao plant. A comparação não exige que o ataque consiga um abate depois do plant.
 
-Entre plants válidos, a condição sem mortes anteriores ao plant é avaliada sem exigir um abate favorável posterior:
-
-| sem_morte_antes_plant | plants | vitoria_do_ataque |
+| Sem morte anterior ao plant | Plants | Vitória do ataque |
 | --- | --- | --- |
-| False | 4038 | 0.698 |
-| True | 398 | 0.671 |
+| Não | 4038 | 0,698 |
+| Sim | 398 | 0,671 |
 
-## 2. Isolamento e distância dos aliados
+## 2. Distância dos aliados
 
-| isolada | mortes | vitoria_da_vitima | troca_temporal |
+Uma morte fica no grupo sem aliado próximo quando o aliado vivo mais próximo está a mais de 1.000 unidades do jogo. A conversão aproximada é de dez metros, mas essa escala não foi validada nestes arquivos. Se não há aliado vivo, a distância fica sem valor. A tabela usa somente a primeira vítima identificada de cada round.
+
+| Sem aliado próximo | Mortes | Vitória da equipe da vítima | Troca em até 5 s |
 | --- | --- | --- | --- |
-| False | 2972 | 0.288 | 0.305 |
-| True | 3565 | 0.287 | 0.114 |
+| Não | 2972 | 0,288 | 0,305 |
+| Sim | 3565 | 0,287 | 0,114 |
 
-O limite padrão é 1.000 unidades; a interface recalcula isolamento e contexto quando o limite muda. Sem aliado vivo, a distância fica indefinida. Igualdade aproximada das médias não demonstra irrelevância do posicionamento; os dados observam mortes, sem registrar todas as exposições bem-sucedidas.
+O controle de distância na interface recalcula os grupos. Taxas de vitória próximas não provam que a posição seja irrelevante. A base registra as mortes e não todas as situações em que um jogador ficou exposto e sobreviveu.
 
-## 3. Contexto dos aliados e ocupação territorial
+## 3. Posição dos aliados e regiões do mapa
 
-O antigo rótulo flanco foi substituído por separado do grupo: nenhum aliado próximo e pelo menos dois aliados na mesma grande região. Não identifica rota de flanqueamento nem garante que os aliados estejam próximos entre si. Território usa o primeiro instante de abate válido até 20 segundos, um snapshot por round incluindo vítimas; não são posições iniciais de todos os rounds.
+Em grupo significa que há um aliado dentro do limite de distância. Isolado significa que não há aliado próximo. O nome separado do grupo é usado quando, além dessa distância, pelo menos dois aliados estão na mesma grande região do mapa. Estar na mesma região não garante que esses aliados estejam próximos entre si. Essa classificação não identifica um flanco.
 
-| contexto | mortes | vitoria | residuo_vivos |
+A referência por vivos é a taxa de vitória nas mortes da defesa antes do plant com a mesma quantidade de aliados e adversários vivos. A diferença da referência subtrai essa taxa do resultado observado e depois calcula a média do grupo. Ela não compara situações iguais em todos os outros aspectos.
+
+| Posição dos aliados | Mortes | Taxa de vitória | Diferença da referência por vivos |
 | --- | --- | --- | --- |
-| em grupo | 3252 | 0.438 | 0.009 |
-| isolado | 8464 | 0.360 | 0.000 |
-| separado do grupo | 1214 | 0.376 | -0.026 |
+| em grupo | 3252 | 0,438 | 0,009 |
+| isolado | 8464 | 0,360 | 0,000 |
+| separado do grupo | 1214 | 0,376 | -0,026 |
 
-O resíduo continua descritivo. A ocupação de uma região não identifica se uma morte individual foi hold ou push, e não estima o risco de avançar.
+A ocupação das regiões usa as posições no primeiro abate válido ocorrido em até 20 segundos, incluindo a vítima. É um registro por round com esse evento, e não a posição inicial de todos os rounds. A região ocupada não diz se o jogador segurava uma posição ou avançava.
 
 ## 4. Diferenças entre mapas
 
-| mapa | rounds | ataque_abriu | ataque_vence | impacto_da_abertura | impacto_ic95_baixo | impacto_ic95_alto |
+A diferença de abertura subtrai a taxa de vitória do ataque quando a defesa abre da taxa de vitória do ataque quando ele próprio abre. Os limites de 95% mostram a incerteza estimada por uma aproximação normal. Essa conta trata os rounds como independentes, embora rounds de uma partida compartilhem equipes e condições.
+
+| Mapa | Rounds | Abertura pelo ataque | Vitória do ataque | Diferença de vitória do ataque conforme quem abriu | Limite inferior de 95% | Limite superior de 95% |
 | --- | --- | --- | --- | --- | --- | --- |
-| Ascent | 1670 | 0.416 | 0.472 | 0.440 | 0.397 | 0.484 |
-| Jam | 1652 | 0.487 | 0.531 | 0.441 | 0.398 | 0.484 |
-| Triad | 1399 | 0.460 | 0.538 | 0.410 | 0.362 | 0.457 |
-| Bonsai | 703 | 0.474 | 0.538 | 0.439 | 0.373 | 0.505 |
-| Juliett | 478 | 0.450 | 0.519 | 0.435 | 0.355 | 0.515 |
-| Infinity | 260 | 0.500 | 0.608 | 0.385 | 0.276 | 0.494 |
-| Plummet | 224 | 0.388 | 0.496 | 0.411 | 0.291 | 0.532 |
-| Foxtrot | 92 | 0.533 | 0.609 | 0.401 | 0.216 | 0.585 |
-| Pitt | 60 | 0.350 | 0.350 | 0.560 | 0.336 | 0.784 |
-| Canyon | 40 | 0.600 | 0.550 | 0.396 | 0.105 | 0.687 |
+| Ascent | 1670 | 0,416 | 0,472 | 0,440 | 0,397 | 0,484 |
+| Lotus | 1652 | 0,487 | 0,531 | 0,441 | 0,398 | 0,484 |
+| Haven | 1399 | 0,460 | 0,538 | 0,410 | 0,362 | 0,457 |
+| Split | 703 | 0,474 | 0,538 | 0,439 | 0,373 | 0,505 |
+| Sunset | 478 | 0,450 | 0,519 | 0,435 | 0,355 | 0,515 |
+| Abyss | 260 | 0,500 | 0,608 | 0,385 | 0,276 | 0,494 |
+| Summit | 224 | 0,388 | 0,496 | 0,411 | 0,291 | 0,532 |
+| Breeze | 92 | 0,533 | 0,609 | 0,401 | 0,216 | 0,585 |
+| Pearl | 60 | 0,350 | 0,350 | 0,560 | 0,336 | 0,784 |
+| Fracture | 40 | 0,600 | 0,550 | 0,396 | 0,105 | 0,687 |
 
-Amostras e participantes diferem entre mapas e builds. Intervalos sobrepostos não demonstram equivalência; mapas pouco observados exigem leitura proporcional à incerteza. Região é o callout 2D mais próximo, sem geometria de colisão.
+Os mapas têm quantidades diferentes de partidas, jogadores e versões do jogo. Por isso, a comparação exige cuidado, sobretudo nos mapas com menos rounds. Intervalos sobrepostos não provam que dois resultados sejam iguais. As regiões usam o nome do ponto conhecido mais próximo no mapa em duas dimensões, sem verificar paredes ou caminhos.
 
-## 5. Pós-plant
+## 5. Combate depois do plant
 
-Troca temporal se associa à vitória posterior em diversas situações de vivos. Controlar pelos vivos não demonstra que a proximidade só importe por permitir troca, nem identifica mediação causal. A troca é uma ação posterior à morte que também altera o número de vivos. Os gráficos detalhados estão em Trocas e isolamento e mostram quando o recorte não tem suporte.
+Pós-plant é o período entre plantar a spike e encerrar o round. Nas mortes desse período, a troca em até cinco segundos aparece junto de taxas de vitória diferentes em várias situações de jogadores vivos. Os gráficos estão na página Trocas e isolamento e indicam quando faltam dados para comparar.
 
-## 6. Associação pós-jogo e previsão temporal
+Separar os casos pela quantidade de vivos não revela por que a troca e a vitória aparecem juntas. A própria troca acontece depois da morte e muda o número de vivos. Portanto, essa comparação não mede quanto a proximidade ajudou por permitir a troca.
 
-Dentro da partida já observada, taxas de combate descrevem o resultado; isso não é uma previsão antes do jogo.
+## 6. Resultado observado e previsão de outras partidas
 
-| metrica | partidas | acerto | ic_baixo | ic_alto | abstencoes_ou_sem_referencia |
+A primeira tabela usa medidas da própria partida já encerrada. A taxa de acerto informa quantas vezes a equipe favorecida pela medida foi a vencedora. Ela descreve o jogo conhecido e não simula um palpite feito antes dele.
+
+| Medida | Partidas | Taxa de acerto | Limite inferior de 95% | Limite superior de 95% | Jogos sem palpite ou referência |
 | --- | --- | --- | --- | --- | --- |
-| abertura | 313 | 0.764 | 0.713 | 0.807 | 22 |
-| troca | 334 | 0.778 | 0.731 | 0.820 | 1 |
-| troca_1a_morte | 326 | 0.629 | 0.575 | 0.679 | 9 |
-| plant_limpo | 195 | 0.605 | 0.535 | 0.671 | 140 |
-| flanco_defesa | 311 | 0.476 | 0.421 | 0.531 | 24 |
-| isolada | 334 | 0.485 | 0.432 | 0.538 | 1 |
-| combinada (todas) | 322 | 0.708 | 0.656 | 0.755 | 13 |
-| combinada (abertura + troca) | 335 | 0.824 | 0.779 | 0.861 | 0 |
+| abertura | 313 | 0,764 | 0,713 | 0,807 | 22 |
+| troca | 334 | 0,778 | 0,731 | 0,820 | 1 |
+| troca após a primeira morte | 326 | 0,629 | 0,575 | 0,679 | 9 |
+| plant sem abate adversário anterior | 195 | 0,605 | 0,535 | 0,671 | 140 |
+| defensor separado do grupo | 311 | 0,476 | 0,421 | 0,531 | 24 |
+| morte sem aliado próximo | 334 | 0,485 | 0,432 | 0,538 | 1 |
+| combinada (todas) | 322 | 0,708 | 0,656 | 0,755 | 13 |
+| combinada (abertura + troca) | 335 | 0,824 | 0,779 | 0,861 | 0 |
 
-Avaliação retrospectiva em outras partidas, inclusive posteriores:
+A medida de plant sem abate adversário anterior conta plants válidos antes de qualquer abate entre adversários no round. Mortes por ambiente ou fogo amigo não impedem essa condição. Ela é diferente do grupo sem nenhuma morte anterior da seção de abertura.
 
-| metrica | partidas | acerto | ic_baixo | ic_alto | abstencoes_ou_sem_referencia | base_mesmos_jogos | diferenca_pareada | diferenca_ic_baixo | diferenca_ic_alto | protocolo |
+A segunda tabela usa outras partidas para formar o perfil de cada equipe. Elas podem ter ocorrido antes ou depois do jogo avaliado, então essa avaliação serve como comparação retrospectiva.
+
+| Medida | Partidas | Taxa de acerto | Limite inferior de 95% | Limite superior de 95% | Jogos sem palpite ou referência | Acerto do histórico nos mesmos jogos | Diferença de acerto para o histórico | Limite inferior da diferença | Limite superior da diferença | Dados usados |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| abertura | 281 | 0.591 | 0.532 | 0.647 | 54 | 0.552 | 0.039 | -0.036 | 0.110 | retrospectivo fora da partida |
-| troca | 281 | 0.566 | 0.507 | 0.623 | 54 | 0.552 | 0.014 | -0.057 | 0.085 | retrospectivo fora da partida |
-| troca_1a_morte | 281 | 0.591 | 0.532 | 0.647 | 54 | 0.552 | 0.039 | -0.043 | 0.125 | retrospectivo fora da partida |
-| plant_limpo | 275 | 0.556 | 0.497 | 0.614 | 60 | 0.556 | 0.000 | -0.080 | 0.076 | retrospectivo fora da partida |
-| flanco_defesa | 281 | 0.530 | 0.472 | 0.588 | 54 | 0.552 | -0.021 | -0.110 | 0.060 | retrospectivo fora da partida |
-| isolada | 281 | 0.509 | 0.451 | 0.567 | 54 | 0.552 | -0.043 | -0.132 | 0.039 | retrospectivo fora da partida |
-| combinada (todas) | 281 | 0.641 | 0.583 | 0.694 | 54 | 0.552 | 0.089 | 0.018 | 0.160 | retrospectivo fora da partida |
-| combinada (abertura + troca) | 281 | 0.605 | 0.547 | 0.660 | 54 | 0.552 | 0.053 | -0.011 | 0.117 | retrospectivo fora da partida |
-| histórico (jogos elegíveis; empates abstêm) | 281 | 0.552 | 0.493 | 0.609 | 54 | — | — | — | — | retrospectivo fora da partida |
+| abertura | 281 | 0,591 | 0,532 | 0,647 | 54 | 0,552 | 0,039 | -0,036 | 0,110 | outras partidas, anteriores ou posteriores |
+| troca | 281 | 0,566 | 0,507 | 0,623 | 54 | 0,552 | 0,014 | -0,057 | 0,085 | outras partidas, anteriores ou posteriores |
+| troca após a primeira morte | 281 | 0,591 | 0,532 | 0,647 | 54 | 0,552 | 0,039 | -0,043 | 0,125 | outras partidas, anteriores ou posteriores |
+| plant sem abate adversário anterior | 275 | 0,556 | 0,497 | 0,614 | 60 | 0,556 | 0,000 | -0,080 | 0,076 | outras partidas, anteriores ou posteriores |
+| defensor separado do grupo | 281 | 0,530 | 0,472 | 0,588 | 54 | 0,552 | -0,021 | -0,110 | 0,060 | outras partidas, anteriores ou posteriores |
+| morte sem aliado próximo | 281 | 0,509 | 0,451 | 0,567 | 54 | 0,552 | -0,043 | -0,132 | 0,039 | outras partidas, anteriores ou posteriores |
+| combinada (todas) | 281 | 0,641 | 0,583 | 0,694 | 54 | 0,552 | 0,089 | 0,018 | 0,160 | outras partidas, anteriores ou posteriores |
+| combinada (abertura + troca) | 281 | 0,605 | 0,547 | 0,660 | 54 | 0,552 | 0,053 | -0,011 | 0,117 | outras partidas, anteriores ou posteriores |
+| histórico de vitórias com palpite definido | 281 | 0,552 | 0,493 | 0,609 | 54 | Sem dado | Sem dado | Sem dado | Sem dado | outras partidas, anteriores ou posteriores |
 
-Previsão usando somente partidas anteriores e escalas estimadas no passado:
+A terceira tabela usa apenas jogos anteriores. A escala que combina as medidas também é calculada com dados do passado. Essa é a avaliação que respeita a ordem das partidas.
 
-| metrica | partidas | acerto | ic_baixo | ic_alto | abstencoes_ou_sem_referencia | base_mesmos_jogos | diferenca_pareada | diferenca_ic_baixo | diferenca_ic_alto | protocolo |
+| Medida | Partidas | Taxa de acerto | Limite inferior de 95% | Limite superior de 95% | Jogos sem palpite ou referência | Acerto do histórico nos mesmos jogos | Diferença de acerto para o histórico | Limite inferior da diferença | Limite superior da diferença | Dados usados |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| abertura | 175 | 0.606 | 0.532 | 0.675 | 160 | 0.657 | -0.051 | -0.137 | 0.034 | somente anteriores |
-| troca | 175 | 0.669 | 0.596 | 0.734 | 160 | 0.657 | 0.011 | -0.074 | 0.091 | somente anteriores |
-| troca_1a_morte | 175 | 0.560 | 0.486 | 0.631 | 160 | 0.657 | -0.097 | -0.200 | 0.006 | somente anteriores |
-| plant_limpo | 170 | 0.541 | 0.466 | 0.614 | 165 | 0.665 | -0.124 | -0.224 | -0.029 | somente anteriores |
-| flanco_defesa | 175 | 0.531 | 0.458 | 0.604 | 160 | 0.657 | -0.126 | -0.217 | -0.029 | somente anteriores |
-| isolada | 175 | 0.509 | 0.435 | 0.582 | 160 | 0.657 | -0.149 | -0.263 | -0.040 | somente anteriores |
-| combinada (todas) | 175 | 0.617 | 0.543 | 0.686 | 160 | 0.657 | -0.040 | -0.131 | 0.051 | somente anteriores |
-| combinada (abertura + troca) | 175 | 0.640 | 0.567 | 0.707 | 160 | 0.657 | -0.017 | -0.097 | 0.057 | somente anteriores |
-| histórico (jogos elegíveis; empates abstêm) | 175 | 0.657 | 0.584 | 0.723 | 160 | — | — | — | — | somente anteriores |
+| abertura | 175 | 0,606 | 0,532 | 0,675 | 160 | 0,657 | -0,051 | -0,137 | 0,034 | somente partidas anteriores |
+| troca | 175 | 0,669 | 0,596 | 0,734 | 160 | 0,657 | 0,011 | -0,074 | 0,091 | somente partidas anteriores |
+| troca após a primeira morte | 175 | 0,560 | 0,486 | 0,631 | 160 | 0,657 | -0,097 | -0,200 | 0,006 | somente partidas anteriores |
+| plant sem abate adversário anterior | 170 | 0,541 | 0,466 | 0,614 | 165 | 0,665 | -0,124 | -0,224 | -0,029 | somente partidas anteriores |
+| defensor separado do grupo | 175 | 0,531 | 0,458 | 0,604 | 160 | 0,657 | -0,126 | -0,217 | -0,029 | somente partidas anteriores |
+| morte sem aliado próximo | 175 | 0,509 | 0,435 | 0,582 | 160 | 0,657 | -0,149 | -0,263 | -0,040 | somente partidas anteriores |
+| combinada (todas) | 175 | 0,617 | 0,543 | 0,686 | 160 | 0,657 | -0,040 | -0,131 | 0,051 | somente partidas anteriores |
+| combinada (abertura + troca) | 175 | 0,640 | 0,567 | 0,707 | 160 | 0,657 | -0,017 | -0,097 | 0,057 | somente partidas anteriores |
+| histórico de vitórias com palpite definido | 175 | 0,657 | 0,584 | 0,723 | 160 | Sem dado | Sem dado | Sem dado | Sem dado | somente partidas anteriores |
 
-Cada modelo é comparado ao histórico nos mesmos jogos com referências identificáveis. Empates são abstensões, com denominadores explícitos. A diferença pareada e seu intervalo são exploratórios; jogos compartilham equipes e não formam uma amostra independente. Não há evidência para tratar as métricas como um oráculo ou contribuição causal. Rankings Spearman descrevem o mesmo campeonato observado.
+O histórico escolhe a equipe com maior taxa de vitória nos jogos de referência. Cada medida é comparada com esse histórico nos mesmos jogos. Se há empate ou faltam dados, não há palpite. A coluna de jogos sem palpite ou referência mostra essas exclusões. O erro entre os palpites feitos é um menos a taxa de acerto. Esse erro não inclui os jogos sem palpite.
 
-CEUB Octopus e CEUB Octopus Vulgaris foram mantidos separados: não têm jogadores em comum nesta base. Nomes parecidos não autorizam fundir elencos.
+A diferença de acerto é a média das diferenças entre os dois palpites em cada jogo avaliado. Os limites estimados ajudam a ver a incerteza, mas equipes se repetem entre partidas. Os intervalos das taxas usam Wilson, um cálculo para proporções que supõe observações independentes. Nenhuma dessas medidas demonstra contribuição causal de um jogador. As posições por correlação de Spearman descrevem a ordem das equipes no mesmo campeonato observado.
 
-## 7. Equipamento, sequência de resultados e ciclo após pistol
+CEUB Octopus e CEUB Octopus Vulgaris permanecem separados porque não compartilham jogadores nesta base. A semelhança dos nomes não basta para juntar os elencos.
 
-| faixa_diferenca | rounds | vitoria |
+## 7. Equipamento e rounds após o pistol
+
+Valor do equipamento é a soma do equipamento registrado para a equipe no começo do round, também chamada de loadout nos dados. Esse valor não informa o gasto naquele round nem o dinheiro disponível. A primeira tabela compara a diferença de equipamento entre as equipes.
+
+| Diferença de equipamento entre equipes | Rounds | Taxa de vitória |
 | --- | --- | --- |
-| ≤ -10k | 1923 | 0.175 |
-| (-10k, -5k] | 958 | 0.341 |
-| (-5k, -2k] | 1526 | 0.458 |
-| (-2k, 2k] | 4399 | 0.500 |
-| (2k, 5k] | 1501 | 0.544 |
-| (5k, 10k] | 957 | 0.662 |
-| > 10k | 1912 | 0.824 |
+| ≤ -10k | 1923 | 0,175 |
+| (-10k, -5k] | 958 | 0,341 |
+| (-5k, -2k] | 1526 | 0,458 |
+| (-2k, 2k] | 4399 | 0,500 |
+| (2k, 5k] | 1501 | 0,544 |
+| (5k, 10k] | 957 | 0,662 |
+| > 10k | 1912 | 0,824 |
 
-Contra adversário com equipamento acima de 20 mil, apenas rounds normais:
+A tabela seguinte usa somente rounds normais contra adversários com mais de 20 mil de equipamento. A diferença por mil resume a mudança entre faixas vizinhas e não mede o efeito de comprar mais.
 
-| faixa_loadout | rounds | vitoria | loadout_medio | ganho_por_1k_a_mais |
+| Equipamento da equipe | Rounds | Taxa de vitória | Valor médio do equipamento | Diferença de vitória por mil de equipamento |
 | --- | --- | --- | --- | --- |
-| até 4k | 12 | 0.000 | 3075.000 | — |
-| (4k, 8k] | 306 | 0.157 | 6676.144 | 0.044 |
-| (8k, 12k] | 838 | 0.212 | 9882.757 | 0.017 |
-| (12k, 16k] | 511 | 0.303 | 14040.313 | 0.022 |
-| (16k, 20k] | 1028 | 0.427 | 18390.175 | 0.029 |
-| > 20k | 4780 | 0.500 | 23024.592 | 0.016 |
+| até 4k | 12 | 0,000 | 3075,000 | Sem dado |
+| (4k, 8k] | 306 | 0,157 | 6676,144 | 0,044 |
+| (8k, 12k] | 838 | 0,212 | 9882,757 | 0,017 |
+| (12k, 16k] | 511 | 0,303 | 14040,313 | 0,022 |
+| (16k, 20k] | 1028 | 0,427 | 18390,175 | 0,029 |
+| > 20k | 4780 | 0,500 | 23024,592 | 0,016 |
 
-Referência econômica após resultado anterior, ajustada somente em rounds normais da amostra selecionada:
+A referência pelo equipamento vem de uma curva calculada apenas com os rounds normais da seleção. A diferença da referência mostra quanto a taxa observada fica acima ou abaixo dessa curva depois de cada resultado anterior.
 
-| anterior | rounds | vitoria | esperado_pelo_dinheiro | acima_do_esperado | diferenca_media |
+| Resultado anterior | Rounds | Taxa de vitória | Referência pelo equipamento | Diferença da referência | Diferença média de equipamento |
 | --- | --- | --- | --- | --- | --- |
-| perdeu | 4793 | 0.407 | 0.414 | -0.007 | -4398.154 |
-| perdeu round fácil (clutch ou thrifty do adversário) | 396 | 0.394 | 0.397 | -0.003 | -5538.636 |
-| venceu | 5189 | 0.594 | 0.588 | 0.007 | 4485.190 |
+| perdeu | 4793 | 0,407 | 0,414 | -0,007 | -4398,154 |
+| perdeu round fácil (clutch ou thrifty do adversário) | 396 | 0,394 | 0,397 | -0,003 | -5538,636 |
+| venceu | 5189 | 0,594 | 0,588 | 0,007 | 4485,190 |
 
-Resíduos pequenos não demonstram ausência de abalo nem que dinheiro explique inteiramente momentum. Seleção por placar final também depende dos resultados. Loadout não é gasto, dinheiro disponível ou valor causal de comprar mais.
+Diferenças pequenas não provam que perder um round não abale a equipe ou que o dinheiro explique toda sequência de resultados. Separar partidas pelo placar final também usa informação que depende dos resultados.
 
-Ciclos separados por metade: taxas e soma na mesma coorte completa; disponibilidade e censura aparecem separadamente.
+Pistol é o primeiro round de cada metade. Após perder o pistol, os ciclos acompanham o segundo, o terceiro e o quarto round da mesma metade. Eco, compra leve e force são faixas de equipamento registrado, e não decisões de compra confirmadas. As taxas e a soma de vitórias usam os mesmos ciclos completos. Os ciclos interrompidos pelo fim da partida aparecem em uma coluna separada.
 
-| metade | compra | rounds | ciclos_completos | ciclos_censurados | disponiveis_round_3 | disponiveis_round_4 | vitoria_round_2 | vitoria_round_3 | vitoria_round_4 | rounds_ganhos_2_a_4 |
+| Metade | Faixa de equipamento | Rounds | Ciclos completos | Ciclos interrompidos pelo fim da partida | Ciclos com terceiro round | Ciclos com quarto round | Vitória no segundo round | Vitória no terceiro round | Vitória no quarto round | Vitórias médias do segundo ao quarto round |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| primeira | eco (até 4k) | 305 | 305 | 0 | 305 | 305 | 0.092 | 0.577 | 0.377 | 1.046 |
-| primeira | leve (4-8k) | 23 | 23 | 0 | 23 | 23 | 0.174 | 0.435 | 0.391 | 1.000 |
-| primeira | force (> 8k) | 7 | 7 | 0 | 7 | 7 | 0.571 | 0.714 | 0.714 | 2.000 |
-| segunda | eco (até 4k) | 232 | 228 | 4 | 232 | 228 | 0.118 | 0.680 | 0.364 | 1.162 |
-| segunda | leve (4-8k) | 32 | 29 | 3 | 31 | 29 | 0.138 | 0.724 | 0.276 | 1.138 |
-| segunda | force (> 8k) | 56 | 35 | 21 | 46 | 35 | 0.543 | 0.743 | 0.543 | 1.829 |
+| primeira | eco (até 4k) | 305 | 305 | 0 | 305 | 305 | 0,092 | 0,577 | 0,377 | 1,046 |
+| primeira | leve (4-8k) | 23 | 23 | 0 | 23 | 23 | 0,174 | 0,435 | 0,391 | 1,000 |
+| primeira | force (> 8k) | 7 | 7 | 0 | 7 | 7 | 0,571 | 0,714 | 0,714 | 2,000 |
+| segunda | eco (até 4k) | 232 | 228 | 4 | 232 | 228 | 0,118 | 0,680 | 0,364 | 1,162 |
+| segunda | leve (4-8k) | 32 | 29 | 3 | 31 | 29 | 0,138 | 0,724 | 0,276 | 1,138 |
+| segunda | force (> 8k) | 56 | 35 | 21 | 46 | 35 | 0,543 | 0,743 | 0,543 | 1,829 |
 
-Ciclos completos continuam selecionados pelo fato de a partida ter durado o horizonte. Esta descrição não identifica o retorno de escolher force/eco. A taxa prévia usa apenas rounds anteriores ao pistol, quando disponíveis.
+Os ciclos completos dependem de a partida ter durado até o quarto round da metade. Por isso, as médias não mostram o retorno de escolher force ou eco. Quando há taxa anterior ao pistol, ela usa somente rounds anteriores a ele.
 
-## 8. Plants válidos, sites e defuse
+## 8. Plant e defuse
 
-Há 4,436 plants válidos, 1,349 defuses e taxa 30.4%. Plants após eliminação/sem defensores ou em rounds encerrados pelo tempo ficam fora das taxas táticas, com motivos preservados na qualidade.
+Plant é a colocação da spike e defuse é o seu desarme. Um plant é válido nesta análise quando ocorre antes do encerramento observável e ainda há defensores vivos. Registros de plant após eliminação ou em rounds encerrados pelo tempo ficam fora das taxas de combate. Os motivos de exclusão continuam na página de qualidade.
 
-| faixa_tempo | plants | partidas | defuse | esperado_pelos_vivos | acima_do_esperado | segundos_plant | defuse_ic95_min | defuse_ic95_max |
+Há 4.436 plants válidos e 1.349 defuses. A taxa de defuse é 30,4%.
+
+A referência por jogadores vivos é a taxa de defuse entre os plants com a mesma quantidade de atacantes e defensores vivos. Por exemplo, um plant com três atacantes e dois defensores é comparado com outros plants em 3 contra 2. A referência de uma linha é a média dessas taxas para os plants daquela linha. A diferença da referência subtrai esse valor da taxa observada.
+
+Os limites de 95% usam Wilson, um cálculo de incerteza para proporções. Ele trata os plants como independentes, embora vários venham da mesma partida. Aqui, os intervalos servem como descrição.
+
+| Tempo até plantar | Plants | Partidas | Taxa de defuse | Referência por jogadores vivos | Diferença da referência | Tempo mediano até plantar em segundos | Limite inferior de 95% | Limite superior de 95% |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0-20 s | 218 | 142 | 0.271 | 0.281 | -0.010 | 18.084 | 0.216 | 0.333 |
-| 20-40 s | 1758 | 332 | 0.267 | 0.268 | -0.001 | 29.338 | 0.247 | 0.289 |
-| 40-60 s | 1103 | 311 | 0.271 | 0.287 | -0.016 | 49.140 | 0.246 | 0.298 |
-| 60-80 s | 850 | 295 | 0.336 | 0.330 | 0.007 | 68.953 | 0.306 | 0.369 |
-| 80-100 s | 507 | 228 | 0.464 | 0.432 | 0.032 | 88.325 | 0.421 | 0.507 |
+| 0-20 s | 218 | 142 | 0,271 | 0,281 | -0,010 | 18,084 | 0,216 | 0,333 |
+| 20-40 s | 1758 | 332 | 0,267 | 0,268 | -0,001 | 29,338 | 0,247 | 0,289 |
+| 40-60 s | 1103 | 311 | 0,271 | 0,287 | -0,016 | 49,140 | 0,246 | 0,298 |
+| 60-80 s | 850 | 295 | 0,336 | 0,330 | 0,007 | 68,953 | 0,306 | 0,369 |
+| 80-100 s | 507 | 228 | 0,464 | 0,432 | 0,032 | 88,325 | 0,421 | 0,507 |
 
-| mapa | site | plants | defuse | esperado_pelos_vivos | acima_do_esperado |
+| Mapa | Local de plant | Plants | Taxa de defuse | Referência por jogadores vivos | Diferença da referência |
 | --- | --- | --- | --- | --- | --- |
-| Ascent | A | 479 | 0.311 | 0.295 | 0.016 |
-| Ascent | B | 517 | 0.288 | 0.312 | -0.023 |
-| Bonsai | A | 235 | 0.277 | 0.312 | -0.035 |
-| Bonsai | B | 224 | 0.232 | 0.293 | -0.061 |
-| Canyon | A | 15 | 0.200 | 0.357 | -0.157 |
-| Canyon | B | 13 | 0.231 | 0.233 | -0.002 |
-| Foxtrot | A | 31 | 0.258 | 0.340 | -0.082 |
-| Foxtrot | B | 31 | 0.226 | 0.297 | -0.071 |
-| Infinity | A | 90 | 0.244 | 0.302 | -0.057 |
-| Infinity | B | 110 | 0.318 | 0.324 | -0.006 |
-| Jam | A | 453 | 0.291 | 0.274 | 0.018 |
-| Jam | B | 215 | 0.330 | 0.307 | 0.024 |
-| Jam | C | 537 | 0.363 | 0.330 | 0.033 |
-| Juliett | A | 145 | 0.234 | 0.259 | -0.024 |
-| Juliett | B | 171 | 0.368 | 0.325 | 0.044 |
-| Pitt | A | 18 | 0.278 | 0.394 | -0.116 |
-| Pitt | B | 17 | 0.588 | 0.365 | 0.223 |
-| Plummet | A | 89 | 0.360 | 0.326 | 0.034 |
-| Plummet | B | 79 | 0.405 | 0.347 | 0.058 |
-| Triad | A | 385 | 0.281 | 0.293 | -0.012 |
-| Triad | B | 142 | 0.394 | 0.361 | 0.033 |
-| Triad | C | 440 | 0.268 | 0.279 | -0.011 |
+| Ascent | A | 479 | 0,311 | 0,295 | 0,016 |
+| Ascent | B | 517 | 0,288 | 0,312 | -0,023 |
+| Split | A | 235 | 0,277 | 0,312 | -0,035 |
+| Split | B | 224 | 0,232 | 0,293 | -0,061 |
+| Fracture | A | 15 | 0,200 | 0,357 | -0,157 |
+| Fracture | B | 13 | 0,231 | 0,233 | -0,002 |
+| Breeze | A | 31 | 0,258 | 0,340 | -0,082 |
+| Breeze | B | 31 | 0,226 | 0,297 | -0,071 |
+| Abyss | A | 90 | 0,244 | 0,302 | -0,057 |
+| Abyss | B | 110 | 0,318 | 0,324 | -0,006 |
+| Lotus | A | 453 | 0,291 | 0,274 | 0,018 |
+| Lotus | B | 215 | 0,330 | 0,307 | 0,024 |
+| Lotus | C | 537 | 0,363 | 0,330 | 0,033 |
+| Sunset | A | 145 | 0,234 | 0,259 | -0,024 |
+| Sunset | B | 171 | 0,368 | 0,325 | 0,044 |
+| Pearl | A | 18 | 0,278 | 0,394 | -0,116 |
+| Pearl | B | 17 | 0,588 | 0,365 | 0,223 |
+| Summit | A | 89 | 0,360 | 0,326 | 0,034 |
+| Summit | B | 79 | 0,405 | 0,347 | 0,058 |
+| Haven | A | 385 | 0,281 | 0,293 | -0,012 |
+| Haven | B | 142 | 0,394 | 0,361 | 0,033 |
+| Haven | C | 440 | 0,268 | 0,279 | -0,011 |
 
-O ajuste pelos vivos é referência observacional, sem controlar toda a situação. Uma célula mais ou menos desarmada que a referência não recebe um custo causal. Tempo até o defuse, nos casos observados:
+Essa referência considera os vivos, mas não toda a situação do round. Uma diferença entre locais não mede o efeito de escolher onde plantar. A tabela seguinte mostra o tempo entre plant e defuse apenas nos casos em que houve desarme.
 
-| count | mean | std | min | 25% | 50% | 75% | max |
+| Defuses | Média em segundos | Desvio padrão em segundos | Menor tempo | Um quarto dos casos até | Metade dos casos até | Três quartos dos casos até | Maior tempo |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1349.000 | 29.799 | 8.302 | 8.446 | 23.750 | 30.563 | 36.505 | 44.999 |
+| 1349,000 | 29,799 | 8,302 | 8,446 | 23,750 | 30,563 | 36,505 | 44,999 |
 
-A distribuição não sustenta dizer que quase todos os defuses ocorrem no limite de 45 segundos.
+Os tempos observados não sustentam a afirmação de que quase todos os defuses acontecem perto do limite de 45 segundos.
 
 ## 9. Função do agente
 
-| funcao | escalações | primeira morte no ataque | primeira morte na defesa |
+Duelista, iniciador, controlador e sentinela são as funções dos agentes nos metadados locais. A participação nas escalações conta jogadores, sem observadores. A primeira tabela compara essa participação com a presença entre as primeiras vítimas.
+
+| Função | escalações | primeira morte no ataque | primeira morte na defesa |
 | --- | --- | --- | --- |
-| duelista | 0.361 | 0.523 | 0.464 |
-| iniciador | 0.214 | 0.114 | 0.168 |
-| controlador | 0.237 | 0.166 | 0.188 |
-| sentinela | 0.187 | 0.197 | 0.181 |
+| duelista | 0,361 | 0,523 | 0,464 |
+| iniciador | 0,214 | 0,114 | 0,168 |
+| controlador | 0,237 | 0,166 | 0,188 |
+| sentinela | 0,187 | 0,197 | 0,181 |
 
-| lado | funcao | rounds | trocada | vitoria_da_vitima | acima_do_time | ic95_baixo | ic95_alto |
+A segunda tabela usa somente primeiras vítimas identificadas individualmente. Mortes simultâneas sem uma vítima única ficam fora. A diferença da média da equipe subtrai a taxa de vitória daquela equipe nos outros rounds da mesma partida, sem incluir o round analisado.
+
+| Lado | Função | Rounds | Troca em até 5 s | Vitória da equipe da vítima | Diferença da média da equipe | Limite inferior de 95% | Limite superior de 95% |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| ataque | duelista | 1853 | 0.280 | 0.317 | -0.152 | 0.297 | 0.339 |
-| ataque | iniciador | 403 | 0.310 | 0.342 | -0.115 | 0.298 | 0.390 |
-| ataque | controlador | 587 | 0.172 | 0.342 | -0.131 | 0.305 | 0.382 |
-| ataque | sentinela | 699 | 0.134 | 0.305 | -0.170 | 0.272 | 0.340 |
-| defesa | duelista | 1390 | 0.174 | 0.245 | -0.226 | 0.223 | 0.268 |
-| defesa | iniciador | 503 | 0.167 | 0.249 | -0.209 | 0.213 | 0.288 |
-| defesa | controlador | 562 | 0.157 | 0.258 | -0.208 | 0.224 | 0.296 |
-| defesa | sentinela | 541 | 0.111 | 0.237 | -0.219 | 0.203 | 0.274 |
+| ataque | duelista | 1853 | 0,280 | 0,317 | -0,152 | 0,297 | 0,339 |
+| ataque | iniciador | 403 | 0,310 | 0,342 | -0,115 | 0,298 | 0,390 |
+| ataque | controlador | 587 | 0,172 | 0,342 | -0,131 | 0,305 | 0,382 |
+| ataque | sentinela | 699 | 0,134 | 0,305 | -0,170 | 0,272 | 0,340 |
+| defesa | duelista | 1390 | 0,174 | 0,245 | -0,226 | 0,223 | 0,268 |
+| defesa | iniciador | 503 | 0,167 | 0,249 | -0,209 | 0,213 | 0,288 |
+| defesa | controlador | 562 | 0,157 | 0,258 | -0,208 | 0,224 | 0,296 |
+| defesa | sentinela | 541 | 0,111 | 0,237 | -0,219 | 0,203 | 0,274 |
 
-Escalações contam participantes, sem observadores. Primeira vítima por função exige identificação individual, excluindo simultaneidade. Sobreposição de intervalos não prova igualdade do custo; subtrair a taxa da equipe na mesma partida não controla independentemente força, lado, economia ou adversário.
+Essa subtração não separa a influência de força da equipe, lado, equipamento ou adversário. Os limites de 95% usam Wilson e são descritivos. Intervalos sobrepostos não provam que perder primeiro agentes de funções diferentes tenha o mesmo custo.
 
-## 10. Geometria e troca temporal
+## 10. Distância e direção dos aliados nas trocas
 
-| lado | troca_possivel | mortes | trocada | venceu_round |
+O teste procura um aliado a até 2.000 unidades do jogo e verifica se sua direção está a até 45 graus da direção do autor do abate. Proximidade e direção compatíveis significam apenas que essas duas condições foram atendidas.
+
+| Lado | Distância e direção do aliado | Mortes | Troca em até 5 s | Vitória da equipe da vítima |
 | --- | --- | --- | --- | --- |
-| ataque | aliado em alcance olhando para outro lado | 3049 | 0.236 | 0.353 |
-| ataque | proximidade e direção compatíveis | 7021 | 0.470 | 0.440 |
-| ataque | sem aliado em alcance | 13159 | 0.104 | 0.266 |
-| defesa | aliado em alcance olhando para outro lado | 2551 | 0.218 | 0.295 |
-| defesa | proximidade e direção compatíveis | 6063 | 0.425 | 0.413 |
-| defesa | sem aliado em alcance | 14280 | 0.089 | 0.229 |
+| ataque | aliado em alcance olhando para outro lado | 3049 | 0,236 | 0,353 |
+| ataque | proximidade e direção compatíveis | 7021 | 0,470 | 0,440 |
+| ataque | sem aliado em alcance | 13159 | 0,104 | 0,266 |
+| defesa | aliado em alcance olhando para outro lado | 2551 | 0,218 | 0,295 |
+| defesa | proximidade e direção compatíveis | 6063 | 0,425 | 0,413 |
+| defesa | sem aliado em alcance | 14280 | 0,089 | 0,229 |
 
-A heurística testa distância 2D até 2.000 unidades e direção até 45 graus. Não verifica linha de tiro, parede, smoke, altura, cegueira, munição ou recarga. Não transforma ausência de troca em erro demonstrado do jogador. Direções ausentes permanecem desconhecidas.
+A conta usa duas dimensões e não verifica linha de tiro, paredes, fumaça, altura, cegueira, munição ou recarga. Quando falta a direção, ela permanece desconhecida. A ausência de troca não demonstra erro de um jogador.
 
-## 11. Colapsos observados
+## 11. Mortes em sequência
 
-| lado | rounds | tres_em_10s | tres_com_abate | colapsos | venceu_sem_colapso | venceu_com_colapso | inicio_mediano |
+Colapso é uma janela de até dez segundos com pelo menos três vítimas distintas da mesma equipe, mortas por adversários válidos, sem abate da própria equipe no intervalo. A tabela também mostra janelas com três mortes e algum abate da própria equipe. Mortes por spike ou ambiente e eventos após o encerramento observável ficam fora.
+
+| Lado | Rounds | Três mortes em 10 s | Três mortes com abate da própria equipe na janela | Rounds com colapso | Vitória sem colapso | Vitória com colapso | Início mediano em segundos |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| ataque | 6588 | 0.391 | 0.230 | 0.234 | 0.656 | 0.073 | 35.795 |
-| defesa | 6588 | 0.348 | 0.197 | 0.198 | 0.586 | 0.055 | 41.608 |
+| ataque | 6588 | 0,391 | 0,230 | 0,234 | 0,656 | 0,073 | 35,795 |
+| defesa | 6588 | 0,348 | 0,197 | 0,198 | 0,586 | 0,055 | 41,608 |
 
-O detector exige três vítimas distintas em abates adversários válidos. Janelas com abate no meio são contadas separadamente. Mortes por Bomb/ambiente e eventos após decisão não são colapso tático. Regiões diferentes geram múltiplas regiões, sem desempate alfabético. A definição temporal não demonstra que mira ou posicionamento causem todos os colapsos.
+Se as mortes ocorrem em regiões diferentes, o registro indica múltiplas regiões. A sequência de mortes descreve o que aconteceu, mas não identifica se mira ou posição causou o colapso.
 
-## 12. Arma inicial, distância e dano agregado
+## 12. Dano registrado e arma inicial
 
-| lado | classe_luta | mortes | dist_killer | trocada | venceu_round |
+As categorias contam quantos adversários causaram dano à vítima durante o round inteiro. Dano de vários adversários não significa fogo simultâneo. O dano recebido pelo autor do abate também é somado no round e não identifica uma reação naquela vida.
+
+| Lado | Adversários que causaram dano | Mortes | Distância média até o autor em unidades | Troca em até 5 s | Vitória da equipe da vítima |
 | --- | --- | --- | --- | --- | --- |
-| ataque | dano de múltiplos adversários no round | 8987 | 1595.160 | 0.216 | 0.331 |
-| ataque | dano de um adversário no round | 14286 | 1670.709 | 0.241 | 0.330 |
-| defesa | dano de múltiplos adversários no round | 8433 | 1572.670 | 0.191 | 0.296 |
-| defesa | dano de um adversário no round | 14481 | 1588.678 | 0.193 | 0.279 |
+| ataque | dano de múltiplos adversários no round | 8987 | 1595,160 | 0,216 | 0,331 |
+| ataque | dano de um adversário no round | 14286 | 1670,709 | 0,241 | 0,330 |
+| defesa | dano de múltiplos adversários no round | 8433 | 1572,670 | 0,191 | 0,296 |
+| defesa | dano de um adversário no round | 14481 | 1588,678 | 0,193 | 0,279 |
 
-As classes descrevem quantidade de adversários com dano registrado na vítima durante o round, sem afirmar foco simultâneo. Dano no autor também é agregado no round, sem identificar reação naquela vida. Assistência não é tratada como prova de dano; entradas repetidas são somadas. A arma da vítima é a do equipamento inicial, pois trocas/armas coletadas não são registradas. Distâncias apenas nas mortes não comprovam disciplina ou erro de alcance.
+Assistência não conta como prova de dano, e registros repetidos de dano são somados. A arma da vítima é a registrada no início do round porque armas coletadas e trocadas não são conhecidas. As distâncias nas mortes, sozinhas, não demonstram bom uso de alcance nem erro.
 
-## 13. Equipamento da vítima, sobrevivência e continuidade econômica
+## 13. Sobrevivência e equipamento no round seguinte
 
-| sobreviventes | rounds | loadout | loadout_seguinte | venceu_seguinte |
+A tabela usa equipes que perderam o round. Sobrevivente é quem está vivo no último registro de posições disponível, incluindo quem voltou à vida. A comparação com o próximo round exclui transições no fim de uma metade e na prorrogação. Os valores de equipamento são os registrados no começo de cada round.
+
+| Sobreviventes | Rounds | Equipamento médio no round | Equipamento médio no próximo round | Vitória no próximo round |
 | --- | --- | --- | --- | --- |
-| 0 | 5355 | 15087.946 | 16325.901 | 0.373 |
-| 1 | 348 | 20067.816 | 17515.374 | 0.382 |
-| 2 | 103 | 20463.592 | 18780.097 | 0.379 |
-| 3 | 37 | 21870.270 | 20074.324 | 0.568 |
-| 4 | 1 | 21900.000 | 24550.000 | 1.000 |
+| 0 | 5355 | 15087,946 | 16325,901 | 0,373 |
+| 1 | 348 | 20067,816 | 17515,374 | 0,382 |
+| 2 | 103 | 20463,592 | 18780,097 | 0,379 |
+| 3 | 37 | 21870,270 | 20074,324 | 0,568 |
+| 4 | 1 | 21900,000 | 24550,000 | 1,000 |
 
-Sobreviventes vêm do último estado observável, incluindo retorno à vida. A continuidade exclui fins de metade e prorrogação. As médias não representam o preço causal de salvar alguém, pois equipamento inicial, bônus e força diferem. Caça não é identificada; selecionar só vitórias do ataque não permite afirmar que uma política de caçar compensa nem fixar uma razão de mortes/abates.
+As médias não medem o valor de salvar um jogador. As equipes também diferem em equipamento inicial, bônus e força. Os dados não identificam a intenção de caçar adversários. Recortar apenas vitórias do ataque não mostra se essa escolha compensa nem qual troca de abates seria aceitável.
 
-## 14. Estilo observado e placar
+## 14. Tempo do plant e resultado
 
-| estilo | rounds | venceu | plant_mediano |
+Os grupos usam o momento em que a spike foi plantada. Plant em até 40 segundos corresponde ao antigo nome execução rápida, e plant depois de 40 segundos corresponde ao antigo nome default. O relógio não revela a intenção da equipe. Sem plant e plant excluído têm grupos próprios.
+
+| Tempo do plant | Rounds | Taxa de vitória | Tempo mediano até plantar em segundos |
 | --- | --- | --- | --- |
-| execução rápida | 1976 | 0.732 | 28.261 |
-| default | 2460 | 0.667 | 62.964 |
-| sem plant | 1940 | 0.068 | — |
-| plant excluído | 212 | 0.958 | 52.722 |
+| plant em até 40 segundos | 1976 | 0,732 | 28,261 |
+| plant após 40 segundos | 2460 | 0,667 | 62,964 |
+| sem plant | 1940 | 0,068 | Sem dado |
+| plant excluído | 212 | 0,958 | 52,722 |
 
-Comparação entre plants válidos, aplicando a mesma referência por vivos usada na análise de posição:
+A próxima tabela usa apenas plants válidos. A referência é a taxa de vitória do ataque nos plants com a mesma quantidade de atacantes e defensores vivos, calculada como na seção de defuse. A diferença subtrai essa referência do resultado observado.
 
-| estilo | plants | vitoria | esperado | residuo |
+| Tempo do plant | Plants | Taxa de vitória | Referência por jogadores vivos | Diferença da referência |
 | --- | --- | --- | --- | --- |
-| default | 2460 | 0.667 | 0.668 | -0.002 |
-| execução rápida | 1976 | 0.732 | 0.730 | 0.002 |
+| plant após 40 segundos | 2460 | 0,667 | 0,668 | -0,002 |
+| plant em até 40 segundos | 1976 | 0,732 | 0,730 | 0,002 |
 
-Não se conclui que plantar rápido causa vitória. O timestamp do plant não registra intenção nem uma execução que falhou antes de plantar. Comparar médias agregadas atrás/na frente também não demonstra que nenhuma equipe adapte seu estilo. Sem plant é um desfecho observado, não derrota por definição. Plant excluído fica em categoria própria.
+Plantar cedo e vencer podem ocorrer juntos sem que um cause o outro. A tabela não registra tentativas que falharam antes do plant. Comparar médias com a equipe atrás ou à frente no placar também não demonstra como cada equipe adapta seu jogo. Um round sem plant pode terminar em vitória ou derrota do ataque.
 
-## 15. Medidas de setup e estado no defuse
+## 15. Posições no plant e no defuse
 
-| faixa_defesa | plants | partidas | defuse | esperado_pelos_vivos | acima_do_esperado | segundos_plant | defuse_ic95_min | defuse_ic95_max |
+A distância mediana da defesa é o valor central das distâncias dos defensores até a spike no plant. Com quantidade par de defensores, usa-se a média dos dois valores centrais. A referência por vivos e seus limites de Wilson seguem a definição da seção de defuse.
+
+| Distância mediana da defesa até a spike | Plants | Partidas | Taxa de defuse | Referência por jogadores vivos | Diferença da referência | Tempo mediano até plantar em segundos | Limite inferior de 95% | Limite superior de 95% |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| até 20 m | 432 | 228 | 0.375 | 0.341 | 0.034 | 56.576 | 0.331 | 0.422 |
-| 20 a 35 m | 1725 | 325 | 0.336 | 0.317 | 0.019 | 44.316 | 0.314 | 0.358 |
-| 35 a 50 m | 1413 | 326 | 0.298 | 0.303 | -0.005 | 41.170 | 0.275 | 0.322 |
-| 50 m+ | 866 | 304 | 0.216 | 0.263 | -0.047 | 42.342 | 0.190 | 0.245 |
+| até 20 m | 432 | 228 | 0,375 | 0,341 | 0,034 | 56,576 | 0,331 | 0,422 |
+| 20 a 35 m | 1725 | 325 | 0,336 | 0,317 | 0,019 | 44,316 | 0,314 | 0,358 |
+| 35 a 50 m | 1413 | 326 | 0,298 | 0,303 | -0,005 | 41,170 | 0,275 | 0,322 |
+| 50 m+ | 866 | 304 | 0,216 | 0,263 | -0,047 | 42,342 | 0,190 | 0,245 |
 
-| atacantes_vivos_no_defuse | defuses | mais_proximo_mediano | ninguem_a_15_m |
+Nos rounds com defuse, a tabela seguinte conta os atacantes ainda vivos no desarme e a distância do mais próximo. Distâncias são unidades do jogo, com conversão aproximada de 100 unidades por metro. Sem atacante vivo, a distância fica sem dado e o caso entra no grupo sem atacante a até 15 metros.
+
+| Atacantes vivos no defuse | Defuses | Distância mediana até o atacante mais próximo em unidades | Defuses sem atacante a até 15 m |
 | --- | --- | --- | --- |
-| 0.000 | 1246 | — | 1.000 |
-| 1.000 | 86 | 2301.591 | 0.698 |
-| 2.000 | 12 | 1211.260 | 0.333 |
-| 3.000 | 5 | 1485.260 | 0.400 |
+| 0,000 | 1246 | Sem dado | 1,000 |
+| 1,000 | 86 | 2301,591 | 0,698 |
+| 2,000 | 12 | 1211,260 | 0,333 |
+| 3,000 | 5 | 1485,260 | 0,400 |
 
-A mediana de distância usa a média dos dois valores centrais quando há quantidade par de defensores. Olhar contrário à spike não comprova vigiar entradas; raio médio até a spike não é dispersão entre aliados. O estado sem atacantes no defuse descreve o fim das lutas, sem excluir influência do setup anterior. Ausência de grande resíduo em proxies não demonstra irrelevância de posição.
+Olhar para longe da spike não comprova vigiar uma entrada. A distância média até a spike também não mede a distância entre os aliados. Encontrar zero atacantes no defuse descreve o fim das lutas, mas não descarta a influência das posições anteriores. Diferenças pequenas nessas medidas não provam que o posicionamento seja irrelevante.
 
-## Referências por estado e limites de uso
+## Referências de situações parecidas
 
-A ferramenta foi convertida em contagens e referências empíricas, sem saldos de pontos ou crédito individual. A partida consultada é excluída da referência. Cada contexto mantém vivos, fase, faixa de diferença de equipamento e relógio; exige ao menos 20 rounds e cinco partidas. Falta de suporte permanece indisponível, sem fallback para uma população diferente. Os estados são observados em eventos; não representam todos os instantes possíveis de um round. O relógio pós-plant é tempo decorrido desde o plant. Mapa, equipe e geometria não são controlados por essa referência. Lados não identificados pela inferência baseada em plants ficam sem referência nessa ferramenta. O resultado final é factual e não pontuado. Excluir a partida consultada evita reutilizar seus resultados nessa referência, mas não é uma avaliação temporal: outras partidas podem ser posteriores. Não há teste de calibração ou erro probabilístico fora da amostra, e os valores não constituem probabilidades prospectivas calibradas.
+Na página da rodada, a referência mostra a taxa de vitória em situações observadas em outras partidas. Ela reúne casos com a mesma quantidade de vivos, fase do round, faixa de diferença de equipamento e faixa de tempo. Exige pelo menos 20 rounds de cinco partidas. Quando faltam casos, o valor fica indisponível. A ferramenta não atribui pontos nem crédito individual por mudanças nessa taxa.
 
-A seleção de torneios, versões e qualidade recalcula as referências analíticas. Este documento é um retrato da amostra padrão descrita acima; não muda quando alguém filtra a interface. Dados ausentes, anomalias, builds misturados, geometria não observada e conversão aproximada de 100 unidades por metro continuam limites declarados. Não foram coletados novos dados para inventar as variáveis ausentes.
+A partida aberta na interface fica fora da referência. As outras partidas podem ser posteriores, portanto essa taxa é uma descrição retrospectiva. Ela não foi avaliada como probabilidade de vitória para jogos futuros. As faixas de incerteza usam reamostragem de partidas, ou seja, recalculam a taxa a partir de diferentes seleções das partidas disponíveis.
 
-Cobertura de lutas no recorte: `{'mortes_brutas': 46708, 'mortes_diagnostico': 46187, 'mortes_excluidas': 521, 'com_posicao_autor': 46123, 'com_proxy_geometrica': 46123, 'com_arma_inicial_conhecida': 46173}`.
+Os registros de posição existem em eventos e não cobrem todos os instantes do round. Depois do plant, o relógio conta o tempo desde a colocação da spike. A referência não iguala mapa, equipe ou geometria. Se os plants não permitem identificar os lados, a referência fica indisponível. O resultado final apenas informa quem venceu.
+
+## Dados e alcance das conclusões
+
+Os filtros de torneios, versões e qualidade recalculam as referências na interface. Este relatório usa a seleção padrão descrita no início e não muda com esses filtros. Dados ausentes, registros incomuns, versões misturadas e geometria não observada limitam as comparações. A conversão de unidades para metros é aproximada. Nenhum dado ausente foi inventado.
+
+| Cobertura das mortes | Quantidade |
+| --- | --- |
+| Mortes registradas | 46708 |
+| Mortes usadas na análise de combate | 46187 |
+| Mortes fora da análise de combate | 521 |
+| Com posição do autor do abate | 46123 |
+| Com classificação de proximidade calculável | 46123 |
+| Com arma inicial conhecida | 46173 |

@@ -1,13 +1,16 @@
 """Análise exploratória dos JSONs de partidas: quais campos existem, o tipo de cada um e a frequência dos valores.
 
-Uso: python explore_fields.py [pasta_com_jsons]
+Uso: python -m valorant.data.fields [pasta_com_jsons]
 """
+
 import json
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-DEFAULT_DATA_DIR = Path(__file__).parent / "data"
+from valorant.paths import DATA_DIR
+
+DEFAULT_DATA_DIR = DATA_DIR
 TOP_VALUES_SHOWN = 5
 
 
@@ -56,13 +59,20 @@ def summarize_fields(types_by_field, values_by_field):
     for field_path in sorted(types_by_field):
         type_counts = types_by_field[field_path]
         value_counts = values_by_field[field_path]
-        field_rows.append({
-            "campo": field_path,
-            "tipos": ", ".join(f"{type_name} ({count})" for type_name, count in type_counts.most_common()),
-            "ocorrencias": sum(type_counts.values()),
-            "distintos": len(value_counts),
-            "mais_frequentes": ", ".join(f"{value!r}: {count}" for value, count in value_counts.most_common(TOP_VALUES_SHOWN)),
-        })
+        field_rows.append(
+            {
+                "campo": field_path,
+                "tipos": ", ".join(
+                    f"{type_name} ({count})" for type_name, count in type_counts.most_common()
+                ),
+                "ocorrencias": sum(type_counts.values()),
+                "distintos": len(value_counts),
+                "mais_frequentes": ", ".join(
+                    f"{value!r}: {count}"
+                    for value, count in value_counts.most_common(TOP_VALUES_SHOWN)
+                ),
+            }
+        )
     return field_rows
 
 
@@ -73,14 +83,20 @@ def has_child_fields(field_path, all_field_paths):
 def split_irrelevant_fields(field_rows):
     """Campo irrelevante tem um único valor em toda a base e nenhum subcampo, então não diferencia nada."""
     all_field_paths = [row["campo"] for row in field_rows]
-    irrelevant_paths = {row["campo"] for row in field_rows if row["distintos"] == 1 and not has_child_fields(row["campo"], all_field_paths)}
+    irrelevant_paths = {
+        row["campo"]
+        for row in field_rows
+        if row["distintos"] == 1 and not has_child_fields(row["campo"], all_field_paths)
+    }
     relevant_rows = [row for row in field_rows if row["campo"] not in irrelevant_paths]
     irrelevant_rows = [row for row in field_rows if row["campo"] in irrelevant_paths]
     return relevant_rows, irrelevant_rows
 
 
 def print_files_summary(match_files, data_dir):
-    files_by_folder = Counter(str(match_file.parent.relative_to(data_dir)) for match_file in match_files)
+    files_by_folder = Counter(
+        str(match_file.parent.relative_to(data_dir)) for match_file in match_files
+    )
     print(f"Arquivos encontrados: {len(match_files)}")
     for folder, file_count in sorted(files_by_folder.items()):
         print(f"  {folder}: {file_count}")
@@ -97,16 +113,25 @@ def print_field_rows(field_rows):
 
 
 def print_field_report(relevant_rows, irrelevant_rows):
-    print(f"Campos encontrados: {len(relevant_rows) + len(irrelevant_rows)}, relevantes: {len(relevant_rows)}\n")
+    print(
+        f"Campos encontrados: {len(relevant_rows) + len(irrelevant_rows)}, relevantes: {len(relevant_rows)}\n"
+    )
     print_field_rows(relevant_rows)
-    print(f"Campos irrelevantes (um único valor em toda a base, sem subcampos): {len(irrelevant_rows)}\n")
+    print(
+        f"Campos irrelevantes (um único valor em toda a base, sem subcampos): {len(irrelevant_rows)}\n"
+    )
     print_field_rows(irrelevant_rows)
 
 
 def run_self_checks():
     sample = {"a": [1, {"b": 2}], "c": {}, "d": []}
     assert list(walk_fields(sample)) == [("a[]", 1), ("a[].b", 2), ("c", {}), ("d", [])]
-    rows = [{"campo": "a", "distintos": 1}, {"campo": "a[].b", "distintos": 1}, {"campo": "c", "distintos": 2}, {"campo": "d", "distintos": 1}]
+    rows = [
+        {"campo": "a", "distintos": 1},
+        {"campo": "a[].b", "distintos": 1},
+        {"campo": "c", "distintos": 2},
+        {"campo": "d", "distintos": 1},
+    ]
     assert [row["campo"] for row in split_irrelevant_fields(rows)[1]] == ["a[].b", "d"]
 
 

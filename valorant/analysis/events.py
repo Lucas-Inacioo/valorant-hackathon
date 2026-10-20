@@ -3,6 +3,7 @@
 Os JSONs não registram ressurreições como eventos: os snapshots são a fonte de
 jogadores vivos. Nenhuma função elimina eventos brutos necessários ao replay.
 """
+
 from copy import deepcopy
 from itertools import groupby
 
@@ -29,7 +30,9 @@ def is_enemy_kill(event, team_by_puuid=None):
         return event.get("enemy_kill") is True
     actor_team = team_by_puuid.get(event.get("actor"))
     victim_team = team_by_puuid.get(event.get("victim"))
-    return actor_team in PLAYING_TEAMS and victim_team in PLAYING_TEAMS and actor_team != victim_team
+    return (
+        actor_team in PLAYING_TEAMS and victim_team in PLAYING_TEAMS and actor_team != victim_team
+    )
 
 
 def alive_puuids(event):
@@ -62,36 +65,64 @@ def round_events(round_result, team_by_puuid=None):
     events = []
     for stats in round_result.get("playerStats", []):
         for kill in stats.get("kills", []) or []:
-            events.append({
-                "time_ms": kill["timeSinceRoundStartMillis"], "kind": "kill",
-                "actor": kill.get("killer"), "victim": kill.get("victim"),
-                "victim_location": deepcopy(kill.get("victimLocation", {})),
-                "locations": deepcopy(kill.get("playerLocations") or []),
-                "assistants": list(kill.get("assistants") or []),
-                "finishing": deepcopy(kill.get("finishingDamage") or {}),
-            })
+            events.append(
+                {
+                    "time_ms": kill["timeSinceRoundStartMillis"],
+                    "kind": "kill",
+                    "actor": kill.get("killer"),
+                    "victim": kill.get("victim"),
+                    "victim_location": deepcopy(kill.get("victimLocation", {})),
+                    "locations": deepcopy(kill.get("playerLocations") or []),
+                    "assistants": list(kill.get("assistants") or []),
+                    "finishing": deepcopy(kill.get("finishingDamage") or {}),
+                }
+            )
     for kind, actor_field, time_field, locations_field in [
         ("plant", "bombPlanter", "plantRoundTime", "plantPlayerLocations"),
         ("defuse", "bombDefuser", "defuseRoundTime", "defusePlayerLocations"),
     ]:
         if round_result.get(actor_field) and round_result.get(time_field) is not None:
-            events.append({"time_ms": round_result[time_field], "kind": kind,
-                           "actor": round_result[actor_field],
-                           "locations": deepcopy(round_result.get(locations_field) or [])})
-    events.sort(key=lambda e: (e["time_ms"], {"kill": 0, "plant": 1, "defuse": 2}[e["kind"]],
-                               str(e.get("victim", "")), str(e.get("actor", ""))))
+            events.append(
+                {
+                    "time_ms": round_result[time_field],
+                    "kind": kind,
+                    "actor": round_result[actor_field],
+                    "locations": deepcopy(round_result.get(locations_field) or []),
+                }
+            )
+    events.sort(
+        key=lambda e: (
+            e["time_ms"],
+            {"kill": 0, "plant": 1, "defuse": 2}[e["kind"]],
+            str(e.get("victim", "")),
+            str(e.get("actor", "")),
+        )
+    )
     counts = {}
     for index, event in enumerate(events):
-        key = f'{event["time_ms"]}:{event["kind"]}:{event.get("victim", "")}:{event.get("actor", "")}'
+        key = (
+            f'{event["time_ms"]}:{event["kind"]}:{event.get("victim", "")}:{event.get("actor", "")}'
+        )
         counts[key] = counts.get(key, 0) + 1
         event.update(index=index, event_id=f"{key}:{counts[key]}")
-        event["enemy_kill"] = is_enemy_kill(event, team_by_puuid) if team_by_puuid is not None else None
+        event["enemy_kill"] = (
+            is_enemy_kill(event, team_by_puuid) if team_by_puuid is not None else None
+        )
         event["actor_team"] = (team_by_puuid or {}).get(event.get("actor"))
         event["victim_team"] = (team_by_puuid or {}).get(event.get("victim"))
-    previous_alive = {puuid for puuid, team in (team_by_puuid or {}).items() if team in PLAYING_TEAMS}
+    previous_alive = {
+        puuid for puuid, team in (team_by_puuid or {}).items() if team in PLAYING_TEAMS
+    }
     decision_ms = round_result.get("defuseRoundTime") if round_result.get("bombDefuser") else None
     if decision_ms is None and round_result.get("roundResultCode") == "Detonate":
-        decision_ms = min((event["time_ms"] for event in events if event.get("finishing", {}).get("damageType") == "Bomb"), default=None)
+        decision_ms = min(
+            (
+                event["time_ms"]
+                for event in events
+                if event.get("finishing", {}).get("damageType") == "Bomb"
+            ),
+            default=None,
+        )
     for time_ms, iterable in groupby(events, key=lambda event: event["time_ms"]):
         group = list(iterable)
         victims = {event["victim"] for event in group if event["kind"] == "kill"}
@@ -100,18 +131,32 @@ def round_events(round_result, team_by_puuid=None):
         # entre vítimas é identificável; remove todas do estado posterior comum.
         after = (observed if observed else previous_alive) - victims
         before = after | victims
-        teams_killing = {team_by_puuid.get(event["actor"]) for event in group
-                         if team_by_puuid and is_enemy_kill(event, team_by_puuid)}
+        teams_killing = {
+            team_by_puuid.get(event["actor"])
+            for event in group
+            if team_by_puuid and is_enemy_kill(event, team_by_puuid)
+        }
         for event in group:
-            event.update(alive_before=sorted(before), alive_after=sorted(after),
-                         snapshot_available=bool(observed), simultaneous=len(group) > 1,
-                         simultaneous_enemy_teams=sorted(teams_killing))
-        if (decision_ms is None and team_by_puuid and observed
-                and round_result.get("roundResultCode") == "Elimination"):
+            event.update(
+                alive_before=sorted(before),
+                alive_after=sorted(after),
+                snapshot_available=bool(observed),
+                simultaneous=len(group) > 1,
+                simultaneous_enemy_teams=sorted(teams_killing),
+            )
+        if (
+            decision_ms is None
+            and team_by_puuid
+            and observed
+            and round_result.get("roundResultCode") == "Elimination"
+        ):
             winner = round_result.get("winningTeam")
             loser = OPPOSITE_TEAM.get(winner)
-            if (loser and any(team_by_puuid.get(p) == winner for p in after)
-                    and not any(team_by_puuid.get(p) == loser for p in after)):
+            if (
+                loser
+                and any(team_by_puuid.get(p) == winner for p in after)
+                and not any(team_by_puuid.get(p) == loser for p in after)
+            ):
                 decision_ms = time_ms
         previous_alive = after
     for event in events:
@@ -124,8 +169,11 @@ def round_events(round_result, team_by_puuid=None):
                 reasons.append("round encerrado por tempo")
             if not event["locations"]:
                 reasons.append("snapshot do plant ausente")
-            elif team_by_puuid and not any(team_by_puuid.get(p) in PLAYING_TEAMS
-                    and team_by_puuid.get(p) != team_by_puuid.get(event["actor"]) for p in alive_puuids(event)):
+            elif team_by_puuid and not any(
+                team_by_puuid.get(p) in PLAYING_TEAMS
+                and team_by_puuid.get(p) != team_by_puuid.get(event["actor"])
+                for p in alive_puuids(event)
+            ):
                 reasons.append("plant sem defensor vivo")
             if event["after_decision"]:
                 reasons.append("plant após decisão do round")
@@ -147,7 +195,9 @@ def was_traded(kill, events, team_by_puuid=None, window_ms=5000):
             continue
         if not is_enemy_kill(candidate, team_by_puuid) or candidate.get("after_decision", False):
             continue
-        actor_team = team_by_puuid.get(candidate["actor"]) if team_by_puuid else candidate.get("actor_team")
+        actor_team = (
+            team_by_puuid.get(candidate["actor"]) if team_by_puuid else candidate.get("actor_team")
+        )
         if victim_team is not None and actor_team == victim_team:
             return True
     return False

@@ -1,7 +1,8 @@
 """Baixa os JSONs de partidas da pasta pública do Drive do hackathon para a pasta data/.
 
-Uso: python download_data.py
+Uso: python -m valorant.data.download
 """
+
 import html
 import json
 import os
@@ -12,13 +13,17 @@ from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+from valorant.paths import DATA_DIR, MANIFEST_PATH
+
 ROOT_FOLDER_ID = "1IuptLxv1FpcvrfB6a7z9bEqPNYSsQ-hW"
-DATA_DIR = Path(__file__).parent / "data"
 FOLDER_LISTING_URL = "https://drive.google.com/embeddedfolderview?id={}"
 FILE_DOWNLOAD_URL = "https://drive.google.com/uc?export=download&id={}"
 PARALLEL_DOWNLOADS = 6
 # Cada entrada da listagem é um link para arquivo ou subpasta seguido do nome em flip-entry-title
-ENTRY_PATTERN = re.compile(r'href="https://drive\.google\.com/(file/d|drive/folders)/([-\w]+)[^"]*"[^>]*>.*?flip-entry-title">([^<]+)<', re.S)
+ENTRY_PATTERN = re.compile(
+    r'href="https://drive\.google\.com/(file/d|drive/folders)/([-\w]+)[^"]*"[^>]*>.*?flip-entry-title">([^<]+)<',
+    re.S,
+)
 
 
 def fetch(url):
@@ -34,7 +39,10 @@ def list_folder(folder_id):
     if not title:
         raise ValueError(f"Listagem inválida da pasta {folder_id}")
     folder_name = html.unescape(title.group(1))
-    entries = [(kind == "drive/folders", item_id, html.unescape(name)) for kind, item_id, name in ENTRY_PATTERN.findall(page)]
+    entries = [
+        (kind == "drive/folders", item_id, html.unescape(name))
+        for kind, item_id, name in ENTRY_PATTERN.findall(page)
+    ]
     return folder_name, entries
 
 
@@ -55,10 +63,16 @@ def atomic_write_json(target_path, payload):
 
 def _validate_match(raw, source):
     payload = json.loads(raw)
-    if not isinstance(payload, dict) or not all(key in payload for key in ("matchInfo", "roundResults", "players")):
+    if not isinstance(payload, dict) or not all(
+        key in payload for key in ("matchInfo", "roundResults", "players")
+    ):
         raise ValueError(f"JSON de partida inválido: {source}")
-    if (not isinstance(payload["roundResults"], list) or not isinstance(payload["players"], list)
-            or not isinstance(payload["matchInfo"], dict) or not payload["matchInfo"].get("matchId")):
+    if (
+        not isinstance(payload["roundResults"], list)
+        or not isinstance(payload["players"], list)
+        or not isinstance(payload["matchInfo"], dict)
+        or not payload["matchInfo"].get("matchId")
+    ):
         raise ValueError(f"Estrutura de partida inválida: {source}")
     return payload
 
@@ -76,8 +90,12 @@ def download_file(file_id, target_path):
     payload = _validate_match(fetch(url), url)
     atomic_write_json(target_path, payload)
     print(f"baixado: {target_path.name}")
-    return {"path": target_path, "origin": url, "status": "downloaded",
-            "downloaded_at_utc": datetime.now(timezone.utc).isoformat()}
+    return {
+        "path": target_path,
+        "origin": url,
+        "status": "downloaded",
+        "downloaded_at_utc": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 def _safe_name(name):
@@ -98,7 +116,9 @@ def download_folder(folder_id, parent_dir, executor, futures=None):
         else:
             if not item_name.lower().endswith(".json"):
                 raise ValueError(f"Arquivo inesperado na base de partidas: {item_name}")
-            futures.append(executor.submit(download_file, item_id, folder_dir / _safe_name(item_name)))
+            futures.append(
+                executor.submit(download_file, item_id, folder_dir / _safe_name(item_name))
+            )
     return futures
 
 
@@ -120,19 +140,29 @@ def download_dataset(data_dir=DATA_DIR, manifest_path=None):
     if errors:
         raise RuntimeError(f"{len(errors)} download(s) falharam: " + "; ".join(errors))
     if manifest_path is not None:
-        from data_quality import write_manifest
-        origins = {str(record["path"].relative_to(target)):
-                   {"origin": record["origin"], **({"downloaded_at_utc": record["downloaded_at_utc"]} if "downloaded_at_utc" in record else {})}
-                   for record in records}
+        from valorant.data.quality import write_manifest
+
+        origins = {
+            str(record["path"].relative_to(target)): {
+                "origin": record["origin"],
+                **(
+                    {"downloaded_at_utc": record["downloaded_at_utc"]}
+                    if "downloaded_at_utc" in record
+                    else {}
+                ),
+            }
+            for record in records
+        }
         write_manifest(manifest_path, target, origins)
     return records
 
 
 def main():
     import argparse
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", type=Path, default=DATA_DIR)
-    parser.add_argument("--manifest", type=Path, default=Path(__file__).parent / "data-manifest.json")
+    parser.add_argument("--manifest", type=Path, default=MANIFEST_PATH)
     args = parser.parse_args()
     download_dataset(args.data_dir, args.manifest)
 
