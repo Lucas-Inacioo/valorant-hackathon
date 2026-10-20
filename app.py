@@ -20,6 +20,7 @@ from setups import build_setups_table, defuse_by, retake_summary, watching_bands
 from round_map import describe_event, draw_callout_summary, draw_points, draw_rate_markers, draw_round_map, round_events
 from fights import build_fights_table, distance_matrix, distance_summary, economic_first_death, fight_class_summary, next_loadout_by_outcome, player_range_discipline, post_plant_exchange, save_effect, team_summary, trade_possibility_summary
 from first_blood import TIME_LABELS, first_blood_table, plant_summary, summary_by_map, wilson_interval, win_rate_by_time
+from factors import build_factor_tables, factor_ranking, player_decisions, team_round_factors
 from solo_deaths import SOLO_DISTANCE, build_deaths_table, context_summary, first_death_summary, summary_by_distance_band, summary_by_round_outcome, territory_summary, win_rate_by_situation, with_solo_flag
 
 st.set_page_config(page_title="VALORANT Hackathon", layout="wide")
@@ -156,6 +157,12 @@ def round_styles_table():
 @st.cache_data
 def setups_table():
     return build_setups_table()
+
+
+@st.cache_data
+def factor_tables():
+    deaths, rounds_with_flags = build_factor_tables(fights_table(), rounds_table(), round_styles_table())
+    return deaths, rounds_with_flags, factor_ranking(deaths, rounds_with_flags)
 
 
 @st.cache_data
@@ -384,7 +391,7 @@ selected_rounds = rounds[rounds["match_id"].isin(selected_ids)]
 map_name_by_internal = dict(zip(matches["mapa_interno"], matches["mapa"]))
 internal_by_name = {name: internal for internal, name in map_name_by_internal.items()}
 
-overview_tab, opening_tab, trades_tab, collapse_tab, economy_tab, plants_tab, match_tab, prediction_tab, conclusions_tab, explore_tab = st.tabs(["Visão geral", "Abertura", "Trocas e isolamento", "Colapso e estilo", "Economia", "Plant e defuse", "Partida", "Previsão", "Conclusões", "Exploração"])
+overview_tab, opening_tab, trades_tab, collapse_tab, economy_tab, plants_tab, match_tab, postgame_tab, prediction_tab, conclusions_tab, explore_tab = st.tabs(["Visão geral", "Abertura", "Trocas e isolamento", "Colapso e estilo", "Economia", "Plant e defuse", "Partida", "Pós-jogo", "Previsão", "Conclusões", "Exploração"])
 
 with overview_tab:
     matches_col, rounds_col, players_col = st.columns(3)
@@ -817,6 +824,68 @@ with match_tab:
         st.dataframe(match_players.sort_values(["time", "score"], ascending=[True, False]), hide_index=True)
         st.dataframe(rounds[rounds["match_id"] == chosen_match["match_id"]].drop(columns=["match_id"]), hide_index=True)
         st.json(match["matchInfo"])
+
+with postgame_tab:
+    st.markdown("Ferramenta de análise depois da partida. Escolha uma partida, um round e um jogador, ou sorteie os três, e veja as decisões daquele round que mais derrubaram a chance de vencer, com o minimapa do instante.")
+    flagged_deaths, flagged_rounds, ranking = factor_tables()
+    costs = dict(zip(ranking["fator"], ranking["diferenca"]))
+    st.subheader("1. O que mais derruba a chance de vencer um round")
+    st.caption("Fatores do round inteiro comparam a vitória com e sem o fator. Fatores de morte comparam a vitória com o esperado pelos vivos naquele instante, para não misturar a decisão com o número de vivos. Diferença em pontos de vitória, com o intervalo de 95%.")
+    ranking_chart = ranking.copy()
+    ranking_chart["fator"] = ranking_chart["fator"].astype(str)
+    ranking_chart["escala"] = ranking_chart["unidade"].map(lambda unit: "fator do round inteiro" if unit == "round do time" else "morte, descontado o esperado pelos vivos")
+    error_bars = alt.Chart(ranking_chart).mark_rule(color="#333333").encode(y=category_axis("fator", list(ranking_chart["fator"])), x=alt.X("ic_baixo:Q", title="diferença na vitória do round (pontos)", axis=alt.Axis(format="+.0%")), x2="ic_alto:Q")
+    points = alt.Chart(ranking_chart).mark_point(size=80, filled=True, color=LOST_COLOR).encode(y=category_axis("fator", list(ranking_chart["fator"])), x="diferenca:Q", shape=alt.Shape("escala:N", scale=alt.Scale(domain=list(dict.fromkeys(ranking_chart["escala"])), range=["square", "circle"]), legend=alt.Legend(orient="bottom", title=None, labelLimit=400)), tooltip=["fator", "o que é", "casos", alt.Tooltip("diferenca", format="+.1%")])
+    labels = alt.Chart(ranking_chart).mark_text(align="left", dx=6, fontSize=10, color="#6b6b6b").encode(y=category_axis("fator", list(ranking_chart["fator"])), x="ic_alto:Q", text=alt.Text("casos:Q", format=","))
+    st.altair_chart((error_bars + points + labels).properties(height=360, autosize=FIT_WIDTH), use_container_width=True)
+    with st.expander("Números de cada fator"):
+        st.dataframe(ranking.round(3), hide_index=True, use_container_width=False)
+
+    st.subheader("2. As decisões de um jogador em um round")
+    if st.button("Sortear partida, round e jogador"):
+        random_match = selected_matches.sample(1).iloc[0]
+        random_loaded = load_match(Path(random_match["caminho"]))
+        st.session_state["pos_match"] = random_match["arquivo"]
+        st.session_state["pos_round"] = int(pd.Series(range(len(random_loaded["roundResults"]))).sample(1).iloc[0])
+        st.session_state["pos_player"] = pd.Series([player["puuid"] for player in random_loaded["players"] if not player["isObserver"]]).sample(1).iloc[0]
+    match_files = selected_matches["arquivo"].tolist()
+    if st.session_state.get("pos_match") not in match_files:
+        st.session_state.pop("pos_match", None)
+    post_match_column, post_round_column, post_player_column = st.columns(3)
+    post_file = post_match_column.selectbox("Partida", match_files, key="pos_match")
+    post_match_row = selected_matches[selected_matches["arquivo"] == post_file].iloc[0]
+    post_match = load_match(Path(post_match_row["caminho"]))
+    post_names = {player["puuid"]: f'{player["gameName"]}#{player["tagLine"]}' for player in post_match["players"]}
+    post_teams = {player["puuid"]: player["teamId"] for player in post_match["players"]}
+    post_puuids = [player["puuid"] for player in post_match["players"] if not player["isObserver"]]
+    if st.session_state.get("pos_round") not in range(len(post_match["roundResults"])):
+        st.session_state.pop("pos_round", None)
+    if st.session_state.get("pos_player") not in post_puuids:
+        st.session_state.pop("pos_player", None)
+    post_round_index = post_round_column.selectbox("Round", range(len(post_match["roundResults"])), format_func=lambda index: f"Round {index + 1}", key="pos_round")
+    post_puuid = post_player_column.selectbox("Jogador", post_puuids, format_func=lambda puuid: f"{post_names[puuid]} ({post_teams[puuid]})", key="pos_player")
+    post_round = post_match["roundResults"][post_round_index]
+    post_team = post_teams[post_puuid]
+    post_flags = flagged_rounds[(flagged_rounds["match_id"] == post_match_row["match_id"]) & (flagged_rounds["round"] == post_round_index + 1) & (flagged_rounds["time"] == post_team)].iloc[0]
+    st.write(f'{post_match_row["torneio"]} · {post_match_row["mapa"]} · round {post_round_index + 1} · {post_names[post_puuid]} jogou {post_flags["lado"]} e o time {"venceu" if post_flags["venceu"] else "perdeu"} o round · loadout {post_flags["loadout"]:,.0f} contra {post_flags["loadout_adversario"]:,.0f}')
+    post_events = round_events(post_round)
+    post_round_deaths = flagged_deaths[(flagged_deaths["match_id"] == post_match_row["match_id"]) & (flagged_deaths["round"] == post_round_index + 1)]
+    decisions = player_decisions(post_events, post_teams, post_puuid, post_round_deaths, costs)
+    team_factors = team_round_factors(post_flags, costs)
+    factors_column, decisions_column = st.columns([1, 2])
+    factors_column.markdown("**Fatores do time neste round**")
+    if team_factors:
+        factors_column.markdown("\n".join(f"- {name} ({cost * 100:+.0f} pontos)" for name, cost in team_factors))
+    else:
+        factors_column.write("Nenhum fator da lista.")
+    decisions_column.markdown("**Decisões do jogador neste round**, da mais cara para a mais barata")
+    post_map_meta = maps_by_url().get(post_match["matchInfo"]["mapId"])
+    if not decisions:
+        decisions_column.write("Nenhuma decisão da lista. O jogador não morreu primeiro, não morreu sem reagir e não deixou de trocar um aliado que podia trocar.")
+    for decision in decisions:
+        decisions_column.markdown(f'**{decision["fator"]}** ({decision["custo"] * 100:+.0f} pontos). {decision["detalhe"].capitalize()}. {describe_event(post_events[decision["evento"]], post_names, post_round)}')
+        if post_map_meta is not None:
+            decisions_column.pyplot(draw_round_map(post_map_meta, post_events, decision["evento"], post_puuid, post_teams, post_names))
 
 with prediction_tab:
     st.markdown("As medidas das conclusões (primeiro abate, troca, isolamento) explicam e preveem quem vence a partida, sem usar nenhum resultado no caminho? O lado de cada round vem de quem planta a spike na metade, sem contagem de rounds, placar nem ordem, e o único rótulo é quem venceu a partida. Os nomes das equipes vêm do nome do arquivo. Esta aba ignora o filtro de torneios.")
