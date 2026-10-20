@@ -404,6 +404,8 @@ st.markdown("""<style>
     background: #fde9d9; border: 1px solid #c0392b; border-bottom: none; border-radius: 8px 8px 0 0; padding: 4px 14px; margin-right: 12px;
 }
 [role="tablist"] [data-testid="stTab"][data-key="0"] p { color: #c0392b; font-weight: 700; }
+[data-testid="stTabs"] [data-testid="stTabs"] [data-testid="stTab"][data-key="0"] { background: none; border: none; border-radius: 0; padding: 0; margin-right: 0; }
+[data-testid="stTabs"] [data-testid="stTabs"] [data-testid="stTab"][data-key="0"] p { color: inherit; font-weight: inherit; }
 </style>""", unsafe_allow_html=True)
 postgame_tab, overview_tab, opening_tab, trades_tab, collapse_tab, economy_tab, plants_tab, match_tab, prediction_tab, conclusions_tab, explore_tab = st.tabs(["Ferramenta proposta", "Visão geral", "Abertura", "Trocas e isolamento", "Colapso e estilo", "Economia", "Plant e defuse", "Partida", "Previsão", "Conclusões", "Exploração"])
 
@@ -865,7 +867,8 @@ with postgame_tab:
         st.dataframe(ranking.round(3), hide_index=True, use_container_width=False)
         st.dataframe(good_ranking.round(3), hide_index=True, use_container_width=False)
 
-    st.subheader("2. Apanhado da partida: o que as decisões custaram para cada equipe e cada jogador")
+    st.subheader("2. Escolha a partida, o round e o jogador")
+    st.caption("As duas ferramentas abaixo usam a mesma escolha. A primeira soma pontos por fator e a segunda mede a chance de vencer evento a evento.")
     if st.button("Sortear partida, round e jogador"):
         random_match = selected_matches.sample(1).iloc[0]
         random_loaded = load_match(Path(random_match["caminho"]))
@@ -875,24 +878,15 @@ with postgame_tab:
     match_files = selected_matches["arquivo"].tolist()
     if st.session_state.get("pos_match") not in match_files:
         st.session_state.pop("pos_match", None)
-    post_file = st.selectbox("Partida", match_files, key="pos_match")
+    selector_columns = st.columns(3)
+    post_match_column = selector_columns[0]
+    post_file = post_match_column.selectbox("Partida", match_files, key="pos_match")
     post_match_row = selected_matches[selected_matches["arquivo"] == post_file].iloc[0]
     post_match = load_match(Path(post_match_row["caminho"]))
     post_names = {player["puuid"]: f'{player["gameName"]}#{player["tagLine"]}' for player in post_match["players"]}
     post_teams = {player["puuid"]: player["teamId"] for player in post_match["players"]}
     post_puuids = [player["puuid"] for player in post_match["players"] if not player["isObserver"]]
-    st.write(f'{post_match_row["torneio"]} · {post_match_row["mapa"]} · Blue {post_match_row["rounds_blue"]} x {post_match_row["rounds_red"]} Red')
-    st.caption("Pontos ganhos e perdidos são a soma do efeito de cada fator ou decisão, em pontos de vitória do round, ao longo da partida. Servem para comparar as duas equipes e os jogadores entre si, não para dizer quantos rounds cada um ganhou ou perdeu de fato.")
-    team_summary_column, player_summary_column = st.columns([1, 2])
-    team_summary_column.markdown("**Por equipe**, quantas vezes cada fator aconteceu")
-    team_summary_column.dataframe(match_team_summary(flagged_rounds, post_match_row["match_id"], costs).T, use_container_width=True, height=600)
-    player_summary_column.markdown("**Por jogador**, quantas vezes cada decisão apareceu")
-    player_summary_column.dataframe(match_player_summary(post_match, flagged_deaths, costs), use_container_width=True, column_config={"saldo": st.column_config.NumberColumn(format="%+d"), "pontos ganhos": st.column_config.NumberColumn(format="%+d"), "pontos perdidos": st.column_config.NumberColumn(format="%+d")})
-    with st.expander("Round a round, o que cada equipe disparou"):
-        st.dataframe(match_timeline(flagged_rounds, post_match_row["match_id"], costs), use_container_width=True)
-
-    st.subheader("3. As decisões de um jogador em um round")
-    post_round_column, post_player_column = st.columns(2)
+    post_round_column, post_player_column = selector_columns[1:]
     if st.session_state.get("pos_round") not in range(len(post_match["roundResults"])):
         st.session_state.pop("pos_round", None)
     if st.session_state.get("pos_player") not in post_puuids:
@@ -901,54 +895,68 @@ with postgame_tab:
     post_puuid = post_player_column.selectbox("Jogador", post_puuids, format_func=lambda puuid: f"{post_names[puuid]} ({post_teams[puuid]})", key="pos_player")
     post_round = post_match["roundResults"][post_round_index]
     post_team = post_teams[post_puuid]
-    post_flags = flagged_rounds[(flagged_rounds["match_id"] == post_match_row["match_id"]) & (flagged_rounds["round"] == post_round_index + 1) & (flagged_rounds["time"] == post_team)].iloc[0]
-    st.write(f'Round {post_round_index + 1} · {post_names[post_puuid]} é do time {post_team}, que jogou {post_flags["lado"]} e {"venceu" if post_flags["venceu"] else "perdeu"} o round · loadout {post_flags["loadout"]:,.0f} contra {post_flags["loadout_adversario"]:,.0f}')
-    post_events = round_events(post_round)
-    post_round_deaths = flagged_deaths[(flagged_deaths["match_id"] == post_match_row["match_id"]) & (flagged_deaths["round"] == post_round_index + 1)]
-    decisions = player_decisions(post_events, post_teams, post_puuid, post_round_deaths, costs, name_of=post_names.get)
-    factors_column, decisions_column = st.columns([1, 2])
-    factors_column.markdown("**Fatores de cada time neste round**")
-    for team_column, team in zip(factors_column.columns(2), ["Blue", "Red"]):
-        team_flags = flagged_rounds[(flagged_rounds["match_id"] == post_match_row["match_id"]) & (flagged_rounds["round"] == post_round_index + 1) & (flagged_rounds["time"] == team)].iloc[0]
-        team_factors = team_round_factors(team_flags, costs)
-        team_column.markdown(f'**{team}** ({team_flags["lado"]}{", time do jogador" if team == post_team else ""})')
-        team_column.markdown("\n".join(f"- {name} ({cost * 100:+.0f} pontos)" for name, cost in team_factors) if team_factors else "Nenhum fator da lista.")
-    decisions_column.markdown("**Decisões do jogador neste round**, da que mais custou à que mais ajudou")
-    post_map_meta = maps_by_url().get(post_match["matchInfo"]["mapId"])
-    if not decisions:
-        decisions_column.write("Nenhuma decisão da lista. O jogador não abriu o round, não trocou, não plantou, não morreu primeiro, não morreu sem reagir e não deixou de trocar um aliado que podia trocar.")
-    for decision in decisions:
-        decisions_column.markdown(f'**{decision["fator"]}** ({decision["custo"] * 100:+.0f} pontos). {decision["detalhe"][0].upper() + decision["detalhe"][1:]}. {describe_event(post_events[decision["evento"]], post_names, post_round)}')
-        if post_map_meta is not None:
-            decisions_column.pyplot(draw_round_map(post_map_meta, post_events, decision["evento"], post_puuid, post_teams, post_names))
+    st.write(f'{post_match_row["torneio"]} · {post_match_row["mapa"]} · Blue {post_match_row["rounds_blue"]} x {post_match_row["rounds_red"]} Red')
 
-    st.subheader("4. Proposta nova: chance de vencer evento a evento")
-    st.markdown("As somas de pontos das seções 2 e 3 contam a mesma coisa mais de uma vez. Fazer o primeiro abate vale 42 pontos e fazer o primeiro abate sem o adversário trocar vale outros 42, mas o segundo é um pedaço do primeiro. Colapso e round sem plant são em boa parte consequência de ter perdido o abate. Aqui cada evento vale só o que mudou na chance de vencer naquele instante.")
-    st.caption("A chance de vencer de cada estado (lado, vivos de cada time, spike plantada ou não) é a taxa de vitória de todos os rounds que passaram por aquele estado, nas mesmas tabelas das outras abas. O estado inicial usa a faixa de diferença de loadout da aba Economia. Um abate vale a chance depois menos a chance antes, creditado a quem matou e debitado de quem morreu. Uma troca devolve parte do que a morte do aliado tirou, e o valor sai da mesma tabela, sem regra própria. Plant e desarme valem a mudança de estado. Quando o round termina pelo tempo ou pela explosão, a chance vai ao resultado real sem autor.")
-    state_table, start_table = state_tables()
-    attacking_by_round = attacking_team_by_round(post_match)
-    attack_rows = rounds_table()[(rounds_table()["match_id"] == post_match_row["match_id"]) & (rounds_table()["lado"] == "ataque")]
-    start_by_round = {row.round: start_table[("ataque", row.faixa_diferenca)] for row in attack_rows.itertuples()}
-    win_added = match_win_added(post_match, attacking_by_round, state_table, start_by_round)
-    added_match_column, added_round_column = st.columns([1, 1])
-    added_match_column.markdown("**Na partida, por jogador.** Chance ganha como autor, chance perdida como vítima e o saldo, em pontos somados nos rounds")
-    added_match_column.dataframe(player_win_added(win_added, post_names, post_teams), use_container_width=True, column_config={"saldo": st.column_config.NumberColumn(format="%+d"), "chance ganha": st.column_config.NumberColumn(format="%+d"), "chance perdida": st.column_config.NumberColumn(format="%+d")})
-    round_added = win_added[win_added["round"] == post_round_index + 1].copy()
-    added_round_column.markdown(f"**No round {post_round_index + 1}, evento a evento.** Chance de vencer do ataque ({attacking_by_round.get(post_round_index + 1, '?')}) depois de cada evento")
-    if round_added.empty:
-        added_round_column.write("Este round não tem lado conhecido ou não tem eventos.")
-    else:
-        round_added["descricao"] = [describe_event(post_events[int(row.evento)], post_names, post_round) if row.evento < len(post_events) else "fim do round" for row in round_added.itertuples()]
-        round_added["passo"] = range(1, len(round_added) + 1)
-        round_added["do jogador"] = (round_added["autor"] == post_puuid) | (round_added["vitima"] == post_puuid)
-        start_row = pd.DataFrame([{"passo": 0, "depois_ataque": round_added["antes_ataque"].iloc[0], "descricao": "início do round", "do jogador": False, "ganho_do_autor": 0.0}])
-        chart_rows = pd.concat([start_row, round_added[["passo", "depois_ataque", "descricao", "do jogador", "ganho_do_autor"]]], ignore_index=True)
-        line = alt.Chart(chart_rows).mark_line(interpolate="step-after", color=ATTACK_COLOR).encode(x=alt.X("passo:Q", title="evento", axis=alt.Axis(tickMinStep=1)), y=alt.Y("depois_ataque:Q", title="chance de vencer do ataque", axis=alt.Axis(format=".0%"), scale=alt.Scale(domain=[0, 1])))
-        marks = alt.Chart(chart_rows).mark_point(size=90, filled=True, color=ATTACK_COLOR).encode(x="passo:Q", y="depois_ataque:Q", shape=alt.Shape("do jogador:N", scale=alt.Scale(domain=[False, True], range=["circle", "diamond"]), legend=alt.Legend(orient="bottom", title=None, labelExpr="datum.label == 'true' ? 'evento do jogador escolhido' : 'outros'")), tooltip=["descricao", alt.Tooltip("depois_ataque", format=".0%", title="chance do ataque"), alt.Tooltip("ganho_do_autor", format="+.0%", title="ganho de quem agiu")])
-        added_round_column.altair_chart((line + marks).properties(height=260, autosize=FIT_WIDTH), use_container_width=True)
-        listing = round_added[["descricao", "tipo", "antes_ataque", "depois_ataque", "ganho_do_autor"]].rename(columns={"descricao": "evento", "antes_ataque": "ataque antes", "depois_ataque": "ataque depois", "ganho_do_autor": "ganho de quem agiu"})
-        listing[["ataque antes", "ataque depois", "ganho de quem agiu"]] = (listing[["ataque antes", "ataque depois", "ganho de quem agiu"]] * 100).round(0)
-        st.dataframe(listing, hide_index=True, use_container_width=True, column_config={"ataque antes": st.column_config.NumberColumn(format="%.0f%%"), "ataque depois": st.column_config.NumberColumn(format="%.0f%%"), "ganho de quem agiu": st.column_config.NumberColumn(format="%+.0f pontos")})
+    tool_one, tool_two = st.tabs(["Ferramenta 1: soma de pontos por fator", "Ferramenta 2: chance de vencer evento a evento"])
+    with tool_one:
+        st.markdown("**Na partida**")
+        st.caption("Pontos ganhos e perdidos são a soma do efeito de cada fator ou decisão, em pontos de vitória do round, ao longo da partida. Servem para comparar as duas equipes e os jogadores entre si, não para dizer quantos rounds cada um ganhou ou perdeu de fato.")
+        team_summary_column, player_summary_column = st.columns([1, 2])
+        team_summary_column.markdown("**Por equipe**, quantas vezes cada fator aconteceu")
+        team_summary_column.dataframe(match_team_summary(flagged_rounds, post_match_row["match_id"], costs).T, use_container_width=True, height=600)
+        player_summary_column.markdown("**Por jogador**, quantas vezes cada decisão apareceu")
+        player_summary_column.dataframe(match_player_summary(post_match, flagged_deaths, costs), use_container_width=True, column_config={"saldo": st.column_config.NumberColumn(format="%+d"), "pontos ganhos": st.column_config.NumberColumn(format="%+d"), "pontos perdidos": st.column_config.NumberColumn(format="%+d")})
+        with st.expander("Round a round, o que cada equipe disparou"):
+            st.dataframe(match_timeline(flagged_rounds, post_match_row["match_id"], costs), use_container_width=True)
+        st.markdown("**No round escolhido**")
+        post_flags = flagged_rounds[(flagged_rounds["match_id"] == post_match_row["match_id"]) & (flagged_rounds["round"] == post_round_index + 1) & (flagged_rounds["time"] == post_team)].iloc[0]
+        st.write(f'Round {post_round_index + 1} · {post_names[post_puuid]} é do time {post_team}, que jogou {post_flags["lado"]} e {"venceu" if post_flags["venceu"] else "perdeu"} o round · loadout {post_flags["loadout"]:,.0f} contra {post_flags["loadout_adversario"]:,.0f}')
+        post_events = round_events(post_round)
+        post_round_deaths = flagged_deaths[(flagged_deaths["match_id"] == post_match_row["match_id"]) & (flagged_deaths["round"] == post_round_index + 1)]
+        decisions = player_decisions(post_events, post_teams, post_puuid, post_round_deaths, costs, name_of=post_names.get)
+        factors_column, decisions_column = st.columns([1, 2])
+        factors_column.markdown("**Fatores de cada time neste round**")
+        for team_column, team in zip(factors_column.columns(2), ["Blue", "Red"]):
+            team_flags = flagged_rounds[(flagged_rounds["match_id"] == post_match_row["match_id"]) & (flagged_rounds["round"] == post_round_index + 1) & (flagged_rounds["time"] == team)].iloc[0]
+            team_factors = team_round_factors(team_flags, costs)
+            team_column.markdown(f'**{team}** ({team_flags["lado"]}{", time do jogador" if team == post_team else ""})')
+            team_column.markdown("\n".join(f"- {name} ({cost * 100:+.0f} pontos)" for name, cost in team_factors) if team_factors else "Nenhum fator da lista.")
+        decisions_column.markdown("**Decisões do jogador neste round**, da que mais custou à que mais ajudou")
+        post_map_meta = maps_by_url().get(post_match["matchInfo"]["mapId"])
+        if not decisions:
+            decisions_column.write("Nenhuma decisão da lista. O jogador não abriu o round, não trocou, não plantou, não morreu primeiro, não morreu sem reagir e não deixou de trocar um aliado que podia trocar.")
+        for decision in decisions:
+            decisions_column.markdown(f'**{decision["fator"]}** ({decision["custo"] * 100:+.0f} pontos). {decision["detalhe"][0].upper() + decision["detalhe"][1:]}. {describe_event(post_events[decision["evento"]], post_names, post_round)}')
+            if post_map_meta is not None:
+                decisions_column.pyplot(draw_round_map(post_map_meta, post_events, decision["evento"], post_puuid, post_teams, post_names))
+
+    with tool_two:
+        st.markdown("As somas de pontos da ferramenta 1 contam a mesma coisa mais de uma vez. Fazer o primeiro abate vale 42 pontos e fazer o primeiro abate sem o adversário trocar vale outros 42, mas o segundo é um pedaço do primeiro. Colapso e round sem plant são em boa parte consequência de ter perdido o abate. Aqui cada evento vale só o que mudou na chance de vencer naquele instante.")
+        st.caption("A chance de vencer de cada estado (lado, vivos de cada time, spike plantada ou não) é a taxa de vitória de todos os rounds que passaram por aquele estado, nas mesmas tabelas das outras abas. O estado inicial usa a faixa de diferença de loadout da aba Economia. Um abate vale a chance depois menos a chance antes, creditado a quem matou e debitado de quem morreu. Uma troca devolve parte do que a morte do aliado tirou, e o valor sai da mesma tabela, sem regra própria. Plant e desarme valem a mudança de estado. Quando o round termina pelo tempo ou pela explosão, a chance vai ao resultado real sem autor.")
+        state_table, start_table = state_tables()
+        attacking_by_round = attacking_team_by_round(post_match)
+        attack_rows = rounds_table()[(rounds_table()["match_id"] == post_match_row["match_id"]) & (rounds_table()["lado"] == "ataque")]
+        start_by_round = {row.round: start_table[("ataque", row.faixa_diferenca)] for row in attack_rows.itertuples()}
+        win_added = match_win_added(post_match, attacking_by_round, state_table, start_by_round)
+        added_match_column, added_round_column = st.columns([1, 1])
+        added_match_column.markdown("**Na partida, por jogador.** Chance ganha como autor, chance perdida como vítima e o saldo, em pontos somados nos rounds")
+        added_match_column.dataframe(player_win_added(win_added, post_names, post_teams), use_container_width=True, column_config={"saldo": st.column_config.NumberColumn(format="%+d"), "chance ganha": st.column_config.NumberColumn(format="%+d"), "chance perdida": st.column_config.NumberColumn(format="%+d")})
+        round_added = win_added[win_added["round"] == post_round_index + 1].copy()
+        added_round_column.markdown(f"**No round {post_round_index + 1}, evento a evento.** Chance de vencer do ataque ({attacking_by_round.get(post_round_index + 1, '?')}) depois de cada evento")
+        if round_added.empty:
+            added_round_column.write("Este round não tem lado conhecido ou não tem eventos.")
+        else:
+            round_added["descricao"] = [describe_event(post_events[int(row.evento)], post_names, post_round) if row.evento < len(post_events) else "fim do round" for row in round_added.itertuples()]
+            round_added["passo"] = range(1, len(round_added) + 1)
+            round_added["do jogador"] = (round_added["autor"] == post_puuid) | (round_added["vitima"] == post_puuid)
+            start_row = pd.DataFrame([{"passo": 0, "depois_ataque": round_added["antes_ataque"].iloc[0], "descricao": "início do round", "do jogador": False, "ganho_do_autor": 0.0}])
+            chart_rows = pd.concat([start_row, round_added[["passo", "depois_ataque", "descricao", "do jogador", "ganho_do_autor"]]], ignore_index=True)
+            line = alt.Chart(chart_rows).mark_line(interpolate="step-after", color=ATTACK_COLOR).encode(x=alt.X("passo:Q", title="evento", axis=alt.Axis(tickMinStep=1)), y=alt.Y("depois_ataque:Q", title="chance de vencer do ataque", axis=alt.Axis(format=".0%"), scale=alt.Scale(domain=[0, 1])))
+            marks = alt.Chart(chart_rows).mark_point(size=90, filled=True, color=ATTACK_COLOR).encode(x="passo:Q", y="depois_ataque:Q", shape=alt.Shape("do jogador:N", scale=alt.Scale(domain=[False, True], range=["circle", "diamond"]), legend=alt.Legend(orient="bottom", title=None, labelExpr="datum.label == 'true' ? 'evento do jogador escolhido' : 'outros'")), tooltip=["descricao", alt.Tooltip("depois_ataque", format=".0%", title="chance do ataque"), alt.Tooltip("ganho_do_autor", format="+.0%", title="ganho de quem agiu")])
+            added_round_column.altair_chart((line + marks).properties(height=260, autosize=FIT_WIDTH), use_container_width=True)
+            listing = round_added[["descricao", "tipo", "antes_ataque", "depois_ataque", "ganho_do_autor"]].rename(columns={"descricao": "evento", "antes_ataque": "ataque antes", "depois_ataque": "ataque depois", "ganho_do_autor": "ganho de quem agiu"})
+            listing[["ataque antes", "ataque depois", "ganho de quem agiu"]] = (listing[["ataque antes", "ataque depois", "ganho de quem agiu"]] * 100).round(0)
+            st.dataframe(listing, hide_index=True, use_container_width=True, column_config={"ataque antes": st.column_config.NumberColumn(format="%.0f%%"), "ataque depois": st.column_config.NumberColumn(format="%.0f%%"), "ganho de quem agiu": st.column_config.NumberColumn(format="%+.0f pontos")})
 
 with prediction_tab:
     st.markdown("As medidas das conclusões (primeiro abate, troca, isolamento) explicam e preveem quem vence a partida, sem usar nenhum resultado no caminho? O lado de cada round vem de quem planta a spike na metade, sem contagem de rounds, placar nem ordem, e o único rótulo é quem venceu a partida. Os nomes das equipes vêm do nome do arquivo. Esta aba ignora o filtro de torneios.")
