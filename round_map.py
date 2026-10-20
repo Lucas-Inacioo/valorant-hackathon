@@ -3,6 +3,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.colors import TwoSlopeNorm
+from matplotlib.patheffects import withStroke
 from matplotlib.lines import Line2D
 from PIL import Image
 
@@ -107,7 +108,7 @@ def draw_rate_markers(map_meta, rows, count_column, rate_column, center_rate, co
     markers = axes.scatter(pixel_xs, pixel_ys, s=20 + size_per_unit * rows[count_column], c=rows[rate_column], cmap="RdBu", norm=norm, edgecolors="white", linewidths=0.8, alpha=0.9)
     for name, count, pixel_x, pixel_y in zip(rows.index, rows[count_column], pixel_xs, pixel_ys):
         if count >= label_min_count:
-            axes.annotate(f"{name} ({count})", (pixel_x, pixel_y), xytext=(0, 9), textcoords="offset points", fontsize=7, color="white", ha="center")
+            axes.annotate(f"{name} ({count})", (pixel_x, pixel_y), xytext=(0, 9), textcoords="offset points", fontsize=7, color="#111111", ha="center", path_effects=[withStroke(linewidth=2.5, foreground="white")])
     colorbar = figure.colorbar(markers, ax=axes, fraction=0.04, pad=0.02)
     colorbar.set_label(colorbar_label)
     if zoom_padding and pixel_xs:
@@ -126,7 +127,7 @@ def draw_callout_summary(map_meta, callout_rows, center_rate, label_min_count=10
 def draw_player(axes, pixels, color, marker, name, is_selected):
     pixel_x, pixel_y = pixels
     axes.scatter([pixel_x], [pixel_y], s=200 if is_selected else 80, c=color, marker=marker, edgecolors="white", linewidths=2 if is_selected else 0.5, zorder=5)
-    axes.annotate(name, (pixel_x, pixel_y), xytext=(6, 6), textcoords="offset points", fontsize=8, color="white", weight="bold" if is_selected else "normal")
+    axes.annotate(name, (pixel_x, pixel_y), xytext=(6, 6), textcoords="offset points", fontsize=8, color="#111111", weight="bold" if is_selected else "normal", path_effects=[withStroke(linewidth=2.5, foreground="white")])
 
 
 def legend_handles():
