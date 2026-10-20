@@ -593,7 +593,7 @@ with collapse_tab:
         regions["y"] = regions["regiao_colapso"].map(lambda name: location_by_name.get(name, (None, None))[1])
         regions = regions.dropna(subset=["x", "y"])
         map_pre_plant = regions["pre_plant"].mean()
-        st.caption(f"Cada círculo é uma região do mapa, só regiões com 5 ou mais colapsos. O tamanho mostra quantos colapsos aconteceram ali. A cor mostra quando: azul, a maior parte antes do plant; vermelho, a maior parte depois do plant, em relação à média do mapa ({map_pre_plant:.0%} antes do plant).")
+        st.caption(f"Cada círculo é uma região do mapa, só regiões com 5 ou mais colapsos. O tamanho mostra quantos colapsos aconteceram ali, enquanto a cor mostra quando, com azul sendo antes do plant e vermelho depois do plant, em relação à média do mapa ({map_pre_plant:.0%} antes do plant).")
         for side_column, side in zip(st.columns(2), ["ataque", "defesa"]):
             side_regions = regions[regions["lado"] == side].set_index("regiao_colapso")
             side_column.markdown(f"**Colapsos da equipe {SIDE_PHRASES[side].replace('no ', 'de ').replace('na ', 'de ')}** ({int(side_regions['colapsos'].sum())} colapsos)")
