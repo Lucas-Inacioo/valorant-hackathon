@@ -479,7 +479,6 @@ with opening_tab:
         st.dataframe(per_round, use_container_width=False)
 
 with trades_tab:
-    st.markdown("Cada morte entra uma vez, com três perguntas. A que distância estava o aliado vivo mais próximo? A morte foi trocada, ou seja, quem matou foi morto por um aliado da vítima em até 5 segundos? A troca era possível, ou seja, havia um aliado a menos de 20 metros de quem matou, olhando para ele (até 45 graus de desvio)? O que os dados mostram: morrer longe dos aliados tira a chance de troca, e a troca é o que muda o resultado do round.")
     control_column, phase_column = st.columns(2)
     solo_distance = control_column.slider("Distância a partir da qual a morte conta como isolada (unidades do jogo, cerca de 100 por metro)", 500, 3000, SOLO_DISTANCE, step=250)
     phase = phase_column.radio("Momento do round", ["todas", "pré-plant", "pós-plant"], horizontal=True, help="Depois do plant os papéis se invertem: a defesa precisa entrar no site para desarmar.")
