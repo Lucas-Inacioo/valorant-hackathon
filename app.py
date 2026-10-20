@@ -405,7 +405,7 @@ with overview_tab:
         st.dataframe(selected_matches.drop(columns=["match_id", "caminho", "mapa_interno", "mapa_do_arquivo"]), hide_index=True)
 
 with opening_tab:
-    st.markdown("Cada round entra uma vez: em que momento aconteceu o primeiro abate, qual lado conseguiu esse abate e se essa equipe venceu o round. O tempo começa quando o round fica ao vivo, depois da fase de compra.")
+    st.caption("O tempo conta a partir do início do round, depois da fase de compra.")
     first_blood = first_blood_rows()[first_blood_rows()["match_id"].isin(selected_ids)]
     rounds_col, median_col, opener_col = st.columns(3)
     rounds_col.metric("Rounds com pelo menos um abate", len(first_blood))
