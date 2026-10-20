@@ -18,7 +18,7 @@ from predict import forecast_accuracy, in_match_accuracy, load_matches, match_pa
 from round_style import STYLE_ORDER, build_round_styles, collapse_regions, collapse_summary, style_by_score, style_summary, team_profiles
 from setups import build_setups_table, defuse_by, retake_summary, watching_bands
 from round_map import describe_event, draw_callout_summary, draw_points, draw_rate_markers, draw_round_map, round_events
-from fights import build_fights_table, distance_matrix, distance_summary, economic_first_death, fight_class_summary, player_range_discipline, save_effect, team_summary, trade_possibility_summary
+from fights import build_fights_table, distance_matrix, distance_summary, economic_first_death, fight_class_summary, next_loadout_by_outcome, player_range_discipline, post_plant_exchange, save_effect, team_summary, trade_possibility_summary
 from first_blood import TIME_LABELS, first_blood_table, plant_summary, summary_by_map, wilson_interval, win_rate_by_time
 from solo_deaths import SOLO_DISTANCE, build_deaths_table, context_summary, first_death_summary, summary_by_distance_band, summary_by_round_outcome, territory_summary, win_rate_by_situation, with_solo_flag
 
@@ -711,6 +711,20 @@ with economy_tab:
     save_loadout_column.bar_chart(saves["loadout_seguinte"], color=[WON_COLOR], y_label="loadout do round seguinte", x_label="sobreviventes")
     save_win_column.markdown("**Chance de vencer o round seguinte**, conforme quantos sobreviveram")
     save_win_column.altair_chart(rate_chart(saves, "sobreviventes", "venceu_seguinte", "rounds", "% de rounds seguintes vencidos", height=170), use_container_width=True)
+
+    st.subheader("5. Vale a pena caçar quem está guardando para o próximo round?")
+    st.caption("Os arquivos não dizem quem foi atrás de quem, então a resposta vem dos dois lados da conta: quanto cada sobrevivente vale para quem venceu e para quem perdeu o round, e como terminam as lutas depois do plant quando o ataque já está em vantagem.")
+    ledger_column, exchange_column = st.columns(2)
+    next_loadouts, next_counts = next_loadout_by_outcome(economy_rounds, fights)
+    ledger_column.markdown("**Quanto a equipe tem para gastar no round seguinte**, conforme quantos sobreviveram, para quem venceu e para quem perdeu o round")
+    ledger_column.altair_chart(grouped_bar_chart(next_loadouts.rename_axis(index="sobreviventes"), [WON_COLOR, LOST_COLOR], "loadout do round seguinte", ",.0f"), use_container_width=True)
+    exchange = post_plant_exchange(plants_table()[plants_table()["match_id"].isin(selected_ids)], fights)
+    exchange_column.markdown("**Parte das mortes depois do plant que são de atacantes**, por situação no plant (atacantes x defensores vivos), em rounds que o ataque venceu")
+    exchange_column.altair_chart(rate_chart(exchange, "situacao", "parte_do_ataque", "mortes_pos_plant", "% das mortes depois do plant que são de atacantes", color=ATTACK_COLOR), use_container_width=True)
+    st.markdown("Cada sobrevivente vale cerca de 1,2 mil no round seguinte para quem perdeu e cerca de 0,5 mil para quem venceu, porque o vencedor recebe o bônus e recompra. Trocar um atacante por um defensor que estava guardando custa menos da metade do que nega. A caça só deixaria de valer a pena se o caçador morresse quase três vezes para cada abate, e na pior situação observada ele morre menos de uma. Em 5v1 o defensor sozinho leva quase um atacante por abate sofrido, provavelmente porque cinco pessoas procurando viram cinco alvos, mas a conta continua fechando.")
+    with st.expander("Números por sobreviventes e por situação no plant"):
+        st.dataframe(next_counts.rename(columns=lambda column: f"rounds, {column}"), use_container_width=False)
+        st.dataframe(exchange, use_container_width=False)
 
 with plants_tab:
     st.markdown("Cada round em que a spike foi plantada entra uma vez: onde foi plantada, quantos jogadores de cada lado estavam vivos nesse momento e se a defesa desarmou. Esperado pelos vivos: a taxa de desarme normal para a mesma quantidade de vivos de cada lado. Nos gráficos de dois pontos, o quadrado é o esperado e o círculo é o que aconteceu. Quando o círculo fica à direita do quadrado, a defesa desarmou mais do que o número de vivos explica.")

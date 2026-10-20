@@ -156,8 +156,8 @@ def economic_first_death(fights, flag_column):
     return first.groupby(["lado", flag_column]).agg(rounds=("vitima", "size"), loadout_vitima=("loadout_vitima", "mean"), trocada=("trocada", "mean"), vitoria_da_vitima=("venceu_round", "mean"), acima_do_time=("acima_do_time", "mean")).round(3)
 
 
-def save_effect(rounds, deaths):
-    """Rounds perdidos fora do fim de metade: sobreviventes do time contra loadout e vitória do round seguinte."""
+def rounds_with_next(rounds, deaths):
+    """Uma linha por round e time com sobreviventes, loadout e vitória do round seguinte, fora do fim de metade."""
     deaths_per_round = deaths.groupby(["match_id", "round", "time_vitima"])["vitima"].nunique().rename("mortes")
     rounds = rounds.merge(deaths_per_round, left_on=["match_id", "round", "time"], right_index=True, how="left").fillna({"mortes": 0})
     rounds = rounds.sort_values(["match_id", "time", "round"])
@@ -165,8 +165,39 @@ def save_effect(rounds, deaths):
     rounds["loadout_seguinte"] = by_team["loadout"].shift(-1)
     rounds["venceu_seguinte"] = by_team["venceu"].shift(-1)
     rounds["sobreviventes"] = (5 - rounds["mortes"]).astype(int)
-    lost = rounds[~rounds["venceu"] & rounds["loadout_seguinte"].notna() & ~rounds["round"].isin(HALF_END_ROUNDS)]
+    return rounds[rounds["loadout_seguinte"].notna() & ~rounds["round"].isin(HALF_END_ROUNDS)]
+
+
+def save_effect(rounds, deaths):
+    """Rounds perdidos fora do fim de metade: sobreviventes do time contra loadout e vitória do round seguinte."""
+    lost = rounds_with_next(rounds, deaths).query("~venceu")
     return lost.groupby("sobreviventes").agg(rounds=("venceu", "size"), loadout=("loadout", "mean"), loadout_seguinte=("loadout_seguinte", "mean"), venceu_seguinte=("venceu_seguinte", "mean")).round(3)
+
+
+def next_loadout_by_outcome(rounds, deaths, min_rounds=20):
+    """Loadout do round seguinte por sobreviventes, vencedor e perdedor do round lado a lado, com a contagem de rounds."""
+    table = rounds_with_next(rounds, deaths).query("sobreviventes <= 4")
+    table["resultado_round"] = table["venceu"].map({True: "venceu o round", False: "perdeu o round"})
+    grouped = table.groupby(["sobreviventes", "resultado_round"]).agg(rounds=("venceu", "size"), loadout_seguinte=("loadout_seguinte", "mean"))
+    grouped = grouped[grouped["rounds"] >= min_rounds]
+    loadouts = grouped["loadout_seguinte"].unstack("resultado_round").reindex(columns=["venceu o round", "perdeu o round"]).round(0)
+    counts = grouped["rounds"].unstack("resultado_round").reindex(columns=["venceu o round", "perdeu o round"])
+    return loadouts, counts
+
+
+def post_plant_exchange(plants, deaths, min_rounds=30):
+    """Rounds de ataque vencidos com plant: por situação no plant, parte das mortes depois do plant que são de atacantes."""
+    won = plants[plants["ataque_venceu"]][["match_id", "round", "situacao", "segundos_plant"]]
+    post = deaths.merge(won, on=["match_id", "round"], suffixes=("", "_plant"))
+    post = post[post["segundos"] > post["segundos_plant_plant"]]
+    by_round = post.groupby(["match_id", "round", "situacao", "lado"])["vitima"].nunique().unstack("lado").reindex(columns=["ataque", "defesa"]).fillna(0)
+    table = by_round.groupby("situacao").agg(mortes_ataque=("ataque", "sum"), mortes_defesa=("defesa", "sum"))
+    table["rounds"] = won.groupby("situacao").size()
+    table["mortes_pos_plant"] = (table["mortes_ataque"] + table["mortes_defesa"]).astype(int)
+    table["parte_do_ataque"] = (table["mortes_ataque"] / table["mortes_pos_plant"]).round(3)
+    table = table[(table["rounds"] >= min_rounds) & (table["mortes_pos_plant"] > 0)]
+    table["ordem"] = table.index.map(lambda situation: tuple(-int(part) for part in situation.split("v")[::-1]))
+    return table.sort_values("ordem").drop(columns="ordem")
 
 
 def main():
