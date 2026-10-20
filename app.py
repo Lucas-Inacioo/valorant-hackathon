@@ -389,7 +389,7 @@ with overview_tab:
 - **Loadout.** Valor total, em créditos, das armas e escudos dos cinco jogadores no início do round.
 - **Esperado pelos vivos.** Uma comparação justa para o desarme da spike.
   - Quantos jogadores estão vivos de cada lado no momento do plant é o que mais decide se a defesa desarma. Com 2 atacantes contra 3 defensores, a defesa desarma 76% das vezes. Com 5 contra 5, 33%.
-  - Por isso, antes de dizer que uma posição ou um horário de plant é bom, o painel pergunta: com esse mesmo número de vivos, quanto a defesa costuma desarmar? Esse é o esperado pelos vivos.
+  - Por isso, antes de dizer que uma posição ou um horário de plant é bom, o painel responde se, com esse mesmo número de vivos, quanto a defesa costuma desarmar? Esse é o esperado pelos vivos.
   - Se a posição desarma 40% e o esperado era 30%, a posição em si vale 10 pontos. Se desarma 40% e o esperado era 40%, a posição não muda nada, o que mudou foi quantos chegaram vivos.
 - **Comparado com a equipe.** Uma comparação justa para o custo de uma morte.
   - Uma equipe forte vence muitos rounds mesmo perdendo o primeiro jogador. Uma equipe fraca perde muitos rounds mesmo sem perder ninguém. Olhar só a taxa de vitória depois da morte misturaria essas duas coisas.
