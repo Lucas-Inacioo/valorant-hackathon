@@ -471,7 +471,7 @@ with opening_tab:
         rounds="size", p10=lambda seconds: seconds.quantile(0.10), p25=lambda seconds: seconds.quantile(0.25), mediana="median",
         p75=lambda seconds: seconds.quantile(0.75), p90=lambda seconds: seconds.quantile(0.90), media="mean", desvio_padrao="std",
     ).round(1)
-    st.caption("Para cada round da partida (1 a 24), o segundo em que o primeiro abate acontece. Linha: valor típico (metade dos rounds abaixo, metade acima). Faixa escura: onde ficam os 50% centrais. Faixa clara: os 80% centrais. O gráfico ao lado mostra quantos rounds entraram em cada ponto.")
+    st.caption("Para cada round da partida, o segundo em que o primeiro abate acontece. A linha apresenta o valor típico, com metade dos rounds abaixo e metade acima. A faixa escura onde ficam os 50% centrais e a faixa clara os 80% centrais. O gráfico ao lado mostra a frequência de partidas que chegaram até cada round.")
     band_column, count_column = st.columns([3, 2])
     band_column.altair_chart(quantile_band_chart(per_round), use_container_width=True)
     count_column.bar_chart(per_round["rounds"], color=[NEUTRAL_COLOR], y_label="rounds contados", x_label="round da partida")
