@@ -379,7 +379,8 @@ with overview_tab:
 - **Lado.** Ataque (precisa plantar a spike) ou defesa (precisa impedir ou desarmar). Os lados trocam na metade da partida.
 - **Abate e morte.** O mesmo evento visto por quem matou (abate) e por quem morreu (morte).
 - **Primeiro abate.** O primeiro abate do round. A equipe que o faz "abre o round".
-- **Troca.** Quando o jogador que matou alguém é morto por um aliado da vítima em até 5 segundos.
+- **Troca.** Quando o inimigo que matou alguém é morto por um aliado da vítima em até 5 segundos.
+  - Troca possível: no instante da morte, algum aliado da vítima estava a menos de 20 metros do inimigo que a matou e olhando para ele.
 - **Isolado.** Jogador que morre sem nenhum aliado vivo a menos de 10 metros (ajustável).
   - As posições nos arquivos vêm em unidades do jogo, não metros.
   - O estudo assume 100 unidades por metro, que é a escala padrão da engine do jogo (Unreal, em centímetros).
@@ -508,9 +509,9 @@ with trades_tab:
             st.dataframe(by_situation.drop(columns=["aliados vivos no instante da morte"]), hide_index=True, use_container_width=False)
 
     st.subheader("2. Quando a troca era possível, ela aconteceu?")
-    trade_table = trade_possibility_summary(fights, ["lado"]).rename(index={TRADE_POSSIBLE: "aliado a menos de 20 m, olhando para quem matou", "aliado em alcance olhando para outro lado": "aliado a menos de 20 m, olhando para outro lado", "sem aliado em alcance": "nenhum aliado a menos de 20 m"}, level="troca_possivel")
+    trade_table = trade_possibility_summary(fights, ["lado"]).rename(index={TRADE_POSSIBLE: "aliado da vítima a menos de 20 m do inimigo que a matou, olhando para ele", "aliado em alcance olhando para outro lado": "aliado da vítima a menos de 20 m do inimigo que a matou, olhando para outro lado", "sem aliado em alcance": "nenhum aliado da vítima a menos de 20 m do inimigo que a matou"}, level="troca_possivel")
     traded_column, won_column = st.columns(2)
-    traded_column.markdown("**Quantas mortes foram trocadas**, considerando onde estava o aliado mais próximo de quem matou. Trocar é atirar em quem matou, por isso a distância é até ele.")
+    traded_column.markdown("**Quantas mortes foram trocadas**, considerando se algum aliado da vítima estava perto do inimigo que a matou e olhando para ele")
     traded_column.altair_chart(rate_chart(trade_table, "troca_possivel", "trocada", "mortes", "% de mortes trocadas", group_column="lado", group_colors=SIDE_COLORS), use_container_width=True)
     won_column.markdown("**Quantos rounds a equipe da vítima venceu**, nas mesmas três situações")
     won_column.altair_chart(rate_chart(trade_table, "troca_possivel", "venceu_round", "mortes", "% de rounds vencidos pela equipe da vítima", group_column="lado", group_colors=SIDE_COLORS), use_container_width=True)
