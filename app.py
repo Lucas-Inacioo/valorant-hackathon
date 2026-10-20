@@ -655,7 +655,7 @@ with collapse_tab:
         st.dataframe(profiles, use_container_width=True)
 
 with economy_tab:
-    st.markdown("Cada round entra uma vez para cada equipe, com o loadout (valor das armas e escudos dos cinco jogadores), o resultado e o tipo de vitória. Rounds normais são todos menos o pistol (rounds 1 e 13) e o segundo round de cada metade (2 e 14). Vitória esperada pelo dinheiro: a taxa de vitória normal para a mesma diferença de loadout entre as equipes. O que fica acima ou abaixo disso não é explicado pelo dinheiro.")
+    st.markdown("Loadout é o valor das armas e escudos dos cinco jogadores. Rounds normais são todos menos o pistol (rounds 1 e 13) e o segundo round de cada metade (2 e 14). Vitória esperada pelo dinheiro é a taxa de vitória normal para a diferença de loadout vista entre as equipes.")
     economy_rounds = rounds_table()[rounds_table()["match_id"].isin(selected_ids)]
     close_rounds = economy_rounds[economy_rounds["match_id"].isin(close_match_ids(economy_rounds))]
     fights = fights_table()[fights_table()["match_id"].isin(selected_ids)]
