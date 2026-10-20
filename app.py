@@ -533,7 +533,19 @@ with trades_tab:
             side_column.dataframe(first_deaths, hide_index=True, use_container_width=False)
 
     st.subheader("4. Onde estavam os aliados, e a morte foi em área própria ou do adversário?")
-    st.caption("À esquerda, a posição dos aliados vivos no momento da morte. Em grupo: pelo menos um aliado dentro do limite de isolamento. Flanco: nenhum aliado perto e todos juntos em outra área do mapa. Isolado: nenhum aliado perto e os aliados espalhados. À direita, de quem costuma ser a região onde o jogador morreu, medido por quem fica ali nos primeiros 20 segundos dos rounds. Própria: 65% ou mais do próprio lado. Do adversário: 35% ou menos. Disputada: no meio.")
+    st.markdown("""
+À esquerda, onde estavam os aliados vivos no momento da morte.
+
+- **Em grupo.** Pelo menos um aliado dentro do limite de isolamento.
+- **Flanco.** Nenhum aliado perto, e os aliados todos juntos em outra área do mapa.
+- **Isolado.** Nenhum aliado perto, e os aliados espalhados pelo mapa.
+
+À direita, de quem costuma ser a região onde o jogador morreu, medido por quem fica ali nos primeiros 20 segundos dos rounds.
+
+- **Própria.** 65% ou mais dos jogadores ali são do mesmo lado da vítima.
+- **Do adversário.** 35% ou menos.
+- **Disputada.** Entre os dois.
+""")
     context_column, territory_column = st.columns(2)
     context_column.markdown("**Quantos rounds a equipe venceu**, conforme onde estavam os aliados")
     context_column.altair_chart(rate_chart(context_summary(deaths_with_allies, ["lado"]), "contexto", "venceu_round", "mortes", "% de rounds vencidos pela equipe da vítima", group_column="lado", group_colors=SIDE_COLORS, order=["em grupo", "flanco", "isolado", "último vivo"]), use_container_width=True)
