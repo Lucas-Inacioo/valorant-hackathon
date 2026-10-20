@@ -726,7 +726,7 @@ with economy_tab:
         st.dataframe(exchange, use_container_width=False)
 
 with plants_tab:
-    st.markdown("Cada round em que a spike foi plantada entra uma vez: onde foi plantada, quantos jogadores de cada lado estavam vivos nesse momento e se a defesa desarmou. Esperado pelos vivos: a taxa de desarme normal para a mesma quantidade de vivos de cada lado. Nos gráficos de dois pontos, o quadrado é o esperado e o círculo é o que aconteceu. Quando o círculo fica à direita do quadrado, a defesa desarmou mais do que o número de vivos explica.")
+    st.markdown("Esperado pelos vivos é a taxa de desarme normal para a mesma quantidade de vivos de cada lado.")
     selected_plants = plants_table()[plants_table()["match_id"].isin(selected_ids)]
     plants_col, defuse_col, time_col = st.columns(3)
     plants_col.metric("Rounds com spike plantada", len(selected_plants))
