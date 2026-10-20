@@ -450,14 +450,14 @@ with opening_tab:
         table_column.dataframe(by_callout[["aberturas", "ataque_venceu", "ic95"]], use_container_width=True)
 
     st.subheader("4. Qual função de agente morre primeiro, e isso muda o custo do primeiro abate?")
-    st.caption("Função é a classe do agente: duelista, iniciador, controlador ou sentinela. Vem da lista pública de agentes, usada só para dar nome ao código do personagem.")
+    st.caption("Dividindo os agentes em duelistas, iniciadores, controladores ou sentinelas, considerando a lista pública de agentes, usada só para dar nome ao código do personagem.")
     max_seconds = st.slider("Considerar só primeiros abates até este segundo do round", 10, 150, 150, step=10, key="role_max_seconds")
     role_deaths = deaths_table()[deaths_table()["match_id"].isin(selected_ids)]
     role_first = first_death_by_role(role_deaths, max_seconds)
     share_column, cost_column = st.columns(2)
-    share_column.markdown("**Quem morre primeiro.** Cinza: quanto cada função aparece nas escalações. Colorido: quanto cada função aparece entre as vítimas do primeiro abate, no ataque e na defesa. Barra colorida maior que a cinza significa que a função morre primeiro mais do que a escalação sugere.")
+    share_column.markdown("**Quem morre primeiro e frequência nas composições de times**")
     share_column.bar_chart(role_share(role_deaths, max_seconds), color=[NEUTRAL_COLOR, ATTACK_COLOR, DEFENSE_COLOR], stack=False, y_label="fração", x_label="")
-    cost_column.markdown("**Quanto custa.** Quantos rounds a equipe ainda vence depois de perder o primeiro jogador, separado pela função dele. Barras parecidas significam que a função de quem morreu não muda o custo.")
+    cost_column.markdown("**Quantos rounds a equipe ainda vence depois de perder o primeiro jogador**, separado pela função do jogador perdido")
     cost_column.altair_chart(rate_chart(role_first, "funcao", "vitoria_da_vitima", "rounds", "% de rounds vencidos pela equipe que perdeu o primeiro jogador", group_column="lado", group_colors=SIDE_COLORS, order=ROLE_ORDER), use_container_width=True)
     with st.expander("Tabelas por função, por troca e por agente"):
         st.dataframe(role_first, use_container_width=False)
