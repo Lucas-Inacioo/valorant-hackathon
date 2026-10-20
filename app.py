@@ -709,7 +709,7 @@ with economy_tab:
     save_loadout_column, save_win_column = st.columns(2)
     save_loadout_column.markdown("**Quanto a equipe tem para gastar no round seguinte**, conforme quantos jogadores sobreviveram ao round perdido (sem os rounds 12 e 24, em que o dinheiro zera)")
     save_loadout_column.bar_chart(saves["loadout_seguinte"], color=[WON_COLOR], y_label="loadout do round seguinte", x_label="sobreviventes")
-    save_win_column.markdown("**Quantos rounds seguintes a equipe vence**, conforme quantos sobreviveram")
+    save_win_column.markdown("**Chance de vencer o round seguinte**, conforme quantos sobreviveram")
     save_win_column.altair_chart(rate_chart(saves, "sobreviventes", "venceu_seguinte", "rounds", "% de rounds seguintes vencidos", height=170), use_container_width=True)
 
 with plants_tab:
