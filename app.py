@@ -32,6 +32,7 @@ ATTACK_COLOR = "#c0392b"
 DEFENSE_COLOR = "#2a9d8f"
 NEUTRAL_COLOR = "#7f7f7f"
 SIDE_COLORS = {"ataque": ATTACK_COLOR, "defesa": DEFENSE_COLOR}
+SIDE_PHRASES = {"ataque": "no ataque", "defesa": "na defesa"}
 STYLE_COLORS = {"execução rápida": WON_COLOR, "default": TRADE_COLOR, "sem plant": LOST_COLOR}
 ROUND_OUTCOME_LABELS = {False: "perdeu o round", True: "venceu o round"}
 TRADE_POSSIBLE = "aliado em alcance olhando para o killer"
@@ -520,7 +521,7 @@ with trades_tab:
     st.caption("Mortes agrupadas pela distância até o aliado vivo mais próximo, em unidades do jogo (100 unidades são cerca de 1 metro). Verde: quantas foram trocadas. Azul: quantos desses rounds a equipe da vítima ainda venceu.")
     for side_column, side in zip(st.columns(2), ["ataque", "defesa"]):
         side_deaths = deaths_with_allies[deaths_with_allies["lado"] == side]
-        side_column.markdown(f"**Jogador que morreu estava no {side}**")
+        side_column.markdown(f"**Jogador que morreu estava {SIDE_PHRASES[side]}**")
         side_column.bar_chart(summary_by_distance_band(side_deaths)[["fracao_trocadas", "venceu_round"]].rename(columns={"fracao_trocadas": "morte trocada", "venceu_round": "equipe venceu o round"}), color=[TRADE_COLOR, WON_COLOR], stack=False, y_label="% das mortes", x_label="distância até o aliado mais próximo (unidades do jogo)")
     with st.expander("Números por lado e resultado do round, e o primeiro abate separado em isolado ou trocado"):
         st.dataframe(summary_by_round_outcome(deaths_with_allies, ["lado"]).rename(index=ROUND_OUTCOME_LABELS, level="venceu_round"), use_container_width=False)
@@ -528,7 +529,7 @@ with trades_tab:
             first_deaths = first_death_summary(deaths_with_allies[deaths_with_allies["lado"] == side]).reset_index()
             first_deaths["isolada"] = first_deaths["isolada"].map({False: "acompanhada", True: "isolada"})
             first_deaths["trocada"] = first_deaths["trocada"].map({False: "não trocada", True: "trocada"})
-            side_column.markdown(f"**Primeira morte do round, jogador que morreu estava no {side}**")
+            side_column.markdown(f"**Primeira morte do round, jogador que morreu estava {SIDE_PHRASES[side]}**")
             side_column.dataframe(first_deaths, hide_index=True, use_container_width=False)
 
     st.subheader("4. Onde estavam os aliados, e a morte foi em área própria ou do adversário?")
