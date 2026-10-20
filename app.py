@@ -381,6 +381,7 @@ with overview_tab:
 - **Primeiro abate.** O primeiro abate do round. A equipe que o faz "abre o round".
 - **Troca.** Quando o jogador que matou alguém é morto por um aliado da vítima em até 5 segundos.
 - **Isolado.** Jogador que morre sem nenhum aliado vivo a menos de 10 metros (ajustável).
+  - As posições nos arquivos vêm em unidades do jogo, sem metro. O painel assume 100 unidades por metro, que é a escala padrão da engine do jogo (Unreal, em centímetros). Então 10 metros são 1.000 unidades. É uma suposição, ainda não confirmada com os organizadores, e vale para toda distância citada no painel.
 - **Colapso.** Três jogadores da mesma equipe morrem em até 10 segundos sem matar ninguém nesse intervalo.
 - **Plant e defuse.** Plantar a spike (ataque) e desarmar a spike (defesa).
 - **Loadout.** Valor total, em créditos, das armas e escudos dos cinco jogadores no início do round.
