@@ -3,7 +3,7 @@
 from importlib import import_module
 
 SECTIONS = {
-    "Visão geral": "overview",
+    "Dashboard da pesquisa": "overview",
     "Análise pós-jogo": "post_match",
     "Primeiro abate": "opening",
     "Trocas e isolamento": "trades",

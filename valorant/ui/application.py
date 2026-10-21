@@ -51,6 +51,8 @@ def run() -> None:
     st.set_page_config(page_title="VALORANT Hackathon", layout="wide")
     st.sidebar.title("VALORANT")
     st.sidebar.caption("Protótipo de análise de partidas")
+    if st.session_state.get("section") not in SECTIONS:
+        st.session_state["section"] = next(iter(SECTIONS))
     active_section = st.sidebar.selectbox("Seção", list(SECTIONS), key="section")
     context = build_context()
     if context is None:
@@ -58,7 +60,7 @@ def run() -> None:
     if not context.selected_match_ids:
         st.info("Selecione ao menos um torneio e uma versão com partidas disponíveis.")
         return
-    if active_section != "Visão geral":
+    if active_section != "Dashboard da pesquisa":
         st.caption(
             f"A seleção contém {len(context.selected_matches)} partidas e "
             f"{len(context.selected_rounds):,} rounds."

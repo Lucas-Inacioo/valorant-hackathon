@@ -1,6 +1,7 @@
 """Leitura e cache das análises. A seleção de partidas faz parte da chave do cache."""
 
 from datetime import datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 import pandas as pd
 import streamlit as st
@@ -216,6 +217,32 @@ def load_match_review(signature, match_ids, match):
     )
 
 
+@st.cache_data(show_spinner=False)
+def load_research(signature, match_ids):
+    from valorant.analysis.research import build_research_data
+
+    inventory = load_inventory(signature)[0]
+    selected = inventory[inventory["match_id"].isin(match_ids)]
+    records = [(info, load_match(Path(info["caminho"]))) for info in selected.to_dict("records")]
+    return build_research_data(
+        records,
+        load_analysis_table(signature, match_ids, "fights"),
+        load_analysis_table(signature, match_ids, "rounds"),
+    )
+
+
+@st.cache_data(show_spinner=False)
+def load_rank_comparison(signature, match_ids, tournament, minimum_matches, performance):
+    from valorant.analysis.research import team_ranking
+    from valorant.analysis.rank_comparison import bootstrap_comparison
+
+    matches = load_research(signature, match_ids).team_matches
+    if tournament is not None:
+        matches = matches[matches["torneio"].eq(tournament)]
+    ranking = team_ranking(matches, minimum_matches)
+    return bootstrap_comparison(matches, ranking, performance)
+
+
 class AnalysisData:
     """Fornece as tabelas de uma seleção sem depender de variáveis globais."""
 
@@ -230,6 +257,12 @@ class AnalysisData:
 
     def match_review(self, match):
         return load_match_review(self.data_version, self.match_ids, match)
+
+    def research(self):
+        return load_research(self.data_version, self.match_ids)
+
+    def rank_comparison(self, tournament, minimum_matches, performance):
+        return load_rank_comparison(self.data_version, self.match_ids, tournament, minimum_matches, performance)
 
     def table(self, name):
         return load_analysis_table(self.data_version, self.match_ids, name)

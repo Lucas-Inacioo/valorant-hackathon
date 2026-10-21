@@ -1,48 +1,55 @@
-"""Resumo da base selecionada e caminhos para as análises."""
+"""Dashboard da pesquisa, com achados, ranking e acesso à revisão das partidas."""
 
 import streamlit as st
 
-from valorant.ui.charts import NEUTRAL_COLOR
 from valorant.ui.context import AppContext
-from valorant.ui.presentation import display_table, display_value
+from valorant.ui.presentation import display_table
+from valorant.ui.research_findings import decimal, show_findings
+from valorant.ui.research_ranking import show_ranking
+
+ALL_TOURNAMENTS = "Todos os torneios selecionados"
 
 
 def render(context: AppContext) -> None:
-    st.header("Visão geral")
+    st.header("Dashboard da pesquisa")
     st.write(
-        "Este projeto reúne partidas de VALORANT para estudar o que acontece nos rounds. "
-        "Escolha uma análise no menu e use os filtros para comparar os torneios."
+        "Veja os achados das partidas, quais equipes acumulam mais lances para rever e como essa frequência "
+        "se relaciona com o desempenho observado. Os números acompanham os filtros do menu lateral."
     )
-    match_column, round_column, player_column = st.columns(3)
-    match_column.metric("Partidas", len(context.selected_matches))
-    round_column.metric("Rounds", len(context.selected_rounds))
-    player_column.metric("Jogadores", context.selected_players["puuid"].nunique())
-
-    map_column, result_column = st.columns(2)
-    map_column.subheader("Partidas por mapa")
-    map_column.bar_chart(
-        context.selected_matches["mapa"].value_counts(),
-        horizontal=True,
-        color=[NEUTRAL_COLOR],
-        x_label="partidas",
-        y_label="",
-    )
-    result_column.subheader("Como os rounds terminam")
-    results = context.selected_rounds["resultado"].map(display_value).value_counts()
-    result_column.bar_chart(
-        results,
-        horizontal=True,
-        color=[NEUTRAL_COLOR],
-        x_label="rounds",
-        y_label="",
-    )
+    options = [ALL_TOURNAMENTS, *sorted(context.selected_matches["torneio"].unique())]
+    if st.session_state.get("dashboard_tournament") not in options:
+        st.session_state["dashboard_tournament"] = ALL_TOURNAMENTS
+    selected = st.selectbox("Recorte do dashboard", options, key="dashboard_tournament")
+    tournament = None if selected == ALL_TOURNAMENTS else selected
+    inventory = context.selected_matches
+    if tournament is not None:
+        inventory = inventory[inventory["torneio"].eq(tournament)]
+    match_ids = set(inventory["match_id"])
+    with st.spinner("Reunindo as observações da pesquisa. A primeira consulta pode demorar um pouco"):
+        data = context.data.research()
+    teams = data.team_matches[data.team_matches["match_id"].isin(match_ids)]
+    games_per_team = teams.groupby("team_name")["matches"].sum()
+    columns = st.columns(4)
+    columns[0].metric("Partidas", len(inventory))
+    columns[1].metric("Rounds", int(teams["rounds"].sum() / 2))
+    columns[2].metric("Equipes", len(games_per_team))
+    columns[3].metric("Lances de equipe para rever", int(teams["review_events"].sum()))
     st.caption(
-        "Os gráficos descrevem as partidas disponíveis. Diferenças entre grupos podem "
-        "misturar equipe, mapa e momento do jogo, por isso não demonstram o efeito de uma decisão."
+        f"Cada equipe tem em média {decimal(games_per_team.mean(), 1)} partidas, com mediana de "
+        f"{decimal(games_per_team.median(), 1)}. Os nomes das equipes vêm dos arquivos. Nomes diferentes "
+        "permanecem separados e um mesmo nome pode ter mudanças de elenco ao longo da base."
     )
+    show_findings(data, match_ids)
+    show_ranking(context, teams, tournament)
+    st.caption(
+        "As observações ajudam a escolher lances para rever. A base registra instantes, sem trajetória contínua "
+        "ou linha de tiro. Uma frequência menor também pode refletir diferença na disponibilidade de posições. "
+        "As associações não demonstram que um jogador causou a derrota."
+    )
+    st.write("A seção Previsão avalia o uso de partidas anteriores para antecipar resultados de outros jogos.")
     with st.expander("Ver a lista de partidas"):
         display_table(
-            context.selected_matches.drop(
+            inventory.drop(
                 columns=["match_id", "caminho", "mapa_interno", "mapa_do_arquivo"]
             ),
             hide_index=True,

@@ -203,11 +203,33 @@ class AppIntegrationTests(unittest.TestCase):
             self.assertEqual(8, len(references))
             check_selected_round_and_player()
 
+        def check_dashboard(matches=335, teams=68):
+            metrics = {item.label: item.value for item in app.metric}
+            self.assertEqual(str(matches), metrics["Partidas"])
+            self.assertEqual(str(teams), metrics["Equipes"])
+            self.assertIn("Spearman entre menos lances e mais vitórias", metrics)
+            self.assertIn("Spearman apenas pela frequência de mortes", metrics)
+            self.assertTrue(app.selectbox(key="dashboard_team").options)
+
+        def check_empty_dashboard_ranking():
+            self.assertTrue(any("Nenhuma equipe atingiu" in message.value for message in app.info))
+            self.assertNotIn("dashboard_open_review", [button.key for button in app.button])
+
+        def check_dashboard_review(filename, team_name):
+            from valorant.analysis.prediction import parse_match_name, team_names_by_color
+
+            self.assertEqual("Análise pós-jogo", app.selectbox(key="section").value)
+            self.assertEqual("Equipe", app.radio(key="review_view").value)
+            self.assertEqual(filename, app.selectbox(key="pos_match").value)
+            match = json.loads(selected_match_file().read_text(encoding="utf-8"))
+            names = team_names_by_color(match, parse_match_name(Path(filename)))
+            self.assertEqual(team_name, names[app.selectbox(key="review_team").value])
+
         try:
             run(
                 "Inicial com a visão geral",
                 check=lambda: self.assertEqual(
-                    "Visão geral",
+                    "Dashboard da pesquisa",
                     app.selectbox(key="section").value,
                 ),
             )
@@ -217,6 +239,40 @@ class AppIntegrationTests(unittest.TestCase):
             self.assertEqual(list(SECTIONS), sections)
             self.assertEqual(11, len(sections))
             report.append(f"Torneios disponíveis: {all_tournaments}")
+            check_dashboard()
+            run(
+                "Dashboard mostra falta de equipes acima do mínimo",
+                lambda: app.number_input(key="dashboard_minimum").set_value(100),
+                check_empty_dashboard_ranking,
+            )
+            run(
+                "Dashboard restaura o ranking e compara vitórias em partidas",
+                lambda: (
+                    app.number_input(key="dashboard_minimum").set_value(3),
+                    app.selectbox(key="dashboard_performance").select("Vitórias em partidas"),
+                ),
+                check_dashboard,
+            )
+            run(
+                "Dashboard aplica o recorte local de torneio",
+                lambda: app.selectbox(key="dashboard_tournament").select("Rush Series Inclusivo"),
+                lambda: check_dashboard(13, 7),
+            )
+            run(
+                "Dashboard restaura o recorte completo e a comparação por rounds",
+                lambda: (
+                    app.selectbox(key="dashboard_tournament").select("Todos os torneios selecionados"),
+                    app.selectbox(key="dashboard_performance").select("Vitórias em rounds"),
+                ),
+                check_dashboard,
+            )
+            dashboard_file = app.selectbox(key="dashboard_match").value
+            dashboard_team = app.selectbox(key="dashboard_team").value
+            run(
+                "Dashboard abre a partida e equipe indicadas no ranking",
+                lambda: app.button(key="dashboard_open_review").click(),
+                lambda: check_dashboard_review(dashboard_file, dashboard_team),
+            )
             for name in sections:
                 run(f"Seção {name}", lambda name=name: section(name))
 

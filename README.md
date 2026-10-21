@@ -16,6 +16,8 @@ python3.12 -m venv .venv
 
 O painel abre em <http://localhost:8501>. Se `data/` já contiver as partidas e os metadados, basta executar o último comando. A navegação e os filtros ficam no menu lateral. Cada análise explica os termos perto dos gráficos.
 
+A página inicial é o Dashboard da pesquisa. Ele reúne os achados, o ranking de equipes por lances únicos a revisar e sua comparação com o desempenho observado. O total de lances aparece junto da frequência por cem rounds. Você pode escolher o torneio, o mínimo de jogos e a referência por rounds ou por partidas, exportar o ranking e abrir uma equipe na análise pós-jogo. [docs/DASHBOARD.md](docs/DASHBOARD.md) registra os critérios e os resultados da base padrão.
+
 Os arquivos baixados ficam em `data/`, fora do Git. O download valida o JSON antes de gravar e também confere os arquivos existentes. O app só lê os metadados locais. Para atualizá-los, use o comando de metadados com `--download`.
 
 ## Entender o código
@@ -51,6 +53,8 @@ docs/LINGUAGEM.md          Critérios de escrita e fontes consultadas
 Para mudar um texto ou organizar uma tela, comece em `valorant/ui/sections/`. Para mudar a aparência de uma medida em várias tabelas, veja `presentation.py`. Para revisar uma conta, procure o assunto em `valorant/analysis/`.
 
 Os módulos de análise recebem tabelas ou identificadores de partidas. Eles podem ser usados fora do app. A interface entrega a seleção por `AppContext` e `AnalysisData`, sem depender de variáveis globais que mudam com os filtros. Os caches incluem a assinatura dos arquivos e a seleção de partidas. Só a tela escolhida executa suas análises.
+
+O dashboard usa `analysis/research.py` para reunir as mesmas observações da revisão pós-jogo e `analysis/rank_comparison.py` para comparar as ordenações. Os achados e o ranking são apresentados por `ui/research_findings.py` e `ui/research_ranking.py`. A primeira consulta calcula toda a seleção e as seguintes usam o cache.
 
 Os comandos antigos como `python economy.py` passaram a ser módulos, por exemplo `python -m valorant.analysis.economy`. A leitura de campos usa `python -m valorant.data.fields`. Execute esses comandos a partir da raiz do repositório.
 

@@ -1,4 +1,4 @@
-# Validação da análise pós-jogo
+# Validação do aplicativo
 
 Conferência feita em 20 de outubro de 2026, sobre a reorganização do commit `8e7fd39`.
 
@@ -35,6 +35,10 @@ A base completa tem 336 partidas, 6.618 rounds, 46.753 mortes, 411 jogadores e d
 O documento CONCLUSOES.md continua com as 15 seções da revisão anterior. Os 756 valores numéricos de suas 25 tabelas originais haviam sido conferidos após a reescrita. Esta etapa não recalculou nem alterou esse documento.
 
 ## Reproduzir as verificações
+
+A inclusão do Dashboard da pesquisa foi conferida com 91 testes aprovados na execução padrão, com 92 descobertos e a integração completa separada. Os 60 cenários de integração passaram com o código estável, cuja assinatura foi `a853f23878264670876188e1af86864922f051d29526f31ac29d0bf43580681a`. A integração inclui o mínimo de partidas, a seleção de torneio, as duas referências de desempenho e o acesso do ranking à partida e equipe corretas.
+
+No Chromium, o dashboard mostrou os números esperados, aplicou os filtros, tratou o ranking vazio e exportou as 59 equipes do recorte padrão. O acesso à análise pós-jogo abriu a equipe escolhida. Não houve erro de JavaScript e a largura móvel de 390 pixels não teve rolagem horizontal. Os resultados e limites estatísticos estão em `docs/DASHBOARD.md`.
 
 Após adicionar o botão Selecionar equipe aleatória, a execução padrão manteve os 80 testes aprovados. Uma conferência específica com AppTest verificou o sorteio entre partidas filtradas, a visão Equipe, a limpeza de lances anteriores e o envio dos valores dos seletores ao navegador. Também verificou três sorteios em um filtro com uma única partida, alternando as equipes, e o filtro vazio sem erro. Os 55 cenários completos descritos acima correspondem à versão anterior à adição desse botão.
 
