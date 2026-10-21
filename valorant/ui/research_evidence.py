@@ -32,29 +32,24 @@ def show_contrast(values, description):
 def show_review_comparisons(data, match_ids):
     st.subheader("Por que vale rever esses lances")
     st.write(
-        "As tabelas mostram o resultado dos rounds em que cada situação apareceu. "
-        "Elas ajudam a escolher o que observar no replay e incluem tanto vitórias quanto derrotas."
+        "Comparação do resultado dos rounds em que cada situação apareceu."
     )
     trades, collapses, advantage = st.tabs(["Primeira morte e troca", "Sequências sem resposta", "Vantagem numérica"])
     with trades:
         table, contrasts = first_death_comparison(data, match_ids)
-        display_table(table.rename(columns={"Casos": "Primeiras mortes"}), hide_index=True,
+        display_table(table.drop(columns="Com resultado").rename(columns={"Casos": "Primeiras mortes"}), hide_index=True,
                       percentage_columns=["Vitória da equipe"])
         st.write(
-            "A vitória é da equipe que sofreu a primeira morte. A troca acontece quando ela abate o autor "
-            "dessa morte em até cinco segundos, incluindo o mesmo instante. Há um aliado próximo quando "
-            "a distância registrada é de até 1000 unidades do jogo, cerca de dez metros. "
-            "Entram primeiras vítimas individuais com ao menos um aliado vivo e distância disponível."
+            "A chance de vitória considerada é da equipe que sofreu a primeira morte. A troca acontece quando "
+            "ela abate o autor dessa morte em até cinco segundos e há um aliado próximo quando a distância "
+            "registrada é de até 1000 unidades do jogo."
         )
         for label, contrast in contrasts:
             show_contrast(contrast, f"{label}, a diferença de vitórias entre com troca e sem troca foi de")
-        st.caption(
-            "A proximidade não verifica paredes ou linha de tiro. O contraste não iguala as equipes, "
-            "o equipamento ou todos os jogadores vivos, portanto não estima o ganho de obrigar uma troca."
-        )
+        st.caption("A proximidade não verifica paredes ou linha de tiro.")
     with collapses:
         table, contrast = pattern_round_comparison(data, match_ids, "collapse")
-        display_table(table.rename(columns={"Casos": "Rounds de equipe"}), hide_index=True,
+        display_table(table.drop(columns="Com resultado").rename(columns={"Casos": "Rounds de equipe"}), hide_index=True,
                       percentage_columns=["Vitória da equipe"])
         st.write(
             "A sequência reúne três jogadores diferentes mortos em até dez segundos, sem abate adversário "
@@ -65,7 +60,7 @@ def show_review_comparisons(data, match_ids):
         st.caption("O ponto de revisão é a sequência de contatos da equipe. O primeiro jogador morto não recebe a culpa pelas perdas seguintes.")
     with advantage:
         table, _ = pattern_round_comparison(data, match_ids, "numerical_advantage_lost")
-        display_table(table.rename(columns={"Casos": "Rounds de equipe"}), hide_index=True,
+        display_table(table.drop(columns="Com resultado").rename(columns={"Casos": "Rounds de equipe"}), hide_index=True,
                       percentage_columns=["Vitória da equipe"])
         flagged = table.iloc[0]
         st.write(
@@ -83,11 +78,6 @@ def show_review_comparisons(data, match_ids):
             "muito próximo da própria definição do resultado, por isso a diferença entre os grupos não "
             "mede quantos rounds uma decisão teria salvado."
         )
-    st.caption(
-        "Casos e partidas indicam a quantidade de informação em cada grupo. As taxas usam apenas resultados "
-        "conhecidos. Os intervalos das diferenças usam 500 reamostragens de partidas inteiras, preservando "
-        "as duas equipes. São associações retrospectivas, sem ajuste por adversário ou mapa."
-    )
 
 
 def show_equipment_context(scoped):
