@@ -566,19 +566,22 @@ def build_match_review(match, deaths, rounds=None, styles=None):
                 before, after = difference(alive_before_puuids(event)), difference(
                     alive_puuids(event)
                 )
+                # A perda só conta quando a equipe, depois de ter estado à frente, fica atrás. Igualar é uma troca, não uma perda.
+                was_ahead = advantage or before > 0
                 advantage |= before > 0 or after > 0
                 if (before < 0 or after < 0) and disadvantage is None:
                     disadvantage = event
                 if (
-                    previous_after is not None
-                    and previous_after > 0
-                    and before <= 0
+                    was_ahead
+                    and previous_after is not None
+                    and previous_after >= 0
+                    and before < 0
                     and lost is None
                 ):
-                    # Uma ressurreição pode remover a vantagem entre snapshots.
+                    # Uma ressurreição pode inverter a vantagem entre snapshots.
                     # Este evento permite localizar a observação, não a causa.
                     lost = event
-                elif before > 0 and after <= 0 and lost is None:
+                elif was_ahead and before >= 0 and after < 0 and lost is None:
                     lost = next(
                         (candidate for candidate in group if candidate["victim_team"] == team),
                         event,

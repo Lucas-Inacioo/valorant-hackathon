@@ -58,7 +58,8 @@ def show_review_comparisons(data, match_ids):
         show_contrast(contrast, "A diferença de vitórias entre com a sequência e sem ela foi de")
     with advantage:
         table, _ = pattern_round_comparison(data, match_ids, "numerical_advantage_lost")
-        display_table(table.drop(columns="Com resultado").rename(columns={"Casos": "Rounds de equipe"}), hide_index=True,
+        # A linha sem perda fica de fora porque quase repete o resultado do round
+        display_table(table.iloc[:1].drop(columns="Com resultado").rename(columns={"Casos": "Rounds de equipe"}), hide_index=True,
                       percentage_columns=["Vitória da equipe"])
         flagged = table.iloc[0]
         st.write(

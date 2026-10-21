@@ -273,9 +273,26 @@ class PostMatchTests(unittest.TestCase):
         lost = pattern(review, "Blue", "numerical_advantage_lost")
         self.assertEqual(1, lost.occurrences)
         self.assertEqual(0, lost.lost_round_count)
+        evidence = review.observations.query(
+            "pattern_id == 'numerical_advantage_lost' and team_id == 'Blue'"
+        ).iloc[0]
+        self.assertEqual(3000, evidence.time_ms, "The loss is the moment the team falls behind, not the tie")
         won = pattern(review, "Blue", "won_after_disadvantage")
         self.assertEqual(1, won.occurrences)
         self.assertTrue(won.positive)
+
+    def test_traded_advantage_that_only_ties_is_not_a_loss(self):
+        result = round_result(
+            [
+                kill("b1", "r1", 1000),
+                kill("r2", "b1", 2000, ["b2", "b3", "r2", "r3"]),
+                kill("b2", "r2", 3000, ["b2", "b3", "r3"]),
+            ]
+        )
+        review = build_match_review(match(result), details(result))
+        lost = pattern(review, "Blue", "numerical_advantage_lost")
+        self.assertEqual(1, lost.opportunities)
+        self.assertEqual(0, lost.occurrences)
 
     def test_advantage_loss_between_snapshots_keeps_first_evidence_after_revive(self):
         result = round_result(
