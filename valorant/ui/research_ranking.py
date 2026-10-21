@@ -135,9 +135,9 @@ def show_methods(team_matches, ranking, comparison, performance):
 def show_ranking(context, team_matches, tournament):
     st.subheader("Ranking das equipes por lances a revisar")
     st.write(
-        "Um lance é um evento com pelo menos um dos padrões de revisão. Quando três padrões apontam o mesmo evento "
-        "da mesma equipe, ele conta uma vez. Entram lances de rounds vencidos e perdidos. Acertos e condições como "
-        "equipamento inferior ficam fora dessa contagem."
+        "Um lance é um evento com pelo menos um dos padrões de revisão explicados acima. Quando três padrões apontam "
+        "o mesmo evento da mesma equipe, ele conta uma única vez. Acertos e condições como equipamento inferior "
+        "ficam fora dessa contagem."
     )
     first, second = st.columns(2)
     minimum = int(first.number_input("Mínimo de partidas por equipe", min_value=1, value=3, step=1, key="dashboard_minimum"))
