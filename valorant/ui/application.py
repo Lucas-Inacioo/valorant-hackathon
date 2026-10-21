@@ -61,6 +61,6 @@ def run() -> None:
     if active_section != "Dashboard da pesquisa":
         st.caption(
             f"A seleção contém {len(context.selected_matches)} partidas e "
-            f"{len(context.selected_rounds):,} rounds."
+            f"{len(context.selected_rounds)} rounds."
         )
     render_content(active_section, context)

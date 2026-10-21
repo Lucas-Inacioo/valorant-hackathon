@@ -51,7 +51,7 @@ def comparison_charts(ranking, performance):
         tooltip=[
             alt.Tooltip("team_name:N", title="Equipe"),
             alt.Tooltip("review_per_100:Q", title="Lances por 100 rounds", format=".1f"),
-            alt.Tooltip("matches:Q", title="Partidas"),
+            alt.Tooltip("matches:Q", title="Partidas", format=".0f"),
         ],
     ).properties(height=300)
     left.altair_chart(bars, width="stretch")
@@ -60,12 +60,13 @@ def comparison_charts(ranking, performance):
     points = alt.Chart(ranking).mark_circle(opacity=.75, color="#1f77b4").encode(
         x=alt.X("review_per_100:Q", title="Lances por 100 rounds"),
         y=alt.Y(f"{performance}:Q", title=y_label, scale=alt.Scale(domain=[0, 1]), axis=alt.Axis(format=".0%")),
-        size=alt.Size("matches:Q", title="Partidas", scale=alt.Scale(range=[35, 230])),
+        size=alt.Size("matches:Q", title="Partidas", scale=alt.Scale(range=[35, 230]),
+                      legend=alt.Legend(format=".0f")),
         tooltip=[
             alt.Tooltip("team_name:N", title="Equipe"),
             alt.Tooltip("review_per_100:Q", title="Lances por 100 rounds", format=".1f"),
-            alt.Tooltip("review_events:Q", title="Lances para rever"),
-            alt.Tooltip("matches:Q", title="Partidas"),
+            alt.Tooltip("review_events:Q", title="Lances para rever", format=".0f"),
+            alt.Tooltip("matches:Q", title="Partidas", format=".0f"),
             alt.Tooltip("round_win_rate:Q", title="Vitórias em rounds", format=".1%"),
             alt.Tooltip("match_win_rate:Q", title="Vitórias em partidas", format=".1%"),
         ],
@@ -87,8 +88,8 @@ def show_methods(team_matches, ranking, comparison, performance):
             "Empates de desempenho ficam fora. Uma concordância de 50% corresponde à referência de uma ordem aleatória."
         )
         st.caption(
-            f"Foram {comparison.comparable_pairs:,} pares comparáveis, {comparison.performance_ties:,} pares com "
-            f"desempenho empatado e {comparison.review_ties:,} empates de frequência entre os pares comparáveis. "
+            f"Foram {comparison.comparable_pairs} pares comparáveis, {comparison.performance_ties} pares com "
+            f"desempenho empatado e {comparison.review_ties} empates de frequência entre os pares comparáveis. "
             "Esses pares compartilham equipes e não são observações independentes."
         )
         st.write(

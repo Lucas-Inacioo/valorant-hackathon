@@ -90,7 +90,7 @@ def _show_summary(
     missed_column.metric(
         "Sem troca com aliado perto e olhando",
         display_number(1 - nearby_and_facing["trocada"].mean(), ".0%"),
-        help="Casos com um aliado a até 2.000 unidades do adversário e com o olhar voltado para ele.",
+        help="Casos com um aliado a até 2000 unidades do adversário e com o olhar voltado para ele.",
     )
     st.caption(
         "Entram mortes causadas por adversários com o round ainda em disputa. "
@@ -150,7 +150,7 @@ def _show_win_differences(deaths_with_allies: pd.DataFrame) -> None:
 def _show_nearby_ally_comparison(fights: pd.DataFrame) -> None:
     st.subheader("Aliado perto do adversário e troca observada")
     st.caption(
-        "Um aliado está perto quando fica a até 2.000 unidades do adversário que "
+        "Um aliado está perto quando fica a até 2000 unidades do adversário que "
         "fez o abate. O olhar está voltado para ele quando a diferença de direção "
         "é de até 45 graus. Distância e direção não mostram se havia uma parede, "
         "fumaça ou outra barreira ao tiro."

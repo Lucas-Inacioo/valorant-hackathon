@@ -185,7 +185,7 @@ def _show_player_positions(context: AppContext) -> None:
     attackers_column, watching_column, defense_column = st.columns(3)
     attackers_column.markdown("**Atacantes perto da spike**")
     attackers_column.caption(
-        "Quantidade a até 1.500 unidades da spike. Estar perto não garante estar dentro do site."
+        "Quantidade a até 1500 unidades da spike. Estar perto não garante estar dentro do site."
     )
     attackers_column.altair_chart(
         _defuse_comparison(
@@ -211,10 +211,10 @@ def _show_player_positions(context: AppContext) -> None:
     )
     defense_distances = defuse_by(setups, "faixa_defesa").rename(
         index={
-            "até 20 m": "até 2.000",
-            "20 a 35 m": "2.000 a 3.500",
-            "35 a 50 m": "3.500 a 5.000",
-            "50 m+": "mais de 5.000",
+            "até 20 m": "até 2000",
+            "20 a 35 m": "2000 a 3500",
+            "35 a 50 m": "3500 a 5000",
+            "50 m+": "mais de 5000",
         }
     )
     defense_column.altair_chart(
@@ -228,6 +228,6 @@ def _show_player_positions(context: AppContext) -> None:
     st.caption(
         "A tabela conta os atacantes vivos no instante do desarme e a distância "
         "do mais próximo. A distância central é a mediana, em unidades do jogo. "
-        "Também mostramos a frequência de casos sem atacante a até 1.500 unidades."
+        "Também mostramos a frequência de casos sem atacante a até 1500 unidades."
     )
     display_table(retake_summary(setups), width="content", container=st)

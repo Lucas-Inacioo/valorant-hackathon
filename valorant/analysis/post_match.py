@@ -43,13 +43,13 @@ class ReviewPattern:
 PATTERNS = {
     "isolated_death": ReviewPattern(
         "Morte longe do apoio",
-        "Morreu com aliado vivo, mas nenhum aliado estava a até 1.000 unidades de jogo. Essa distância corresponde a cerca de 10 metros e não considera paredes.",
+        "Morreu com aliado vivo, mas nenhum aliado estava a até 1000 unidades de jogo. Essa distância corresponde a cerca de 10 metros e não considera paredes.",
         "O jogador precisava fazer esse contato sozinho ou poderia esperar apoio?",
         "Mortes com aliado vivo e posição disponível",
     ),
     "away_from_group": ReviewPattern(
         "Morte longe do grupo",
-        "Morreu a mais de 1.000 unidades do aliado mais próximo enquanto pelo menos dois aliados ocupavam a mesma região do mapa.",
+        "Morreu a mais de 1000 unidades do aliado mais próximo enquanto pelo menos dois aliados ocupavam a mesma região do mapa.",
         "A separação tinha um objetivo combinado com a equipe?",
         "Mortes com ao menos dois aliados vivos e regiões identificadas",
     ),
@@ -61,14 +61,14 @@ PATTERNS = {
     ),
     "untraded_with_nearby_ally": ReviewPattern(
         "Sem troca com aliado perto",
-        "Havia aliado a até 2.000 unidades do autor do abate e olhando em sua direção, mas a equipe não o abateu em até 5 segundos. Paredes, visão e habilidades não são verificadas.",
+        "Havia aliado a até 2000 unidades do autor do abate e olhando em sua direção, mas a equipe não o abateu em até 5 segundos. Paredes, visão e habilidades não são verificadas.",
         "O aliado tinha visão e condições de trocar ou a posição apenas parecia próxima no mapa?",
         "Mortes com aliado vivo e proximidade e direção conhecidas",
         context_only=True,
     ),
     "nearby_ally_without_trade": ReviewPattern(
         "Aliado próximo de uma morte sem troca",
-        "Estava a até 2.000 unidades do adversário que matou um colega e olhando em sua direção, mas a equipe não o abateu em até 5 segundos. A geometria não verifica paredes, visão, habilidades ou condições de agir.",
+        "Estava a até 2000 unidades do adversário que matou um colega e olhando em sua direção, mas a equipe não o abateu em até 5 segundos. A geometria não verifica paredes, visão, habilidades ou condições de agir.",
         "O jogador tinha condições de ajudar o colega ou a posição parecia próxima apenas nas coordenadas?",
         "Mortes de colegas com o jogador vivo e posições e direção conhecidas",
         context_only=True,
@@ -108,7 +108,7 @@ PATTERNS = {
     ),
     "lower_starting_equipment": ReviewPattern(
         "Equipamento inicial inferior",
-        "O equipamento inicial da equipe valia mais de 5.000 créditos a menos que o do adversário. É uma condição do round e não um erro de compra identificado.",
+        "O equipamento inicial da equipe valia mais de 5000 créditos a menos que o do adversário. É uma condição do round e não um erro de compra identificado.",
         "O plano de jogo considerou a diferença de equipamento?",
         "Rounds com valor de equipamento conhecido para as duas equipes",
         context_only=True,

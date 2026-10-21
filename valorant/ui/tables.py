@@ -8,7 +8,7 @@ from valorant.analysis.first_blood import wilson_interval
 
 def display_number(value, spec=".1f", suffix=""):
     return (
-        format(value, spec).translate(str.maketrans({",": ".", ".": ","})) + suffix
+        format(value, spec.replace(",", "").replace("_", "")).replace(".", ",") + suffix
         if pd.notna(value)
         else "sem amostra"
     )

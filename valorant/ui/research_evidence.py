@@ -43,7 +43,7 @@ def show_review_comparisons(data, match_ids):
         st.write(
             "A vitória é da equipe que sofreu a primeira morte. A troca acontece quando ela abate o autor "
             "dessa morte em até cinco segundos, incluindo o mesmo instante. Há um aliado próximo quando "
-            "a distância registrada é de até 1.000 unidades do jogo, cerca de dez metros. "
+            "a distância registrada é de até 1000 unidades do jogo, cerca de dez metros. "
             "Entram primeiras vítimas individuais com ao menos um aliado vivo e distância disponível."
         )
         for label, contrast in contrasts:
@@ -74,7 +74,7 @@ def show_review_comparisons(data, match_ids):
             "ela deixa de existir nos instantes disponíveis, inclusive após ressurreições."
         )
         st.write(
-            f"A equipe ainda venceu {int(flagged['Vitórias']):,} dos {int(flagged['Com resultado']):,} "
+            f"A equipe ainda venceu {int(flagged['Vitórias'])} dos {int(flagged['Com resultado'])} "
             f"rounds com perda da vantagem, ou {percent(flagged['Vitória da equipe'])}. "
             "Esses exemplos podem mostrar recuperação e também decisões que merecem revisão."
         )
@@ -195,7 +195,7 @@ def show_examples(data, match_ids):
         selected = st.selectbox("Lance para abrir", list(examples), format_func=label, key="dashboard_example")
         row = examples[selected]
         st.write(PATTERNS[pattern].question)
-        st.caption(f"Há {len(chosen):,} ocorrências desta equipe em {chosen['match_id'].nunique():,} partidas neste filtro. Um round pode ter mais de uma ocorrência.")
+        st.caption(f"Há {len(chosen)} ocorrências desta equipe em {chosen['match_id'].nunique()} partidas neste filtro. Um round pode ter mais de uma ocorrência.")
         st.button("Rever este lance", key="dashboard_open_example", on_click=open_dashboard_evidence,
                   args=(row["arquivo"], row))
 

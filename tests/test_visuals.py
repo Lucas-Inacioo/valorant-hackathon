@@ -215,15 +215,15 @@ class PresentationRegressionTests(unittest.TestCase):
         from unittest.mock import Mock
         from valorant.ui.presentation import display_table
 
-        table = pd.DataFrame({("colapsos", "ataque"): [5, 8], ("venceu", "ataque"): [0.25, 0.5]})
+        table = pd.DataFrame({("colapsos", "ataque"): [2972, 3565], ("venceu", "ataque"): [0.25, 0.5]})
         before = table.copy(deep=True)
         receiver = Mock()
         display_table(table, container=receiver)
         shown = receiver.dataframe.call_args.args[0]
         config = receiver.dataframe.call_args.kwargs["column_config"]
-        self.assertEqual([5, 8], shown.iloc[:, 0].tolist())
+        self.assertEqual([2972, 3565], shown.iloc[:, 0].tolist())
         self.assertEqual([0.25, 0.5], shown.iloc[:, 1].tolist())
-        self.assertNotIn(shown.columns[0], config)
+        self.assertEqual("plain", config[shown.columns[0]]["type_config"]["format"])
         self.assertEqual("percent", config[shown.columns[1]]["type_config"]["format"])
         pd.testing.assert_frame_equal(table, before)
 

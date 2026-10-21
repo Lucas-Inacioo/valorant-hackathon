@@ -166,7 +166,7 @@ COVERAGE_LABELS = {
 
 
 def format_count(value):
-    return f"{value:,}".replace(",", ".")
+    return str(value)
 
 
 def format_percent(value):
@@ -324,7 +324,7 @@ def isolation_section(data):
     return [
         "## 2. Distância dos aliados",
         "Uma morte fica no grupo sem aliado próximo quando o aliado vivo mais próximo está a mais "
-        "de 1.000 unidades do jogo. A conversão aproximada é de dez metros, mas essa escala não foi "
+        "de 1000 unidades do jogo. A conversão aproximada é de dez metros, mas essa escala não foi "
         "validada nestes arquivos. Se não há aliado vivo, a distância fica sem valor. A tabela usa "
         "somente a primeira vítima identificada de cada round.",
         markdown_table(
@@ -535,7 +535,7 @@ def agent_role_section(data):
 def geometry_section(data):
     return [
         "## 10. Distância e direção dos aliados nas trocas",
-        "O teste procura um aliado a até 2.000 unidades do jogo e verifica se sua direção está a "
+        "O teste procura um aliado a até 2000 unidades do jogo e verifica se sua direção está a "
         "até 45 graus da direção do autor do abate. Proximidade e direção compatíveis significam "
         "apenas que essas duas condições foram atendidas.",
         markdown_table(trade_possibility_summary(data.fights, ["lado"])),

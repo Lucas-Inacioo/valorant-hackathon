@@ -29,7 +29,7 @@ def show_match_details(selection: PostMatchSelection):
         )
         st.markdown("**Mortes, isolamento e trocas por round**")
         st.caption(
-            "O isolamento usa o limite de 1.000 unidades do jogo, cerca de 10 metros. Essa conversão é aproximada. Trocas contam abates do autor da morte em até cinco segundos, incluindo o mesmo instante."
+            "O isolamento usa o limite de 1000 unidades do jogo, cerca de 10 metros. Essa conversão é aproximada. Trocas contam abates do autor da morte em até cinco segundos, incluindo o mesmo instante."
         )
         deaths = app.data.match_table(match_id, "deaths")
         scoped = with_solo_flag(deaths[deaths["match_id"] == match_id], SOLO_DISTANCE)

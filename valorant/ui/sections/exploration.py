@@ -42,7 +42,7 @@ def render(context: AppContext) -> None:
     )
     display_table(sniper_table, hide_index=True, width="content", container=sniper_column)
     st.caption(
-        "As distâncias vêm em unidades do jogo. Consideramos longa distância a partir de 2.500 unidades e curta até 1.000. A aproximação de 100 unidades por metro não foi validada."
+        "As distâncias vêm em unidades do jogo. Consideramos longa distância a partir de 2500 unidades e curta até 1000. A aproximação de 100 unidades por metro não foi validada."
     )
     st.subheader("Dano recebido e causado ao longo do round")
     st.caption(

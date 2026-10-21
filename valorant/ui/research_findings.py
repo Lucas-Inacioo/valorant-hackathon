@@ -37,15 +37,15 @@ def show_findings(data, match_ids):
     flagged = round_groups["collapsed"].eq(True)
     first, second, third = st.columns(3)
     first.metric("Vitória de quem fez o primeiro abate", percent(openings["abriu_venceu"].mean()))
-    first.caption(f"Em {len(openings):,} rounds")
+    first.caption(f"Em {len(openings)} rounds")
     second.metric("Troca quando há aliado próximo", percent(near["trocada"].mean()))
     second.caption(
-        f"Entre {len(near):,} primeiras mortes com aliado próximo. Nas {len(far):,} distantes, "
+        f"Entre {len(near)} primeiras mortes com aliado próximo. Nas {len(far)} distantes, "
         f"a taxa foi {percent(far['trocada'].mean())}. Troca é abater o autor em até cinco segundos."
     )
     third.metric("Vitória após três perdas sem resposta", percent(round_groups.loc[flagged, "won_round"].mean()))
     third.caption(
-        f"Foram {int(flagged.sum()):,} rounds com três pessoas diferentes da mesma equipe mortas em até dez "
+        f"Foram {int(flagged.sum())} rounds com três pessoas diferentes da mesma equipe mortas em até dez "
         "segundos, sem abater adversários nesse intervalo."
     )
     with st.expander("Entender a proximidade e a troca"):
@@ -57,7 +57,7 @@ def show_findings(data, match_ids):
         ])
         display_table(table, hide_index=True, percentage_columns=["Troca em até 5 s", "Vitória da equipe"])
         st.write(
-            "O limite de proximidade é de 1.000 unidades do jogo, cerca de dez metros por uma conversão "
+            "O limite de proximidade é de 1000 unidades do jogo, cerca de dez metros por uma conversão "
             "aproximada. Há pelo menos um aliado vivo e posição disponível. A distância não verifica "
             "paredes ou visão. A comparação inclui somente primeiras vítimas individuais identificadas."
         )

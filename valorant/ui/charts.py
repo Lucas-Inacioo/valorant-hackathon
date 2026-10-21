@@ -94,7 +94,7 @@ def rate_chart(
     )
     tooltip = [
         _tooltip(category_column),
-        _tooltip(count_column, "Q", number_format=",.0f"),
+        _tooltip(count_column, "Q", number_format=".0f"),
         _tooltip(rate_column, "Q", title=x_title, number_format=".1%"),
         _tooltip("ic95_baixo", "Q", number_format=".1%"),
         _tooltip("ic95_alto", "Q", number_format=".1%"),
@@ -138,7 +138,7 @@ def rate_chart(
         color=alt.value("#4a4a4a"),
     )
     counts = data[count_column].map(
-        lambda count: f"{count:,.0f}".replace(",", ".") if pd.notna(count) else "sem amostra"
+        lambda count: f"{count:.0f}" if pd.notna(count) else "sem amostra"
     )
     data["rotulo_contagem"] = (
         counts if not group_column else data[group_column].str.cat(counts, sep=" ")
@@ -207,7 +207,7 @@ def dumbbell_chart(
         _tooltip("valor", "Q", title=x_title, number_format=".1%"),
     ]
     if count_column:
-        tooltip.append(_tooltip(count_column, "Q", number_format=",.0f"))
+        tooltip.append(_tooltip(count_column, "Q", number_format=".0f"))
     lines = (
         alt.Chart(data)
         .mark_rule(color="#b0b0b0", strokeWidth=2)
@@ -289,7 +289,7 @@ def heatmap_chart(rates, counts, x_title, y_title, color_title):
                 _tooltip("linha", title=y_title),
                 _tooltip("coluna", title=x_title),
                 _tooltip("taxa", "Q", title=color_title, number_format=".1%"),
-                _tooltip("n", "Q", title="Casos nesta combinação", number_format=",.0f"),
+                _tooltip("n", "Q", title="Casos nesta combinação", number_format=".0f"),
             ],
         )
     )
@@ -332,7 +332,7 @@ def difference_heatmap(by_situation, side, color_title):
             tooltip=[
                 _tooltip("aliados", "Q", title="Aliados vivos"),
                 _tooltip("inimigos", "Q", title="Adversários vivos"),
-                _tooltip("mortes", "Q", number_format=",.0f"),
+                _tooltip("mortes", "Q", number_format=".0f"),
                 _tooltip("sem", "Q", number_format=".1%"),
                 _tooltip("com", "Q", number_format=".1%"),
                 _tooltip("diferenca_rotulo", title="Diferença em pontos percentuais"),
@@ -401,7 +401,7 @@ def share_chart(shares, counts, part_colors, x_title):
                 _tooltip("categoria", title=category_title),
                 _tooltip("parte", title=part_title),
                 _tooltip("fracao", "Q", title="Parte dos rounds deste grupo", number_format=".1%"),
-                _tooltip("casos", "Q", title="Rounds neste grupo", number_format=",.0f"),
+                _tooltip("casos", "Q", title="Rounds neste grupo", number_format=".0f"),
             ],
         )
     )
@@ -491,10 +491,11 @@ def team_scatter(profiles, x_column, y_column, size_column, x_title, y_title):
         .encode(
             x=x,
             y=y,
-            size=alt.Size(field=size_column, type="quantitative", title=field_label(size_column)),
+            size=alt.Size(field=size_column, type="quantitative", title=field_label(size_column),
+                          legend=alt.Legend(format=".0f")),
             tooltip=[
                 _tooltip("time"),
-                _tooltip(size_column, "Q", number_format=",.0f"),
+                _tooltip(size_column, "Q", number_format=".0f"),
                 _tooltip(x_column, "Q", title=x_title, number_format=".1%"),
                 _tooltip(y_column, "Q", title=y_title, number_format=".1%"),
             ],
@@ -514,7 +515,7 @@ def quantile_band_chart(per_round):
     if per_round.empty:
         return empty_chart()
     base = alt.Chart(per_round.reset_index()).encode(x=alt.X("round:O", title=field_label("round")))
-    tooltip = [_tooltip("round", "O"), _tooltip("rounds", "Q", number_format=",.0f")]
+    tooltip = [_tooltip("round", "O"), _tooltip("rounds", "Q", number_format=".0f")]
     tooltip += [
         _tooltip(column, "Q", title=f"{field_label(column)} em segundos", number_format=".1f")
         for column in ("p10", "p25", "mediana", "p75", "p90", "media", "desvio_padrao")
@@ -549,7 +550,7 @@ def opening_impact_chart(by_map):
         data[f"{column}_rotulo"] = data[column].map(_point_difference)
     tooltip = [
         _tooltip("mapa"),
-        _tooltip("rounds", "Q", number_format=",.0f"),
+        _tooltip("rounds", "Q", number_format=".0f"),
         _tooltip("ataque_vence_se_abre", "Q", number_format=".1%"),
         _tooltip("ataque_vence_se_defesa_abre", "Q", number_format=".1%"),
         _tooltip("impacto_da_abertura_rotulo", title="Diferença em pontos percentuais"),

@@ -294,7 +294,7 @@ def _show_next_equipment_and_post_plant(
             next_equipment.rename_axis(index="sobreviventes"),
             [WON_COLOR, LOST_COLOR],
             "valor do equipamento inicial em créditos",
-            ",.0f",
+            ".0f",
         ),
         width="stretch",
     )

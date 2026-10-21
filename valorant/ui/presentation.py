@@ -274,11 +274,11 @@ FIELD_LABELS.update(
         "categoria_vitima": "Tipo da arma inicial da vítima",
         "dist_mediana": "Distância mediana do autor do abate em unidades",
         "dist_killer": "Distância mediana do autor do abate em unidades",
-        "duelo_longo": "Mortes a partir de 2.500 unidades",
+        "duelo_longo": "Mortes a partir de 2500 unidades",
         "mortes_arma_curta": "Mortes com submetralhadora ou escopeta inicial",
-        "em_duelo_longo": "Mortes a partir de 2.500 unidades",
+        "em_duelo_longo": "Mortes a partir de 2500 unidades",
         "mortes_sniper": "Mortes com fuzil de precisão inicial",
-        "em_duelo_curto": "Mortes até 1.000 unidades",
+        "em_duelo_curto": "Mortes até 1000 unidades",
         "sem_dano_no_autor": "Mortes sem dano no autor durante o round",
         "multiplas_fontes_dano_round": "Casos com dano de mais de um adversário no round",
         "loadout_vitima": "Valor do equipamento inicial da vítima",
@@ -297,7 +297,7 @@ FIELD_LABELS.update(
         "atacantes_vivos_no_defuse": "Atacantes vivos no desarme",
         "defuses": "Desarmes",
         "mais_proximo_mediano": "Distância mediana do atacante mais próximo em unidades",
-        "ninguem_a_15_m": "Desarmes sem atacante em até 1.500 unidades",
+        "ninguem_a_15_m": "Desarmes sem atacante em até 1500 unidades",
         "count": "Registros",
         "mean": "Média",
         "std": "Desvio padrão",
@@ -380,6 +380,10 @@ def display_table(table, *, container=st, column_config=None, percentage_columns
         if is_fraction and pd.api.types.is_float_dtype(table[column]):
             config[field_label(column)] = st.column_config.NumberColumn(
                 format="percent", help=FIELD_HELP.get(rate_key)
+            )
+        elif pd.api.types.is_numeric_dtype(table[column]) and not pd.api.types.is_bool_dtype(table[column]):
+            config[field_label(column)] = st.column_config.NumberColumn(
+                format="plain", help=FIELD_HELP.get(column)
             )
         elif column in FIELD_HELP:
             config[field_label(column)] = st.column_config.NumberColumn(help=FIELD_HELP[column])
