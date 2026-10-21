@@ -36,6 +36,8 @@ O documento CONCLUSOES.md continua com as 15 seções da revisão anterior. Os 7
 
 ## Reproduzir as verificações
 
+A inclusão dos cruzamentos no dashboard passou por 98 testes na execução padrão, com 99 descobertos e a integração completa separada. As verificações novas cobrem os denominadores de troca, rounds únicos, a exigência de vantagem observada, resultados ausentes, o cálculo da referência por vivos no recorte e a restauração dos filtros ao voltar de um exemplo. O Chromium conferiu os painéis de contexto, um exemplo de round vencido no evento correto, o retorno ao torneio selecionado e a largura móvel de 390 pixels, sem erros de JavaScript. A integração completa inclui também os valores da seleção padrão e os contextos filtrados por torneio. Os critérios e resultados estão em `docs/DASHBOARD.md`.
+
 A inclusão do Dashboard da pesquisa foi conferida com 91 testes aprovados na execução padrão, com 92 descobertos e a integração completa separada. Os 60 cenários de integração passaram com o código estável, cuja assinatura foi `a853f23878264670876188e1af86864922f051d29526f31ac29d0bf43580681a`. A integração inclui o mínimo de partidas, a seleção de torneio, as duas referências de desempenho e o acesso do ranking à partida e equipe corretas.
 
 No Chromium, o dashboard mostrou os números esperados, aplicou os filtros, tratou o ranking vazio e exportou as 59 equipes do recorte padrão. O acesso à análise pós-jogo abriu a equipe escolhida. Não houve erro de JavaScript e a largura móvel de 390 pixels não teve rolagem horizontal. Os resultados e limites estatísticos estão em `docs/DASHBOARD.md`.

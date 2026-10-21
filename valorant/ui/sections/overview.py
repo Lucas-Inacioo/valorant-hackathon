@@ -5,6 +5,7 @@ import streamlit as st
 from valorant.ui.context import AppContext
 from valorant.ui.presentation import display_table
 from valorant.ui.research_findings import decimal, show_findings
+from valorant.ui.research_evidence import show_evidence_context
 from valorant.ui.research_ranking import show_ranking
 
 ALL_TOURNAMENTS = "Todos os torneios selecionados"
@@ -40,6 +41,7 @@ def render(context: AppContext) -> None:
         "permanecem separados e um mesmo nome pode ter mudanças de elenco ao longo da base."
     )
     show_findings(data, match_ids)
+    show_evidence_context(context, data, match_ids)
     show_ranking(context, teams, tournament)
     st.caption(
         "As observações ajudam a escolher lances para rever. A base registra instantes, sem trajetória contínua "

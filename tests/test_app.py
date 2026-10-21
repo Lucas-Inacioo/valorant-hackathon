@@ -225,6 +225,42 @@ class AppIntegrationTests(unittest.TestCase):
             names = team_names_by_color(match, parse_match_name(Path(filename)))
             self.assertEqual(team_name, names[app.selectbox(key="review_team").value])
 
+        def check_evidence_tables():
+            tables = [frame.value for frame in app.dataframe]
+            trade = next(table for table in tables if "Primeira morte" in table)
+            self.assertEqual([907, 2065, 406, 3159], trade["Primeiras mortes"].tolist())
+            advantage = next(table for table in tables if "Situação" in table and "Perdeu a vantagem" in table["Situação"].tolist())
+            self.assertEqual([5562, 3545], advantage["Rounds de equipe"].tolist())
+            self.assertEqual(3040, advantage.iloc[0]["Vitórias"])
+
+        def check_evidence_context():
+            tables = [frame.value for frame in app.dataframe]
+            postplant = next(table for table in tables if "No instante do desarme" in table)
+            self.assertEqual([1246, 103, 0], postplant["Desarmes"].tolist())
+            plants = next(table for table in tables if "Momento do plant" in table)
+            self.assertEqual([1976, 2460], plants["Plants"].tolist())
+            self.assertTrue(any("Equipamento da equipe menos o adversário" in table for table in tables))
+            self.assertTrue(any("Equipamento inicial médio no seguinte" in table for table in tables))
+
+        def check_scoped_evidence():
+            check_dashboard(13, 7)
+            tables = [frame.value for frame in app.dataframe]
+            for column in ["Primeira morte", "No instante do desarme", "Momento do plant"]:
+                table = next(table for table in tables if column in table)
+                self.assertTrue(table["Partidas"].le(13).all(), column)
+
+        def open_evidence_panels():
+            for key in ["dashboard_equipment", "dashboard_postplant", "dashboard_examples"]:
+                app.session_state[key] = True
+
+        def check_dashboard_example():
+            self.assertEqual("Análise pós-jogo", app.selectbox(key="section").value)
+            self.assertEqual("Lances", app.radio(key="review_view").value)
+            focus = app.session_state["review_event_focus"]
+            self.assertEqual(focus["round"] - 1, app.selectbox(key="pos_round").value)
+            check_event_selection(focus["event_index"], len(event_buttons()))
+            self.assertEqual("Voltar para o dashboard", app.button(key="review_return").label)
+
         try:
             run(
                 "Inicial com a visão geral",
@@ -240,6 +276,17 @@ class AppIntegrationTests(unittest.TestCase):
             self.assertEqual(11, len(sections))
             report.append(f"Torneios disponíveis: {all_tournaments}")
             check_dashboard()
+            check_evidence_tables()
+            run("Dashboard carrega equipamento e pós-plant no recorte completo", open_evidence_panels, check_evidence_context)
+            run("Dashboard abre um exemplo no round e evento corretos",
+                lambda: app.button(key="dashboard_open_example").click(), check_dashboard_example)
+            run("Exemplo retorna ao dashboard de origem", lambda: app.button(key="review_return").click(), check_dashboard)
+            run("Dashboard oferece exemplos de rounds vencidos",
+                lambda: app.selectbox(key="dashboard_example_outcome").select("Rounds vencidos"),
+                lambda: self.assertTrue(app.button(key="dashboard_open_example")))
+            run("Exemplo de round vencido abre no evento indicado",
+                lambda: app.button(key="dashboard_open_example").click(), check_dashboard_example)
+            run("Exemplo vencedor retorna ao dashboard", lambda: app.button(key="review_return").click(), check_dashboard)
             run(
                 "Dashboard mostra falta de equipes acima do mínimo",
                 lambda: app.number_input(key="dashboard_minimum").set_value(100),
@@ -256,7 +303,7 @@ class AppIntegrationTests(unittest.TestCase):
             run(
                 "Dashboard aplica o recorte local de torneio",
                 lambda: app.selectbox(key="dashboard_tournament").select("Rush Series Inclusivo"),
-                lambda: check_dashboard(13, 7),
+                check_scoped_evidence,
             )
             run(
                 "Dashboard restaura o recorte completo e a comparação por rounds",

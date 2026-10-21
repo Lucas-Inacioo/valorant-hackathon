@@ -293,7 +293,7 @@ def show_fight_context(selection: PostMatchSelection, recorded: RecordedRound, e
 def show_evidence(selection: PostMatchSelection):
     origin = evidence_origin(selection)
     if origin:
-        label = (
+        label = "Voltar para o dashboard" if origin["state"].get("section") == "Dashboard da pesquisa" else (
             "Voltar para a análise do jogador"
             if origin["state"]["review_view"] == "Jogadores"
             else "Voltar para a análise da equipe"

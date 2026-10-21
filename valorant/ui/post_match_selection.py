@@ -143,7 +143,7 @@ def return_from_evidence(selection):
             st.session_state[key] = value
 
 
-def _open_evidence(selection, pattern_id, player_id, round_number, observation=None):
+def _open_evidence(match_id, pattern_id, player_id, round_number, observation=None):
     event_index = 0
     if observation is not None:
         round_number = int(observation["round"])
@@ -158,7 +158,7 @@ def _open_evidence(selection, pattern_id, player_id, round_number, observation=N
     st.session_state["pos_round"] = round_number - 1
     st.session_state["review_jump_serial"] = st.session_state.get("review_jump_serial", 0) + 1
     st.session_state["review_event_focus"] = {
-        "match_id": selection.match_id,
+        "match_id": match_id,
         "round": round_number,
         "event_index": event_index,
     }
@@ -168,7 +168,7 @@ def jump_to_occurrence(selection, pattern_id, player_id, observation_id):
     chosen = matching_occurrences(selection, pattern_id, player_id)
     chosen = chosen[chosen["observation_id"] == observation_id]
     if not chosen.empty:
-        _open_evidence(selection, pattern_id, player_id, 1, chosen.iloc[0])
+        _open_evidence(selection.match_id, pattern_id, player_id, 1, chosen.iloc[0])
 
 
 def jump_to_evidence(
@@ -189,4 +189,28 @@ def jump_to_evidence(
     if round_number is not None:
         chosen = chosen[chosen["round"] == round_number]
     first = chosen.iloc[0] if not chosen.empty else None
-    _open_evidence(selection, pattern_id, player_id, round_number or 1, first)
+    _open_evidence(selection.match_id, pattern_id, player_id, round_number or 1, first)
+
+
+def open_dashboard_evidence(filename, observation):
+    """Abre exatamente o exemplo do dashboard e permite voltar ao mesmo recorte."""
+    match_id, team_id = observation["match_id"], observation["team_id"]
+    st.session_state["section"] = "Análise pós-jogo"
+    st.session_state["pos_match"] = filename
+    st.session_state["review_team"] = team_id
+    # A seleção já foi validada no recorte do dashboard, antes da navegação.
+    st.session_state["review_scope"] = (match_id, team_id)
+    dashboard_keys = [
+        "dashboard_tournament", "dashboard_minimum", "dashboard_performance",
+        "dashboard_team", "dashboard_match", "dashboard_equipment", "dashboard_postplant",
+        "dashboard_examples", "dashboard_example_pattern", "dashboard_example_outcome", "dashboard_example",
+        "dashboard_example_team",
+    ]
+    st.session_state["review_return_to"] = {
+        "scope": (match_id, team_id),
+        "state": {
+            **{key: st.session_state[key] for key in dashboard_keys if key in st.session_state},
+            "section": "Dashboard da pesquisa", "review_view": "Equipe",
+        },
+    }
+    _open_evidence(match_id, observation["pattern_id"], ALL_PLAYERS, 1, observation)

@@ -49,9 +49,36 @@ Nas primeiras mortes individuais com aliado vivo e distância disponível, a tro
 
 Em 2.850 rounds de equipe houve três mortes de pessoas diferentes em até dez segundos sem abate adversário pela equipe no intervalo. A equipe venceu 6,5% desses rounds. Esse número descreve a sequência observada e não atribui culpa individual.
 
+## Comparações para orientar a revisão
+
+O painel também cruza as análises já existentes nas outras abas. Não foram coletados novos dados, alterados os arquivos das partidas ou treinados modelos adicionais. Todas as tabelas acompanham os filtros laterais e o recorte local de torneio.
+
+A primeira comparação separa primeiras mortes individuais por proximidade do aliado e troca efetivamente registrada. A vitória é sempre da equipe da vítima.
+
+| Primeira morte | Resposta | Casos | Vitórias | Taxa de vitória |
+| --- | --- | --- | --- | --- |
+| Com aliado próximo | Com troca | 907 | 398 | 43,9% |
+| Com aliado próximo | Sem troca | 2.065 | 457 | 22,1% |
+| Longe dos aliados | Com troca | 406 | 195 | 48,0% |
+| Longe dos aliados | Sem troca | 3.159 | 828 | 26,2% |
+
+A diferença com troca menos sem troca é de 21,8 pontos percentuais nos dois grupos, com arredondamento. Os intervalos de 95% são de 18,7 a 25,0 pontos no grupo próximo e de 17,2 a 25,6 no distante. Eles usam a função existente `cluster_contrast`, com 500 reamostragens de partidas inteiras e semente zero. Essa separação não controla equipamento, equipe ou todos os jogadores vivos e não demonstra o ganho causal de executar uma troca.
+
+A sequência de três perdas sem resposta aparece em 2.850 rounds de equipe, com 184 vitórias e 2.666 derrotas. Nos 10.326 rounds sem essa sequência registrada houve 6.404 vitórias, ou 62,0%. O grupo de referência inclui rounds sem três mortes próximas, por isso não significa três mortes equivalentes que receberam resposta. A diferença bruta de vitórias é de menos 55,6 pontos, com intervalo de menos 56,6 a menos 54,4 pontos. A sequência não atribui culpa ao primeiro jogador morto.
+
+A comparação de vantagem numérica se limita aos 9.107 rounds de equipe com vantagem observada. Em 5.562 houve perda dessa vantagem, mas a equipe ainda venceu 3.040, ou 54,7%. Nos 3.545 sem perda registrada houve 3.520 vitórias, ou 99,3%. A proximidade deste último grupo com a definição do resultado impede interpretar a diferença como rounds que uma decisão teria salvado. Os instantes registrados também não garantem vantagem mantida continuamente.
+
+Dois painéis de contexto são calculados ao abrir. O primeiro reutiliza a vitória por diferença de equipamento inicial e o equipamento e resultado do round seguinte às derrotas, separados por sobreviventes. As transições excluem a passagem de metade, a prorrogação e rounds sem seguinte consecutivo. Valores iniciais não equivalem ao gasto ou ao valor perdido em uma morte. Os grupos mostram as próprias contagens, inclusive quando pequenos.
+
+O segundo painel mostra os 1.349 desarmes de plants válidos. Em 1.246 havia zero atacantes vivos e em 103 havia pelo menos um. Os 92,4% são a fração dos desarmes com zero atacantes vivos, não a probabilidade de desarme depois da morte do último atacante.
+
+Nesse mesmo painel, os 1.976 plants até 40 segundos e os 2.460 posteriores são comparados com a vitória média de plants com as mesmas quantidades de atacantes e defensores vivos. A referência é recalculada no recorte selecionado e usa os próprios rounds. A diferença para ela é de aproximadamente mais 0,2 e menos 0,2 pontos percentuais, respectivamente, apesar da diferença bruta de cerca de 6,5 pontos entre tempos. Isso descreve a composição dos grupos e não valida acelerar o plant como intervenção.
+
+O painel de exemplos permite escolher o padrão, a equipe e rounds vencidos ou perdidos, abrir a partida no evento selecionado e voltar ao dashboard com o recorte e as escolhas anteriores. A escolha da equipe mantém a lista de eventos curta. Os identificadores combinam partida e ocorrência, pois o identificador da ocorrência sozinho pode se repetir entre jogos.
+
 ## Código e verificações
 
-`valorant/analysis/research.py` prepara as contagens. `rank_comparison.py` compara as ordenações e calcula os intervalos. A interface fica em `ui/research_findings.py`, `ui/research_ranking.py` e `ui/sections/overview.py`.
+`valorant/analysis/research.py` prepara as contagens. `rank_comparison.py` compara as ordenações e calcula os intervalos. `review_evidence.py` organiza os cruzamentos por troca, sequência, vantagem e plant. A interface fica em `ui/research_findings.py`, `ui/research_evidence.py`, `ui/research_ranking.py` e `ui/sections/overview.py`.
 
 Os testes conferem sobreposição de padrões, rounds únicos, inclusão de vitórias na revisão, bases de exposição, resultados ausentes, empates, orientação do coeficiente e reamostragem por partida. A integração confere os filtros, os recortes sem equipes suficientes, a troca da referência de desempenho e a abertura da equipe e partida corretas na análise pós-jogo. A exportação inclui o ranking completo do recorte.
 
