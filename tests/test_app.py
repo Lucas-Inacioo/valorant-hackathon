@@ -237,7 +237,7 @@ class AppIntegrationTests(unittest.TestCase):
         def check_evidence_context():
             tables = [frame.value for frame in app.dataframe]
             postplant = next(table for table in tables if "No instante do desarme" in table)
-            self.assertEqual([1246, 103, 0], postplant["Desarmes"].tolist())
+            self.assertEqual([1246, 103], postplant["Desarmes"].tolist())
             plants = next(table for table in tables if "Momento do plant" in table)
             self.assertEqual([1976, 2460], plants["Plants"].tolist())
             self.assertTrue(any("Equipamento da equipe menos o adversário" in table for table in tables))

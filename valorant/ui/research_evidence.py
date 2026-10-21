@@ -88,8 +88,7 @@ def show_equipment_context(scoped):
         }), hide_index=True, percentage_columns=["Vitória da equipe"])
         st.write(
             "O valor soma o equipamento inicial dos cinco jogadores. A diferença compara as duas equipes "
-            "em créditos e a letra k significa mil. Esse valor não é o gasto do round nem o valor perdido "
-            "numa morte. Antes de avaliar um lance, veja se as equipes começaram com recursos parecidos."
+            "em créditos e a letra k significa mil."
         )
         st.markdown("**O que aconteceu depois dos rounds perdidos**")
         following = save_effect(rounds).reset_index().rename(columns={
@@ -100,10 +99,8 @@ def show_equipment_context(scoped):
         })
         display_table(following, hide_index=True, percentage_columns=["Vitória no round seguinte"])
         st.caption(
-            "Entram derrotas com round consecutivo disponível, sem passagem de metade ou prorrogação. "
-            "Sobreviventes são os jogadores vivos ao final. Grupos pequenos aparecem com sua contagem. "
-            "As médias não demonstram que guardar uma arma causou a diferença, pois os grupos já "
-            "podiam ter equipamento e força diferentes."
+            "Não considerados rounds de troca de lados ou prorrogação. As médias não demonstram que "
+            "guardar uma arma causou a diferença, pois os grupos já podiam ter equipamento e força diferentes."
         )
 
 
@@ -113,16 +110,13 @@ def show_postplant_context(scoped):
         return
     with panel:
         st.markdown("**Quem ainda estava vivo quando a spike foi desarmada**")
-        display_table(defuse_survival_comparison(scoped.setups()), hide_index=True,
+        survival = defuse_survival_comparison(scoped.setups())
+        display_table(survival[survival["No instante do desarme"].ne("Sem informação de vivos")], hide_index=True,
                       percentage_columns=["Fração dos desarmes"])
         st.write(
-            "Pós-plant é o período depois de plantar a spike. A tabela conta somente plants válidos "
-            "que terminaram em desarme e usa os atacantes registrados naquele instante. Ela ajuda a "
-            "escolher entre rever as mortes anteriores e rever a posição dos atacantes ainda vivos."
-        )
-        st.caption(
-            "A fração entre os desarmes não é a chance de desarme após a morte do último atacante. "
-            "O registro também não revela a intenção do jogador ou se ele tinha linha de tiro."
+            "Pós-plant é o período depois de armar a spike. A tabela conta somente plants que terminaram "
+            "em desarme, ajudando a escolher entre rever as mortes anteriores e rever a posição dos "
+            "atacantes ainda vivos."
         )
         st.markdown("**O tempo do plant junto de quem estava vivo**")
         display_table(plant_time_comparison(scoped.plants()), hide_index=True, percentage_columns=[
@@ -133,10 +127,6 @@ def show_postplant_context(scoped):
             "vitória do ataque nos plants deste recorte com a mesma quantidade de atacantes e defensores "
             "vivos. A tabela mostra a média dessas referências em cada grupo de tempo. "
             "A diferença subtrai essa média da taxa observada e é expressa em pontos percentuais."
-        )
-        st.caption(
-            "A referência usa os próprios rounds selecionados. Ela descreve a composição dos grupos "
-            "e não é uma previsão independente nem uma prova de que plantar mais rápido melhora o resultado."
         )
 
 

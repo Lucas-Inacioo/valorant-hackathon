@@ -240,6 +240,19 @@ class PresentationRegressionTests(unittest.TestCase):
         self.assertEqual([2972.0, 3565.0], shown.iloc[:, 0].tolist())
         self.assertEqual([0.305, 0.114], shown.iloc[:, 1].tolist())
 
+    def test_rates_stored_as_objects_are_shown_as_percentages(self):
+        from unittest.mock import Mock
+        from valorant.ui.presentation import display_table
+
+        table = pd.DataFrame({"vitoria": pd.Series([0.37350, 1], dtype=object), "trocada": pd.Series([True, False], dtype=object)})
+        receiver = Mock()
+        display_table(table, container=receiver, percentage_columns=["vitoria"])
+        shown = receiver.dataframe.call_args.args[0]
+        config = receiver.dataframe.call_args.kwargs["column_config"]
+        self.assertEqual([0.374, 1.0], shown.iloc[:, 0].tolist())
+        self.assertEqual("percent", config[shown.columns[0]]["type_config"]["format"])
+        self.assertEqual([True, False], shown.iloc[:, 1].tolist())
+
     def test_number_step_rounds_counts_and_keeps_two_decimals_for_small_values(self):
         from valorant.ui.presentation import number_step
 

@@ -379,25 +379,37 @@ def number_step(values):
     return 0.01
 
 
+def numbers_stored_as_objects(values):
+    """Médias de colunas verdadeiro ou falso deslocadas saem como objeto, mesmo contendo só números."""
+    present = values.dropna()
+    return values.dtype == object and not present.empty and present.map(
+        lambda value: isinstance(value, (int, float, np.number)) and not isinstance(value, (bool, np.bool_))
+    ).all()
+
+
 def display_table(table, *, container=st, column_config=None, percentage_columns=(), **kwargs):
     """Aplica rótulos e formatos sem transformar contagens em porcentagens."""
     config = {}
     # O Streamlit corta as casas do passo sem arredondar, então a cópia exibida já vai arredondada
     shown = table.copy()
     for column in table.columns:
+        values = table[column]
+        if not isinstance(values, pd.DataFrame) and numbers_stored_as_objects(values):
+            values = values.astype(float)
+            shown[column] = values
         parts = column if isinstance(column, tuple) else (column,)
         rate_key = next((part for part in parts if part in RATE_COLUMNS), None)
         is_fraction = rate_key is not None or column in percentage_columns
-        if is_fraction and pd.api.types.is_float_dtype(table[column]):
+        if is_fraction and pd.api.types.is_float_dtype(values):
             # O passo de 0,001 fixa uma casa decimal na porcentagem, como 30,5%
-            shown[column] = table[column].round(3)
+            shown[column] = values.round(3)
             config[field_label(column)] = st.column_config.NumberColumn(
                 format="percent", step=0.001, help=FIELD_HELP.get(rate_key)
             )
-        elif pd.api.types.is_numeric_dtype(table[column]) and not pd.api.types.is_bool_dtype(table[column]):
+        elif pd.api.types.is_numeric_dtype(values) and not pd.api.types.is_bool_dtype(values):
             # O formato plain do Streamlit usa 20 casas e mostra 3565 como 3564.9999999999995
-            step = number_step(table[column].astype(float))
-            shown[column] = table[column].round(0 if step == 1 else 2)
+            step = number_step(values.astype(float))
+            shown[column] = values.round(0 if step == 1 else 2)
             config[field_label(column)] = st.column_config.NumberColumn(
                 format=None if step == 1 else "localized", step=step, help=FIELD_HELP.get(column)
             )
