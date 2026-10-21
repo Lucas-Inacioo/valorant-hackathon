@@ -37,10 +37,7 @@ def show_findings(data, match_ids):
     flagged = round_groups["collapsed"].eq(True)
     first, second, third = st.columns(3)
     first.metric("Vitória de quem fez o primeiro abate", percent(openings["abriu_venceu"].mean()))
-    first.caption(
-        f"Foram {len(openings):,} rounds com equipe de abertura identificada. "
-        "Abertura é o primeiro abate adversário válido do round."
-    )
+    first.caption(f"Em {len(openings):,} rounds")
     second.metric("Troca quando há aliado próximo", percent(near["trocada"].mean()))
     second.caption(
         f"Entre {len(near):,} primeiras mortes com aliado próximo. Nas {len(far):,} distantes, "
@@ -48,8 +45,8 @@ def show_findings(data, match_ids):
     )
     third.metric("Vitória após três perdas sem resposta", percent(round_groups.loc[flagged, "won_round"].mean()))
     third.caption(
-        f"Foram {int(flagged.sum()):,} rounds de equipe com três pessoas diferentes mortas em até dez "
-        "segundos, sem abate adversário pela equipe nesse intervalo."
+        f"Foram {int(flagged.sum()):,} rounds com três pessoas diferentes da mesma equipe mortas em até dez "
+        "segundos, sem abater adversários nesse intervalo."
     )
     with st.expander("Entender a proximidade e a troca"):
         table = pd.DataFrame([

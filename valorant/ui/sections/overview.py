@@ -14,10 +14,7 @@ ALL_TOURNAMENTS = "Todos os torneios selecionados"
 
 def render(context: AppContext) -> None:
     st.header("Dashboard da pesquisa")
-    st.write(
-        "Veja os achados das partidas, quais equipes acumulam mais lances para rever e como essa frequência "
-        "se relaciona com o desempenho observado. Os números acompanham os filtros do menu lateral."
-    )
+    st.write("Os números acompanham os filtros do menu lateral.")
     render_dashboard_paths()
     options = [ALL_TOURNAMENTS, *sorted(context.selected_matches["torneio"].unique())]
     if st.session_state.get("dashboard_tournament") not in options:
@@ -39,8 +36,7 @@ def render(context: AppContext) -> None:
     columns[3].metric("Lances de equipe para rever", int(teams["review_events"].sum()))
     st.caption(
         f"Cada equipe tem em média {decimal(games_per_team.mean(), 1)} partidas, com mediana de "
-        f"{decimal(games_per_team.median(), 1)}. Os nomes das equipes vêm dos arquivos. Nomes diferentes "
-        "permanecem separados e um mesmo nome pode ter mudanças de elenco ao longo da base."
+        f"{decimal(games_per_team.median(), 1)}. Os nomes das equipes vêm dos arquivos."
     )
     show_findings(data, match_ids)
     show_evidence_context(context, data, match_ids)
