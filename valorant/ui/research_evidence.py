@@ -123,10 +123,9 @@ def show_postplant_context(scoped):
             "Vitória do ataque", "Referência por jogadores vivos",
         ])
         st.write(
-            "O tempo é contado desde o início do round. A referência por jogadores vivos é a taxa de "
-            "vitória do ataque nos plants deste recorte com a mesma quantidade de atacantes e defensores "
-            "vivos. A tabela mostra a média dessas referências em cada grupo de tempo. "
-            "A diferença subtrai essa média da taxa observada e é expressa em pontos percentuais."
+            "O tempo conta desde o início do round. A referência é quanto o ataque costuma vencer só pelo "
+            "número de vivos de cada lado no momento do plant. A diferença é a vitória real menos essa "
+            "referência. Perto de zero, o tempo do plant não muda o resultado além do número de vivos."
         )
 
 
