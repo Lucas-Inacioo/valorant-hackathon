@@ -14,7 +14,7 @@ Os filtros laterais continuam compartilhados pelas três áreas. Os atalhos de e
 
 O dashboard reutiliza `build_match_review`, a mesma função da análise pós-jogo. Entram os cinco padrões de revisão que descrevem ações ou sequências observadas. Acertos e condições classificadas como contexto ficam fora.
 
-Os padrões são morte longe do apoio, morte longe do grupo, primeira morte longe do apoio e sem troca, vantagem numérica perdida e três mortes sem resposta em até dez segundos.
+Os padrões são morte longe do apoio, morte longe do grupo, primeira morte longe do apoio e sem troca, vantagem numérica invertida e três mortes sem resposta em até dez segundos.
 
 Um lance corresponde a uma partida, equipe, round e evento. Quando vários padrões apontam esse mesmo evento, ele conta uma vez. O resultado do round não decide se o lance entra na contagem. Entram rounds vencidos e perdidos.
 
@@ -74,7 +74,7 @@ A diferença com troca menos sem troca é de 21,8 pontos percentuais nos dois gr
 
 A sequência de três perdas sem resposta aparece em 2.850 rounds de equipe, com 184 vitórias e 2.666 derrotas. Nos 10.326 rounds sem essa sequência registrada houve 6.404 vitórias, ou 62,0%. O grupo de referência inclui rounds sem três mortes próximas, por isso não significa três mortes equivalentes que receberam resposta. A diferença bruta de vitórias é de menos 55,6 pontos, com intervalo de menos 56,6 a menos 54,4 pontos. A sequência não atribui culpa ao primeiro jogador morto.
 
-A comparação de vantagem numérica se limita aos 9.107 rounds de equipe com vantagem observada. Em 5.562 houve perda dessa vantagem, mas a equipe ainda venceu 3.040, ou 54,7%. Nos 3.545 sem perda registrada houve 3.520 vitórias, ou 99,3%. A proximidade deste último grupo com a definição do resultado impede interpretar a diferença como rounds que uma decisão teria salvado. Os instantes registrados também não garantem vantagem mantida continuamente.
+A comparação de vantagem numérica se limita aos 9.107 rounds de equipe com vantagem observada. Em 3.320 a equipe ficou atrás depois de estar à frente e ainda venceu 838, ou 25,2%. Igualar o número de vivos, como numa troca, não conta como perda.
 
 Dois painéis de contexto são calculados ao abrir. O primeiro reutiliza a vitória por diferença de equipamento inicial e o equipamento e resultado do round seguinte às derrotas, separados por sobreviventes. As transições excluem a passagem de metade, a prorrogação e rounds sem seguinte consecutivo. Valores iniciais não equivalem ao gasto ou ao valor perdido em uma morte. Os grupos mostram as próprias contagens, inclusive quando pequenos.
 

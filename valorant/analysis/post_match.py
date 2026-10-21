@@ -88,8 +88,8 @@ PATTERNS = {
         positive=True,
     ),
     "numerical_advantage_lost": ReviewPattern(
-        "Vantagem numérica perdida",
-        "A equipe chegou a ter mais jogadores vivos, mas essa vantagem deixou de existir. A mudança pode ocorrer inclusive por ressurreição.",
+        "Vantagem numérica invertida",
+        "A equipe chegou a ter mais jogadores vivos e depois ficou com menos que o adversário. Igualar não conta como perda. A mudança pode ocorrer inclusive por ressurreição.",
         "O que mudou entre conseguir a vantagem e voltar a ter o mesmo número de jogadores ou menos?",
         "Rounds com vantagem numérica observada",
     ),

@@ -64,18 +64,13 @@ def show_review_comparisons(data, match_ids):
         flagged = table.iloc[0]
         st.write(
             "Há vantagem numérica quando a equipe tem mais jogadores vivos que a adversária. "
-            "Entram apenas rounds em que essa vantagem foi observada. A perda é registrada quando "
-            "ela deixa de existir nos instantes disponíveis, inclusive após ressurreições."
+            "A perda é registrada quando a equipe passa a ter menos jogadores vivos, inclusive após "
+            "ressurreições. Igualar, como numa troca, não conta."
         )
         st.write(
             f"A equipe ainda venceu {int(flagged['Vitórias'])} dos {int(flagged['Com resultado'])} "
             f"rounds com perda da vantagem, ou {percent(flagged['Vitória da equipe'])}. "
             "Esses exemplos podem mostrar recuperação e também decisões que merecem revisão."
-        )
-        st.caption(
-            "Sem perda registrada não significa vantagem mantida em todos os instantes. Esse grupo está "
-            "muito próximo da própria definição do resultado, por isso a diferença entre os grupos não "
-            "mede quantos rounds uma decisão teria salvado."
         )
 
 

@@ -54,7 +54,7 @@ def pattern_round_comparison(data, match_ids, pattern_id):
     rounds = pattern_round_groups(data, match_ids, pattern_id)
     labels = {
         "collapse": ("Com três perdas sem resposta", "Sem essa sequência registrada"),
-        "numerical_advantage_lost": ("Perdeu a vantagem", "Sem perda da vantagem registrada"),
+        "numerical_advantage_lost": ("Ficou atrás depois de estar à frente", "Sem perda da vantagem registrada"),
     }
     table = pd.DataFrame([
         {"Situação": label, **outcome_summary(rounds[rounds["observed"].eq(observed)], "won_round")}

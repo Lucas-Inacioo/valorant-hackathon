@@ -230,9 +230,9 @@ class AppIntegrationTests(unittest.TestCase):
             tables = [frame.value for frame in app.dataframe]
             trade = next(table for table in tables if "Primeira morte" in table)
             self.assertEqual([907, 2065, 406, 3159], trade["Primeiras mortes"].tolist())
-            advantage = next(table for table in tables if "Situação" in table and "Perdeu a vantagem" in table["Situação"].tolist())
-            self.assertEqual([5562, 3545], advantage["Rounds de equipe"].tolist())
-            self.assertEqual(3040, advantage.iloc[0]["Vitórias"])
+            advantage = next(table for table in tables if "Situação" in table and "Ficou atrás depois de estar à frente" in table["Situação"].tolist())
+            self.assertEqual([3320], advantage["Rounds de equipe"].tolist())
+            self.assertEqual(838, advantage.iloc[0]["Vitórias"])
 
         def check_evidence_context():
             tables = [frame.value for frame in app.dataframe]
