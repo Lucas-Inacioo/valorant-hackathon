@@ -34,7 +34,7 @@ class AppIntegrationTests(unittest.TestCase):
     def test_all_sections_and_audited_filter_regressions(self):
         from streamlit.testing.v1 import AppTest
 
-        from valorant.ui.navigation import SECTIONS
+        from valorant.ui.navigation import EXPLORATORY_SECTIONS, MAIN_AREAS, SECTIONS
         from valorant.ui.presentation import field_label
 
         report, failures = [], []
@@ -73,7 +73,7 @@ class AppIntegrationTests(unittest.TestCase):
             return next(item for item in getattr(app, kind) if item.label == label)
 
         def section(name):
-            app.selectbox(key="section").select(name)
+            app.session_state["section"] = name
 
         def tournaments(values):
             widget("multiselect", "Torneios").set_value(values)
@@ -218,7 +218,8 @@ class AppIntegrationTests(unittest.TestCase):
         def check_dashboard_review(filename, team_name):
             from valorant.analysis.prediction import parse_match_name, team_names_by_color
 
-            self.assertEqual("Análise pós-jogo", app.selectbox(key="section").value)
+            self.assertEqual("Análise pós-jogo", app.session_state["section"])
+            self.assertEqual("Análise pós-jogo", app.radio(key="navigation_area").value)
             self.assertEqual("Equipe", app.radio(key="review_view").value)
             self.assertEqual(filename, app.selectbox(key="pos_match").value)
             match = json.loads(selected_match_file().read_text(encoding="utf-8"))
@@ -254,7 +255,8 @@ class AppIntegrationTests(unittest.TestCase):
                 app.session_state[key] = True
 
         def check_dashboard_example():
-            self.assertEqual("Análise pós-jogo", app.selectbox(key="section").value)
+            self.assertEqual("Análise pós-jogo", app.session_state["section"])
+            self.assertEqual("Análise pós-jogo", app.radio(key="navigation_area").value)
             self.assertEqual("Lances", app.radio(key="review_view").value)
             focus = app.session_state["review_event_focus"]
             self.assertEqual(focus["round"] - 1, app.selectbox(key="pos_round").value)
@@ -266,17 +268,29 @@ class AppIntegrationTests(unittest.TestCase):
                 "Inicial com a visão geral",
                 check=lambda: self.assertEqual(
                     "Dashboard da pesquisa",
-                    app.selectbox(key="section").value,
+                    app.session_state["section"],
                 ),
             )
             all_tournaments = list(widget("multiselect", "Torneios").options)
             all_versions = list(widget("multiselect", "Versões do jogo").options)
-            sections = list(app.selectbox(key="section").options)
-            self.assertEqual(list(SECTIONS), sections)
+            sections = list(SECTIONS)
+            self.assertEqual(list(MAIN_AREAS), app.radio(key="navigation_area").options)
+            self.assertEqual("Dashboard", app.radio(key="navigation_area").value)
+            self.assertEqual(9, len(EXPLORATORY_SECTIONS))
+            self.assertFalse(any(item.key == "section" for item in app.selectbox))
             self.assertEqual(11, len(sections))
             report.append(f"Torneios disponíveis: {all_tournaments}")
             check_dashboard()
             check_evidence_tables()
+            run("Acesso principal do dashboard abre a ferramenta",
+                lambda: app.button(key="dashboard_go_post_match").click(), check_team_summary)
+            run("Menu principal retorna da ferramenta ao dashboard",
+                lambda: app.radio(key="navigation_area").set_value("Dashboard"), check_dashboard)
+            run("Acesso exploratório abre apenas as nove abas de apoio",
+                lambda: app.button(key="dashboard_go_exploratory").click(),
+                lambda: self.assertEqual(list(EXPLORATORY_SECTIONS), [tab.label for tab in app.tabs]))
+            run("Menu principal retorna das análises ao dashboard",
+                lambda: app.radio(key="navigation_area").set_value("Dashboard"), check_dashboard)
             run("Dashboard carrega equipamento e pós-plant no recorte completo", open_evidence_panels, check_evidence_context)
             run("Dashboard abre um exemplo no round e evento corretos",
                 lambda: app.button(key="dashboard_open_example").click(), check_dashboard_example)

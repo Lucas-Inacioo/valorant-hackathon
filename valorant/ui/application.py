@@ -5,7 +5,7 @@ import streamlit as st
 from valorant.data.quality import data_signature
 from valorant.ui.context import AppContext
 from valorant.ui.data import AnalysisData, load_inventory, load_quality
-from valorant.ui.navigation import SECTIONS, render_section
+from valorant.ui.navigation import render_content, render_navigation
 
 
 def build_context() -> AppContext | None:
@@ -51,9 +51,7 @@ def run() -> None:
     st.set_page_config(page_title="VALORANT Hackathon", layout="wide")
     st.sidebar.title("VALORANT")
     st.sidebar.caption("Protótipo de análise de partidas")
-    if st.session_state.get("section") not in SECTIONS:
-        st.session_state["section"] = next(iter(SECTIONS))
-    active_section = st.sidebar.selectbox("Seção", list(SECTIONS), key="section")
+    active_section = render_navigation()
     context = build_context()
     if context is None:
         return
@@ -65,4 +63,4 @@ def run() -> None:
             f"A seleção contém {len(context.selected_matches)} partidas e "
             f"{len(context.selected_rounds):,} rounds."
         )
-    render_section(active_section, context)
+    render_content(active_section, context)

@@ -3,6 +3,7 @@
 import streamlit as st
 
 from valorant.ui.context import AppContext
+from valorant.ui.navigation import render_dashboard_paths
 from valorant.ui.presentation import display_table
 from valorant.ui.research_findings import decimal, show_findings
 from valorant.ui.research_evidence import show_evidence_context
@@ -17,6 +18,7 @@ def render(context: AppContext) -> None:
         "Veja os achados das partidas, quais equipes acumulam mais lances para rever e como essa frequência "
         "se relaciona com o desempenho observado. Os números acompanham os filtros do menu lateral."
     )
+    render_dashboard_paths()
     options = [ALL_TOURNAMENTS, *sorted(context.selected_matches["torneio"].unique())]
     if st.session_state.get("dashboard_tournament") not in options:
         st.session_state["dashboard_tournament"] = ALL_TOURNAMENTS

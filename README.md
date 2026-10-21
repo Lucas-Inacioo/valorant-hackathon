@@ -16,6 +16,8 @@ python3.12 -m venv .venv
 
 O painel abre em <http://localhost:8501>. Se `data/` já contiver as partidas e os metadados, basta executar o último comando. A navegação e os filtros ficam no menu lateral. Cada análise explica os termos perto dos gráficos.
 
+A navegação principal tem três áreas. O Dashboard reúne o resumo da pesquisa e oferece dois caminhos. A Análise pós-jogo é a ferramenta para revisar partidas e lances. Dados exploratórios e análises reúne as nove abas que sustentam os achados, desde o primeiro abate até a qualidade dos dados. Essa área lembra a última aba consultada e carrega apenas a análise escolhida. O menu lateral permite voltar ao dashboard ou trocar de área a qualquer momento.
+
 A página inicial é o Dashboard da pesquisa. Ele reúne os achados, o ranking de equipes por lances únicos a revisar e sua comparação com o desempenho observado. O total de lances aparece junto da frequência por cem rounds. Você pode escolher o torneio, o mínimo de jogos e a referência por rounds ou por partidas, exportar o ranking e abrir uma equipe na análise pós-jogo. As comparações de primeira morte e troca, sequências sem resposta e perda de vantagem mostram contagens e resultados dos rounds. Os detalhes de equipamento e pós-plant ajudam a interpretar esses lances. O painel de exemplos abre o evento escolhido e permite voltar ao dashboard com os filtros anteriores. [docs/DASHBOARD.md](docs/DASHBOARD.md) registra os critérios e os resultados da base padrão.
 
 Os arquivos baixados ficam em `data/`, fora do Git. O download valida o JSON antes de gravar e também confere os arquivos existentes. O app só lê os metadados locais. Para atualizá-los, use o comando de metadados com `--download`.
@@ -32,7 +34,7 @@ valorant/
     application.py          Inicialização e filtros
     context.py              Dados da seleção entregues às telas
     data.py                 Acesso às análises e cache por seleção
-    navigation.py           Ordem das seções e carregamento de cada tela
+    navigation.py           Três áreas, abas exploratórias e atalhos de navegação
     sections/               Uma tela por assunto, com funções por gráfico
     charts.py               Gráficos compartilhados
     presentation.py         Nomes de colunas e formatos exibidos
