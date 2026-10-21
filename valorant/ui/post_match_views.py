@@ -54,9 +54,7 @@ def _show_pattern_table(summary):
         display_table(
             _pattern_table(summary),
             hide_index=True,
-            column_config={
-                "Frequência": st.column_config.NumberColumn(format="percent"),
-            },
+            percentage_columns=["Frequência"],
         )
 
 

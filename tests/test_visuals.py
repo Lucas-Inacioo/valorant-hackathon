@@ -223,9 +223,30 @@ class PresentationRegressionTests(unittest.TestCase):
         config = receiver.dataframe.call_args.kwargs["column_config"]
         self.assertEqual([2972, 3565], shown.iloc[:, 0].tolist())
         self.assertEqual([0.25, 0.5], shown.iloc[:, 1].tolist())
-        self.assertEqual("plain", config[shown.columns[0]]["type_config"]["format"])
+        self.assertIsNone(config[shown.columns[0]]["type_config"].get("format"))
+        self.assertEqual(1, config[shown.columns[0]]["type_config"]["step"])
         self.assertEqual("percent", config[shown.columns[1]]["type_config"]["format"])
+        self.assertEqual(0.001, config[shown.columns[1]]["type_config"]["step"])
         pd.testing.assert_frame_equal(table, before)
+
+    def test_table_rounds_before_streamlit_truncates_the_decimals(self):
+        from unittest.mock import Mock
+        from valorant.ui.presentation import display_table
+
+        table = pd.DataFrame({"mortes": [2972.0, 3564.9999999999995], "trocada": [0.30521, 0.11394]})
+        receiver = Mock()
+        display_table(table, container=receiver)
+        shown = receiver.dataframe.call_args.args[0]
+        self.assertEqual([2972.0, 3565.0], shown.iloc[:, 0].tolist())
+        self.assertEqual([0.305, 0.114], shown.iloc[:, 1].tolist())
+
+    def test_number_step_rounds_counts_and_keeps_two_decimals_for_small_values(self):
+        from valorant.ui.presentation import number_step
+
+        self.assertEqual(1, number_step(pd.Series([2972.0, 3564.9999999999995])))
+        self.assertEqual(1, number_step(pd.Series([18765.4, 22500.0])))
+        self.assertEqual(0.01, number_step(pd.Series([1.25, 45.3, float("nan")])))
+        self.assertEqual(1, number_step(pd.Series([float("nan")])))
 
 
 if __name__ == "__main__":

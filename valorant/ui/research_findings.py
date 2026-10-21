@@ -41,7 +41,7 @@ def show_findings(data, match_ids):
     second.metric("Troca quando há aliado próximo", percent(near["trocada"].mean()))
     second.caption(
         f"Entre {len(near)} primeiras mortes com aliado próximo. Nas {len(far)} distantes, "
-        f"a taxa foi {percent(far['trocada'].mean())}. Troca é abater o autor em até cinco segundos."
+        f"a taxa foi {percent(far['trocada'].mean())}. Troca é vingar seu aliado, abatendo o inimigo que o matou em até cinco segundos."
     )
     third.metric("Vitória após três perdas sem resposta", percent(round_groups.loc[flagged, "won_round"].mean()))
     third.caption(

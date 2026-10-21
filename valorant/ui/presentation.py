@@ -4,6 +4,7 @@ As análises mantêm suas colunas de trabalho. A interface aplica nomes e format
 apenas na cópia apresentada, para não alterar agrupamentos ou cálculos.
 """
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 
@@ -370,22 +371,37 @@ def readable_table(table):
     return result
 
 
+def number_step(values):
+    """Passo que fixa as casas exibidas: inteiro para contagens e números grandes, duas casas para o resto."""
+    finite = values[np.isfinite(values)] if len(values) else values
+    if pd.api.types.is_integer_dtype(values) or finite.empty or (finite % 1 == 0).all() or finite.abs().max() >= 100:
+        return 1
+    return 0.01
+
+
 def display_table(table, *, container=st, column_config=None, percentage_columns=(), **kwargs):
     """Aplica rótulos e formatos sem transformar contagens em porcentagens."""
     config = {}
+    # O Streamlit corta as casas do passo sem arredondar, então a cópia exibida já vai arredondada
+    shown = table.copy()
     for column in table.columns:
         parts = column if isinstance(column, tuple) else (column,)
         rate_key = next((part for part in parts if part in RATE_COLUMNS), None)
         is_fraction = rate_key is not None or column in percentage_columns
         if is_fraction and pd.api.types.is_float_dtype(table[column]):
+            # O passo de 0,001 fixa uma casa decimal na porcentagem, como 30,5%
+            shown[column] = table[column].round(3)
             config[field_label(column)] = st.column_config.NumberColumn(
-                format="percent", help=FIELD_HELP.get(rate_key)
+                format="percent", step=0.001, help=FIELD_HELP.get(rate_key)
             )
         elif pd.api.types.is_numeric_dtype(table[column]) and not pd.api.types.is_bool_dtype(table[column]):
+            # O formato plain do Streamlit usa 20 casas e mostra 3565 como 3564.9999999999995
+            step = number_step(table[column].astype(float))
+            shown[column] = table[column].round(0 if step == 1 else 2)
             config[field_label(column)] = st.column_config.NumberColumn(
-                format="plain", help=FIELD_HELP.get(column)
+                format=None if step == 1 else "localized", step=step, help=FIELD_HELP.get(column)
             )
         elif column in FIELD_HELP:
             config[field_label(column)] = st.column_config.NumberColumn(help=FIELD_HELP[column])
     config.update({field_label(key): value for key, value in (column_config or {}).items()})
-    return container.dataframe(readable_table(table), column_config=config, **kwargs)
+    return container.dataframe(readable_table(shown), column_config=config, **kwargs)
