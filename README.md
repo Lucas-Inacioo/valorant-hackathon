@@ -64,6 +64,8 @@ Trocas contam abates do autor da morte em até cinco segundos, incluindo o mesmo
 
 Em **Análise pós-jogo**, você começa pela partida e pela equipe. As visões Equipe e Jogadores mostram padrões, sua frequência e os rounds que os sustentam. A visão Lances abre a sequência de eventos. Cada evento tem um botão, e o mapa usa símbolos sem nomes sobre os jogadores. Estrela indica quem abateu e X indica quem morreu naquele instante. A legenda fica abaixo da imagem e os nomes aparecem no texto e na tabela.
 
+O botão Selecionar equipe aleatória escolhe outra partida dos filtros atuais e abre a visão Equipe. Quando há apenas uma partida no filtro, ele escolhe a outra equipe dessa partida.
+
 As observações saem de `valorant/analysis/post_match.py`. Cada padrão tem uma base de oportunidades definida. O resumo conta rounds distintos e separa ações individuais das situações da equipe. Informações de equipamento, posição compatível com troca e ataque sem plant continuam como contexto. As situações coletivas em que um jogador participou aparecem separadas de suas próprias ações.
 
 Os botões dos padrões abrem os lances correspondentes. O estado da navegação é separado por partida e round, para uma troca de seleção não abrir um evento inválido. As análises da partida usam somente os dados daquela partida e os detalhes adicionais são carregados quando você os abre.

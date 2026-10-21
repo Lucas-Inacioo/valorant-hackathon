@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
+import random
 
 import pandas as pd
 import streamlit as st
@@ -41,8 +42,36 @@ class PostMatchSelection:
         return self.match["matchInfo"]["matchId"]
 
 
+def select_random_team(context: AppContext):
+    """Escolhe uma partida dos filtros atuais e abre a revisão de uma equipe."""
+    files = context.selected_matches["arquivo"].tolist()
+    if not files:
+        return
+    current_file = st.session_state.get("pos_match")
+    other_files = [filename for filename in files if filename != current_file]
+    chosen_file = random.choice(other_files or files)
+    info = context.selected_matches[context.selected_matches["arquivo"] == chosen_file].iloc[0]
+    match = load_match(Path(info["caminho"]))
+    teams = [team["teamId"] for team in match["teams"] if team["teamId"] in {"Blue", "Red"}]
+    if chosen_file == current_file:
+        other_teams = [team for team in teams if team != st.session_state.get("review_team")]
+        teams = other_teams or teams
+    if teams:
+        st.session_state["pos_match"] = chosen_file
+        st.session_state["review_team"] = random.choice(teams)
+        st.session_state["review_view"] = "Equipe"
+
+
 def select_match_and_team(context: AppContext) -> PostMatchSelection:
     files = context.selected_matches["arquivo"].tolist()
+    st.button(
+        "Selecionar equipe aleatória",
+        key="review_random_team",
+        help="Escolhe uma partida dos filtros atuais e abre a análise de uma de suas equipes.",
+        on_click=select_random_team,
+        args=(context,),
+        disabled=not files,
+    )
     if st.session_state.get("pos_match") not in files:
         st.session_state["pos_match"] = files[0]
     chosen_file = st.selectbox("Partida", files, key="pos_match")

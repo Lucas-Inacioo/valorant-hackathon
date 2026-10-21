@@ -36,6 +36,8 @@ O documento CONCLUSOES.md continua com as 15 seções da revisão anterior. Os 7
 
 ## Reproduzir as verificações
 
+Após adicionar o botão Selecionar equipe aleatória, a execução padrão manteve os 80 testes aprovados. Uma conferência específica com AppTest verificou o sorteio entre partidas filtradas, a visão Equipe, a limpeza de lances anteriores e o envio dos valores dos seletores ao navegador. Também verificou três sorteios em um filtro com uma única partida, alternando as equipes, e o filtro vazio sem erro. Os 55 cenários completos descritos acima correspondem à versão anterior à adição desse botão.
+
 ```bash
 PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR=/tmp/valorant-mpl .venv/bin/python -B -m unittest discover -s tests -v
 VALORANT_RUN_APPTEST=1 PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR=/tmp/valorant-mpl .venv/bin/python -B -m unittest discover -s tests -p test_app.py -v
