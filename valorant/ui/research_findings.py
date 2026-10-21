@@ -6,6 +6,9 @@ import streamlit as st
 from valorant.analysis.research import pattern_findings
 from valorant.ui.presentation import display_table
 
+# Padrões cuja base da frequência não é mais explicada no texto
+FREQUENCY_BASE_HIDDEN = {"isolated_death", "numerical_advantage_lost", "isolated_opening_untraded", "collapse"}
+
 
 def percent(value):
     return f"{value:.1%}".replace(".", ",") if pd.notna(value) else "Sem dados"
@@ -57,18 +60,9 @@ def show_findings(data, match_ids):
         ])
         display_table(table, hide_index=True, percentage_columns=["Troca em até 5 s", "Vitória da equipe"])
         st.write(
-            "O limite de proximidade é de 1000 unidades do jogo, cerca de dez metros por uma conversão "
-            "aproximada. Há pelo menos um aliado vivo e posição disponível. A distância não verifica "
-            "paredes ou visão. A comparação inclui somente primeiras vítimas individuais identificadas."
+            "O limite de proximidade foi considerado como 1000 unidades do jogo, cerca de dez metros "
+            "considerando o padrão da Unreal, engine em que Valorant é feito. A distância não verifica paredes ou visão."
         )
-        if len(near) and len(far):
-            trade_gap = near["trocada"].mean() - far["trocada"].mean()
-            win_gap = near["venceu_round"].mean() - far["venceu_round"].mean()
-            st.write(
-                f"Neste recorte, a diferença entre mortes próximas e distantes é de {decimal(100 * trade_gap, 1)} "
-                f"pontos percentuais nas trocas e {decimal(100 * win_gap, 1)} nas vitórias. "
-                "A base registra as mortes, sem registrar todas as exposições em que o jogador sobreviveu."
-            )
     with st.expander("Ver os padrões que geram revisão"):
         patterns = pattern_findings(data, match_ids)
         table = patterns[["pattern", "occurrences", "opportunities", "rate", "rounds", "round_win_rate"]].rename(columns={
@@ -76,11 +70,8 @@ def show_findings(data, match_ids):
             "rate": "Frequência", "rounds": "Rounds de equipe", "round_win_rate": "Vitória nesses rounds",
         })
         display_table(table, hide_index=True, percentage_columns=["Frequência", "Vitória nesses rounds"])
-        st.caption(
-            "Cada padrão tem sua própria base de oportunidades. Vários padrões podem descrever o mesmo lance, "
-            "por isso a soma das ocorrências desta tabela difere do total de lances únicos do ranking."
-        )
         for row in patterns.itertuples():
             st.markdown(f"**{row.pattern}**")
             st.write(row.description)
-            st.caption(f"A frequência usa {row.opportunity_label.lower()}.")
+            if row.pattern_id not in FREQUENCY_BASE_HIDDEN:
+                st.caption(f"A frequência usa {row.opportunity_label.lower()}.")

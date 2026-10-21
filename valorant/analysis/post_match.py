@@ -43,7 +43,7 @@ class ReviewPattern:
 PATTERNS = {
     "isolated_death": ReviewPattern(
         "Morte longe do apoio",
-        "Morreu com aliado vivo, mas nenhum aliado estava a até 1000 unidades de jogo. Essa distância corresponde a cerca de 10 metros e não considera paredes.",
+        "Morreu com aliado vivo, mas nenhum aliado estava a até 1000 unidades de jogo.",
         "O jogador precisava fazer esse contato sozinho ou poderia esperar apoio?",
         "Mortes com aliado vivo e posição disponível",
     ),
@@ -55,7 +55,7 @@ PATTERNS = {
     ),
     "isolated_opening_untraded": ReviewPattern(
         "Primeira morte longe do apoio e sem troca",
-        "Foi a única primeira vítima do round, estava longe dos aliados e o autor do abate não morreu para a equipe em até 5 segundos.",
+        "O autor do primeiro abate do round eliminou um jogador que estava longe dos aliados e não morreu em até 5 segundos.",
         "Como preparar esse primeiro contato para que haja apoio ou uma saída?",
         "Primeiras mortes individuais com aliado vivo e posição disponível",
     ),
@@ -89,13 +89,13 @@ PATTERNS = {
     ),
     "numerical_advantage_lost": ReviewPattern(
         "Vantagem numérica perdida",
-        "A equipe chegou a ter mais jogadores vivos, mas essa vantagem deixou de aparecer nos estados registrados. A mudança pode ocorrer entre registros, inclusive por ressurreição. O lance aberto marca a primeira observação da perda e não atribui a mudança somente ao abate exibido. Cada round entra uma vez.",
+        "A equipe chegou a ter mais jogadores vivos, mas essa vantagem deixou de existir. A mudança pode ocorrer inclusive por ressurreição.",
         "O que mudou entre conseguir a vantagem e voltar a ter o mesmo número de jogadores ou menos?",
         "Rounds com vantagem numérica observada",
     ),
     "collapse": ReviewPattern(
         "Três mortes sem resposta em até 10 segundos",
-        "Três jogadores diferentes da equipe morreram em até 10 segundos sem abate adversário da equipe nesse intervalo. Cada round entra uma vez.",
+        "Três jogadores diferentes da equipe morreram em até 10 segundos sem abater adversários.",
         "Os contatos aconteceram juntos e havia um plano para interromper a sequência?",
         "Rounds da equipe",
     ),

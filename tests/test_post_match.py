@@ -301,7 +301,7 @@ class PostMatchTests(unittest.TestCase):
         self.assertEqual(2000, evidence.time_ms)
         self.assertEqual(3, evidence.allies_before)
         self.assertEqual(3, evidence.enemies_before)
-        self.assertIn("entre registros", evidence.description)
+        self.assertIn("ressurreição", evidence.description)
 
     def test_partial_ally_coordinates_do_not_prove_isolation(self):
         result = round_result(
