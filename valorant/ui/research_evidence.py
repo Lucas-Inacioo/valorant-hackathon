@@ -52,12 +52,10 @@ def show_review_comparisons(data, match_ids):
         display_table(table.drop(columns="Com resultado").rename(columns={"Casos": "Rounds de equipe"}), hide_index=True,
                       percentage_columns=["Vitória da equipe"])
         st.write(
-            "A sequência reúne três jogadores diferentes mortos em até dez segundos, sem abate adversário "
-            "pela equipe no intervalo. Cada round de equipe aparece uma vez. O outro grupo contém todos "
-            "os rounds sem essa sequência registrada, inclusive aqueles sem três mortes próximas."
+            "A sequência diz respeito a três jogadores diferentes da equipe morrerem em até 10 segundos "
+            "sem abater adversários."
         )
         show_contrast(contrast, "A diferença de vitórias entre com a sequência e sem ela foi de")
-        st.caption("O ponto de revisão é a sequência de contatos da equipe. O primeiro jogador morto não recebe a culpa pelas perdas seguintes.")
     with advantage:
         table, _ = pattern_round_comparison(data, match_ids, "numerical_advantage_lost")
         display_table(table.drop(columns="Com resultado").rename(columns={"Casos": "Rounds de equipe"}), hide_index=True,
