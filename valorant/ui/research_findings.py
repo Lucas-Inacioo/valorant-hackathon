@@ -37,7 +37,7 @@ def show_findings(data, match_ids):
     flagged = round_groups["collapsed"].eq(True)
     first, second, third = st.columns(3)
     first.metric("Vitória de quem fez o primeiro abate", percent(openings["abriu_venceu"].mean()))
-    first.caption(f"Em {len(openings)} rounds")
+    first.caption(f"{int(openings['abriu_venceu'].sum())} vitórias e {int((~openings['abriu_venceu']).sum())} derrotas em {len(openings)} rounds")
     second.metric("Troca quando há aliado próximo", percent(near["trocada"].mean()))
     second.caption(
         f"Entre {len(near)} primeiras mortes com aliado próximo. Nas {len(far)} distantes, "

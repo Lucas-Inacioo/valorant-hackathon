@@ -70,12 +70,12 @@ def render_dashboard_paths():
     tool, research = st.columns(2)
     with tool.container(border=True):
         st.markdown("**Ferramenta de análise pós-jogo**")
-        st.write("Revise uma partida, encontre padrões da equipe e dos jogadores e abra os lances para entender o que aconteceu.")
+        st.write("Esse é o meu entregável para a Hackaton, lances decisivos para a partida são selecionados e podem ser revisados em um mapa.")
         st.button("Abrir ferramenta de análise pós-jogo", key="dashboard_go_post_match", type="primary",
                   on_click=navigate, args=(POST_MATCH,))
     with research.container(border=True):
         st.markdown(f"**{EXPLORATORY_AREA}**")
-        st.write("Consulte as análises de trocas, equipamento, plant e os demais dados que sustentam os resultados da pesquisa.")
+        st.write("Aqui estão as análises que fiz para chegar ao meu entregável, são apenas para consulta e curiosidade. Cada seção está explicada, com conclusões específicas dela e também com dados inconclusivos, mas que foram avaliados como parte do projeto.")
         st.button("Explorar dados e análises", key="dashboard_go_exploratory", on_click=select_exploratory_area)
 
 
