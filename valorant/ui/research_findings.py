@@ -6,9 +6,6 @@ import streamlit as st
 from valorant.analysis.research import pattern_findings
 from valorant.ui.presentation import display_table
 
-# Padrões cuja base da frequência não é mais explicada no texto
-FREQUENCY_BASE_HIDDEN = {"isolated_death", "numerical_advantage_lost", "isolated_opening_untraded", "collapse"}
-
 
 def percent(value):
     return f"{value:.1%}".replace(".", ",") if pd.notna(value) else "Sem dados"
@@ -73,5 +70,3 @@ def show_findings(data, match_ids):
         for row in patterns.itertuples():
             st.markdown(f"**{row.pattern}**")
             st.write(row.description)
-            if row.pattern_id not in FREQUENCY_BASE_HIDDEN:
-                st.caption(f"A frequência usa {row.opportunity_label.lower()}.")
