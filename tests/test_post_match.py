@@ -6,7 +6,7 @@ import pandas as pd
 
 from valorant.analysis.events import round_events
 from valorant.analysis.fights import TRADE_POSSIBLE
-from valorant.analysis.post_match import build_match_review
+from valorant.analysis.post_match import PATTERNS, build_match_review
 
 TEAMS = {
     f"{prefix}{index}": team
@@ -87,6 +87,11 @@ def pattern(review, team, pattern_id, player=None):
 
 
 class PostMatchTests(unittest.TestCase):
+    def test_every_review_pattern_has_a_card_sentence(self):
+        for key, pattern in PATTERNS.items():
+            if not pattern.positive and not pattern.context_only:
+                self.assertIn("{occurrences} de {opportunities}", pattern.summary, key)
+
     def test_multiple_patterns_keep_one_lost_round_and_evidence(self):
         result = round_result([kill("r1", "b1", 1000)])
         table = details(result)

@@ -71,10 +71,7 @@ def show_training_points(selection: PostMatchSelection, player_id=ALL_PLAYERS):
         st.info("Não há ocorrências desses padrões com informação suficiente nesta seleção.")
     for row in points.itertuples():
         st.markdown(f"**{row.pattern}**")
-        base_label = row.opportunity_label[:1].lower() + row.opportunity_label[1:]
-        frequency = f"{row.occurrences} de {row.opportunities} {base_label}"
-        summary = PATTERNS[row.pattern_id].summary
-        st.write(summary.format(occurrences=row.occurrences, opportunities=row.opportunities) if summary else f"{frequency}. {row.description}")
+        st.write(PATTERNS[row.pattern_id].summary.format(occurrences=row.occurrences, opportunities=row.opportunities))
         st.write(f"Ocorreu em {row.round_count} rounds diferentes, dos quais {row.lost_round_count} foram perdidos.")
         st.write(f"Pergunta a ser feita: {row.review_question}")
         st.button(
@@ -86,9 +83,7 @@ def show_training_points(selection: PostMatchSelection, player_id=ALL_PLAYERS):
     if not points.empty:
         with st.expander("Ver todos os padrões e os rounds envolvidos"):
             _show_pattern_table(points)
-            st.caption(
-                "Cada linha tem sua própria base de comparação. As contagens de rounds de linhas diferentes podem se sobrepor."
-            )
+            st.caption("Cada linha tem sua própria base de comparação.")
 
     positive = observed[observed["positive"] & ~observed["context_only"]]
     with st.expander("Acertos para manter"):

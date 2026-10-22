@@ -97,12 +97,14 @@ PATTERNS = {
         "A equipe chegou a ter mais jogadores vivos e depois ficou com menos que o adversário. Igualar não conta como perda. A mudança pode ocorrer inclusive por ressurreição.",
         "O que mudou entre conseguir a vantagem e passar a ter menos?",
         "Rounds com vantagem numérica observada",
+        summary="{occurrences} de {opportunities} rounds tinham vantagem numérica. A equipe chegou a ter mais jogadores vivos e depois ficou com menos que o adversário.",
     ),
     "collapse": ReviewPattern(
         "Três mortes sem resposta em até 10 segundos",
         "Três jogadores diferentes da equipe morreram em até 10 segundos sem abater adversários.",
-        "Os contatos aconteceram juntos e havia um plano para interromper a sequência?",
+        "Foi um erro mecânico ou de decisão?",
         "Rounds da equipe",
+        summary="{occurrences} de {opportunities} rounds tiveram três jogadores diferentes da equipe mortos em até 10 segundos sem abater adversários.",
     ),
     "won_after_disadvantage": ReviewPattern(
         "Vitória após desvantagem numérica",
