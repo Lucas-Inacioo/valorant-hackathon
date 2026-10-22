@@ -127,8 +127,7 @@ def show_methods(team_matches, ranking, comparison, performance):
         )
         st.caption(
             "Os intervalos individuais de Wilson tratam partidas como tentativas independentes e servem como descrição. "
-            "A repetição de adversários e o calendário limitam essa aproximação. "
-            "A cobertura de posição na tabela principal conta mortes com aliado vivo em que foi possível avaliar isolamento."
+            "A repetição de adversários e o calendário limitam essa aproximação."
         )
 
 
@@ -175,15 +174,14 @@ def show_ranking(context, team_matches, tournament):
     )
     comparison_charts(ranking, performance)
     ranking["performance_rank"] = ranking[performance].rank(ascending=False, method="min")
-    table = ranking[["review_rank", "team_name", "review_events", "review_per_100", "matches", "rounds", "review_round_rate", "round_win_rate", "match_win_rate", "performance_rank", "position_coverage"]].rename(columns={
+    table = ranking[["review_rank", "team_name", "review_events", "review_per_100", "matches", "rounds", "review_round_rate", "round_win_rate", "match_win_rate", "performance_rank"]].rename(columns={
         "review_rank": "Posição por lances", "team_name": "Equipe", "review_events": "Lances para rever",
         "review_per_100": "Lances por 100 rounds", "matches": "Partidas", "rounds": "Rounds",
         "review_round_rate": "Rounds com revisão", "round_win_rate": "Vitórias em rounds",
         "match_win_rate": "Vitórias em partidas", "performance_rank": "Posição no desempenho",
-        "position_coverage": "Cobertura de posição",
     })
     st.caption("A lista começa com mais lances por 100 rounds. No desempenho, a primeira posição é a maior taxa de vitória. Posições empatadas são preservadas.")
-    display_table(table, hide_index=True, percentage_columns=["Rounds com revisão", "Vitórias em rounds", "Vitórias em partidas", "Cobertura de posição"])
+    display_table(table, hide_index=True, percentage_columns=["Rounds com revisão", "Vitórias em rounds", "Vitórias em partidas"])
     st.download_button("Baixar ranking em CSV", data=table.to_csv(index=False).encode("utf-8-sig"), file_name="ranking_equipes.csv", mime="text/csv", key="dashboard_download")
     show_methods(team_matches, ranking, comparison, performance)
     show_team_link(team_matches, ranking)

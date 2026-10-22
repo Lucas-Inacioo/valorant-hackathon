@@ -15,7 +15,7 @@ REVIEW_PATTERNS = tuple(
 )
 MATCH_TOTALS = [
     "matches", "decided_matches", "match_wins", "rounds", "round_outcomes", "round_wins",
-    "review_events", "review_rounds", "position_opportunities", "position_candidates", "deaths",
+    "review_events", "review_rounds", "deaths",
 ]
 TEAM_MATCH_COLUMNS = [
     "match_id", "arquivo", "torneio", "inicio", "team_id", "team_name", *MATCH_TOTALS,
@@ -46,7 +46,6 @@ def summarize_review_match(info, match, review, fights):
     decided = sum(bool(team.get("won")) for team in match["teams"]) == 1
     won = {team["teamId"]: bool(team.get("won")) for team in match["teams"]}
     events = review_events(review.observations)
-    candidates = fights[fights["diagnostico_tatico"].eq(True) & fights["aliados_vivos"].gt(0)]
     known_rounds = [
         result for result in match["roundResults"] if result.get("winningTeam") in {"Blue", "Red"}
     ]
@@ -54,10 +53,6 @@ def summarize_review_match(info, match, review, fights):
     for team_id, team_name in names.items():
         rounds = review.rounds[review.rounds["team_id"].eq(team_id)]
         own_events = events[events["team_id"].eq(team_id)]
-        eligible = review.opportunities[
-            review.opportunities["pattern_id"].eq("isolated_death")
-            & review.opportunities["team_id"].eq(team_id)
-        ]
         rows.append({
             **{key: info[key] for key in ["match_id", "arquivo", "torneio", "inicio"]},
             "team_id": team_id,
@@ -70,8 +65,6 @@ def summarize_review_match(info, match, review, fights):
             "round_wins": sum(result["winningTeam"] == team_id for result in known_rounds),
             "review_events": len(own_events),
             "review_rounds": own_events["round"].nunique(),
-            "position_opportunities": len(eligible),
-            "position_candidates": int(candidates["time_vitima"].eq(team_id).sum()),
             "deaths": int((fights["time_vitima"].eq(team_id) & fights["diagnostico_tatico"].eq(True)).sum()),
         })
     return rows
@@ -121,7 +114,6 @@ def team_ranking(team_matches, minimum_matches=3):
         ("review_round_rate", "review_rounds", "rounds", 1),
         ("match_win_rate", "match_wins", "decided_matches", 1),
         ("round_win_rate", "round_wins", "round_outcomes", 1),
-        ("position_coverage", "position_opportunities", "position_candidates", 1),
         ("deaths_per_100", "deaths", "rounds", 100),
     ]:
         summary[name] = scale * summary[numerator] / summary[denominator].replace(0, np.nan)
