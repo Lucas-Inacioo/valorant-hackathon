@@ -38,37 +38,6 @@ def openings_by_callout(attack_openings, map_meta):
     return by_callout.sort_values("aberturas", ascending=False).round(3)
 
 
-def first_blood_per_round_table(match_first_blood):
-    columns = {
-        "round": "round",
-        "segundos": "primeira morte (s)",
-        "time_abriu": "quem abriu",
-        "lado_abriu": "lado",
-        "trocada": "trocada",
-        "antes_do_plant": "antes do plant",
-        "abriu_venceu": "quem abriu venceu",
-    }
-    return match_first_blood[list(columns)].rename(columns=columns).round(1)
-
-
-def deaths_per_round_table(match_deaths, round_results):
-    """Por round da partida: vencedor e, para cada time, mortes, isoladas e trocadas."""
-    per_round = match_deaths.groupby(["round", "time_vitima"]).agg(
-        mortes=("vitima", "size"), isoladas=("isolada", "sum"), trocadas=("trocada", "sum")
-    )
-    per_round = per_round.unstack("time_vitima").fillna(0).astype(int)
-    per_round.columns = [f"{team} {stat}" for stat, team in per_round.columns]
-    winner_by_round = {
-        round_result["roundNum"] + 1: round_result["winningTeam"] for round_result in round_results
-    }
-    attacker_by_round = {
-        round_result["roundNum"] + 1: attacking_team(round_result) for round_result in round_results
-    }
-    per_round.insert(0, "vencedor", per_round.index.map(winner_by_round))
-    per_round.insert(0, "atacante", per_round.index.map(attacker_by_round))
-    return per_round.reset_index()
-
-
 def attacking_team(round_result):
     other_team = {"Blue": "Red", "Red": "Blue"}
     winner = round_result["winningTeam"]

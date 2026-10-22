@@ -15,7 +15,6 @@ class AppContext:
     rounds: pd.DataFrame
     selected_matches: pd.DataFrame
     selected_players: pd.DataFrame
-    selected_rounds: pd.DataFrame
     quality: dict
 
     @property

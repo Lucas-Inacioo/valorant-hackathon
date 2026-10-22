@@ -30,7 +30,6 @@ from valorant.analysis.round_style import build_round_styles
 from valorant.analysis.setups import build_setups_table
 from valorant.analysis.fights import build_fights_table
 from valorant.analysis.state_reference import build_state_table
-from valorant.analysis.factors import build_factor_tables, factor_ranking, good_factor_ranking
 from valorant.analysis.deaths import build_deaths_table
 
 
@@ -162,22 +161,6 @@ def load_analysis_table(signature, match_ids, kind):
 
 
 @st.cache_data(show_spinner=False)
-def load_factors(signature, match_ids):
-    deaths, flagged = build_factor_tables(
-        load_analysis_table(signature, match_ids, "fights"),
-        load_analysis_table(signature, match_ids, "rounds"),
-        load_analysis_table(signature, match_ids, "styles"),
-    )
-    return (deaths, flagged)
-
-
-@st.cache_data(show_spinner=False)
-def load_associations(signature, match_ids):
-    deaths, flagged = load_factors(signature, match_ids)
-    return (factor_ranking(deaths, flagged), good_factor_ranking(deaths, flagged))
-
-
-@st.cache_data(show_spinner=False)
 def load_state_references(signature, match_ids, exclude_match_id):
     return build_state_table(
         load_analysis_table(signature, match_ids, "deaths"),
@@ -295,12 +278,6 @@ class AnalysisData:
 
     def maps(self):
         return load_map_metadata(self.data_version)
-
-    def factors(self):
-        return load_factors(self.data_version, self.match_ids)
-
-    def associations(self):
-        return load_associations(self.data_version, self.match_ids)
 
     def states(self, exclude_match_id):
         return load_state_references(self.data_version, self.match_ids, exclude_match_id)

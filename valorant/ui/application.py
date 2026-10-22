@@ -42,7 +42,6 @@ def build_context() -> AppContext | None:
         rounds=rounds,
         selected_matches=selected_matches,
         selected_players=players[players["match_id"].isin(match_ids)],
-        selected_rounds=rounds[rounds["match_id"].isin(match_ids)],
         quality=quality,
     )
 
@@ -58,9 +57,4 @@ def run() -> None:
     if not context.selected_match_ids:
         st.info("Selecione ao menos um torneio e uma versão com partidas disponíveis.")
         return
-    if active_section != "Dashboard da pesquisa":
-        st.caption(
-            f"A seleção contém {len(context.selected_matches)} partidas e "
-            f"{len(context.selected_rounds)} rounds."
-        )
     render_content(active_section, context)
