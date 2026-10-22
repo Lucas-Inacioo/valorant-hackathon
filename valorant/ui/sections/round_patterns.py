@@ -29,19 +29,20 @@ from valorant.ui.tables import display_number
 
 
 def render(context: AppContext) -> None:
-    st.header("Ritmo dos rounds")
-    st.caption(
-        "Aqui olhamos para as perdas de jogadores e o tempo dos eventos. "
-        "Cada round aparece uma vez para cada equipe."
+    st.header("Colapso e estilo")
+    st.markdown(
+        "Colapso foi definido como três jogadores da equipe morrendo em até 10 segundos sem que a equipe mate ninguém nesse intervalo. "
+        "Execução rápida é quando a spike é plantada em até 40 s, default quando é plantada depois disso, sem plant quando o round acabou antes de plantar. "
+        "Contato cedo é quando o primeiro abate do round aconteceu em até 20 s. Por fim, placar é quem estava na frente antes do round começar."
     )
     team_rounds = context.data.styles()
     team_rounds = team_rounds[
         team_rounds["match_id"].isin(context.selected_match_ids) & (team_rounds["lado"] != "?")
     ]
     rounds_column, losses_column, plants_column = st.columns(3)
-    rounds_column.metric("Rounds contados por equipe", len(team_rounds))
+    rounds_column.metric("Rounds contados (um por equipe)", len(team_rounds))
     losses_column.metric(
-        "Rounds com três perdas em sequência",
+        "Rounds com colapso",
         display_number(team_rounds["colapso"].mean(), ".0%"),
         help="Três jogadores diferentes morrem em até 10 segundos sem a equipe fazer um abate nesse intervalo.",
     )
@@ -59,7 +60,7 @@ def render(context: AppContext) -> None:
 
 
 def _show_losses_by_side_and_map(team_rounds: pd.DataFrame, context: AppContext) -> None:
-    st.subheader("Três perdas em sequência")
+    st.subheader("1. Colapso: com que frequência acontece e quanto custa?")
     st.caption(
         "Contamos os rounds em que três jogadores diferentes da equipe morreram "
         "em até 10 segundos, sem que ela fizesse um abate nesse intervalo. "
@@ -67,36 +68,36 @@ def _show_losses_by_side_and_map(team_rounds: pd.DataFrame, context: AppContext)
     )
     results_by_side = collapse_summary(team_rounds, ["lado"])
     side_column, map_column = st.columns([2, 3])
-    side_column.markdown("**Frequência em cada lado**")
+    side_column.markdown("**Parte dos rounds com colapso**, em cada lado")
     side_column.altair_chart(
         rate_chart(
             results_by_side,
             "lado",
             "colapsos",
             "rounds",
-            "% de rounds com três perdas",
+            "% dos rounds com colapso",
             group_column="lado",
             group_colors=SIDE_COLORS,
             height=140,
         ),
         width="stretch",
     )
-    side_column.markdown("**Vitórias com e sem essas perdas**")
+    side_column.markdown("**Quantos rounds a equipe vence** quando colapsa (quadrado) e quando não colapsa (círculo)")
     side_column.altair_chart(
         dumbbell_chart(
             results_by_side,
             "lado",
             "venceu_com_colapso",
             "venceu_sem_colapso",
-            "com três perdas",
-            "sem três perdas",
+            "com colapso",
+            "sem colapso",
             "% de rounds vencidos",
             count_column="rounds",
             left_color=LOST_COLOR,
         ),
         width="stretch",
     )
-    map_column.markdown("**Frequência por mapa e lado**")
+    map_column.markdown("**Parte dos rounds com colapso em cada mapa**, por lado")
     results_by_map = (
         collapse_summary(team_rounds, ["mapa", "lado"])
         .rename(index=context.map_names, level="mapa")
@@ -108,7 +109,7 @@ def _show_losses_by_side_and_map(team_rounds: pd.DataFrame, context: AppContext)
             "mapa",
             "colapsos",
             "rounds",
-            "% de rounds com três perdas",
+            "% dos rounds com colapso",
             group_column="lado",
             group_colors=SIDE_COLORS,
         ),
@@ -119,13 +120,13 @@ def _show_losses_by_side_and_map(team_rounds: pd.DataFrame, context: AppContext)
 def _show_loss_locations(team_rounds: pd.DataFrame, context: AppContext) -> None:
     selected_map, map_metadata = select_map(
         context,
-        "Mapa das perdas em sequência",
+        "Em que regiões do mapa os colapsos acontecem",
         team_rounds["mapa"].value_counts().index,
         "collapse_map",
     )
     losses_by_region = collapse_regions(team_rounds, selected_map)
     if map_metadata is None or losses_by_region.empty:
-        st.info("Não há imagem do mapa ou regiões com pelo menos 5 sequências de perdas.")
+        st.info("Este mapa não tem imagem disponível ou não tem colapsos suficientes.")
         return
     location_by_region = {
         callout_name(region): (region["location"]["x"], region["location"]["y"])
@@ -157,7 +158,7 @@ def _show_loss_locations(team_rounds: pd.DataFrame, context: AppContext) -> None
             f"**{side.capitalize()}** com {shown_count} sequências nas regiões mostradas"
         )
         if side_regions.empty:
-            side_column.info("Nenhuma região deste lado reúne pelo menos 5 sequências.")
+            side_column.info("Sem colapsos com volume neste lado.")
             continue
         side_column.pyplot(
             draw_rate_markers(
@@ -166,7 +167,7 @@ def _show_loss_locations(team_rounds: pd.DataFrame, context: AppContext) -> None
                 "colapsos",
                 "pre_plant",
                 before_plant_rate,
-                "parte das sequências antes do plant",
+                "parte dos colapsos antes do plant",
                 label_min_count=10**9,
                 size_per_unit=6,
             ),
@@ -183,7 +184,7 @@ def _show_loss_locations(team_rounds: pd.DataFrame, context: AppContext) -> None
 
 
 def _show_plant_and_abate_timing(team_rounds: pd.DataFrame) -> None:
-    st.subheader("Tempo do plant e do primeiro abate")
+    st.subheader("2. Ritmo do ataque: plantar rápido rende mais? E fazer contato cedo?")
     st.caption(
         "Plant é a instalação da spike. Separamos os rounds por plant até "
         "40 segundos, depois de 40 segundos ou sem plant. Essa divisão usa o tempo "
@@ -192,7 +193,7 @@ def _show_plant_and_abate_timing(team_rounds: pd.DataFrame) -> None:
     )
     results_by_plant_time, results_by_abate_time = style_summary(team_rounds)
     plant_column, abate_column = st.columns(2)
-    plant_column.markdown("**Vitórias do ataque conforme o tempo do plant**")
+    plant_column.markdown("**Quantos rounds o ataque vence** conforme o ritmo")
     plant_column.altair_chart(
         rate_chart(
             results_by_plant_time,
@@ -205,7 +206,7 @@ def _show_plant_and_abate_timing(team_rounds: pd.DataFrame) -> None:
         ),
         width="stretch",
     )
-    abate_column.markdown("**Vitórias conforme o tempo do primeiro abate**")
+    abate_column.markdown("**Quantos rounds cada lado vence** quando o primeiro abate sai até 20 s (contato cedo) ou depois (contato tarde)")
     abate_column.altair_chart(
         rate_chart(
             results_by_abate_time,
@@ -222,14 +223,14 @@ def _show_plant_and_abate_timing(team_rounds: pd.DataFrame) -> None:
 
 
 def _show_timing_by_score(team_rounds: pd.DataFrame) -> None:
-    st.subheader("Tempo do plant conforme o placar")
+    st.subheader("3. A equipe muda o ritmo quando está perdendo?")
     st.caption(
         "O placar é o que a equipe tinha antes do round começar. "
         "Comparamos os rounds em que estava na frente, atrás ou empatada."
     )
     shares, win_rates, counts = style_by_score(team_rounds)
     shares_column, wins_column = st.columns(2)
-    shares_column.markdown("**Distribuição dos rounds de ataque por tempo do plant**")
+    shares_column.markdown("**Como os rounds de ataque se dividem entre os ritmos**, conforme o placar antes do round")
     shares_column.altair_chart(
         share_chart(
             shares,
@@ -239,12 +240,12 @@ def _show_timing_by_score(team_rounds: pd.DataFrame) -> None:
         ),
         width="stretch",
     )
-    wins_column.markdown("**Vitórias em cada grupo**")
+    wins_column.markdown("**Parte dos rounds vencidos** em cada combinação de placar e ritmo")
     display_table(win_rates, width="content", container=wins_column)
 
 
 def _show_team_profiles(team_rounds: pd.DataFrame) -> None:
-    st.subheader("Tempo do plant por equipe")
+    st.subheader("4. Perfil de cada equipe (equipes com 40 ou mais rounds de ataque)")
     st.caption(
         "Cada ponto é uma equipe com pelo menos 40 rounds de ataque. "
         "O tamanho mostra quantos rounds entraram na comparação."
@@ -256,7 +257,7 @@ def _show_team_profiles(team_rounds: pd.DataFrame) -> None:
             "execução rápida",
             "vitoria_ataque",
             "rounds_ataque",
-            "% de rounds de ataque com plant até 40 s",
+            "% dos rounds de ataque com plant até 40 s",
             "% de rounds de ataque vencidos",
         ),
         width="stretch",

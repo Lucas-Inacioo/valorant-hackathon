@@ -513,7 +513,7 @@ class AppIntegrationTests(unittest.TestCase):
                     f"Plants com poucos casos em {tournament}",
                     lambda selected=selected: (
                         tournaments([selected]),
-                        section("Plant e desarme"),
+                        section("Plant e defuse"),
                     ),
                 ):
                     continue
@@ -548,7 +548,7 @@ class AppIntegrationTests(unittest.TestCase):
                     "Momento do round",
                 ).set_value("todas"),
             )
-            slider_label = "Distância para considerar uma morte isolada"
+            slider_label = "Distância a partir da qual a morte conta como isolada (unidades do jogo, cerca de 100 por metro)"
             context_snapshots = {}
 
             def context_counts():

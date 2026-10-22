@@ -36,10 +36,10 @@ from valorant.ui.presentation import display_table
 
 def render(context: AppContext) -> None:
     st.header("Economia")
-    st.caption(
-        "O valor do equipamento inicial é a soma registrada para os cinco jogadores "
-        "da equipe, em créditos. Parte desse equipamento pode ter vindo do round "
-        "anterior. O saldo de créditos e o gasto na compra são outras medidas."
+    st.markdown(
+        "Loadout é o valor das armas e escudos dos cinco jogadores. Rounds normais são todos menos o pistol "
+        "(rounds 1 e 13) e o segundo round de cada metade (2 e 14). Vitória esperada pelo dinheiro é a taxa "
+        "de vitória normal para a diferença de loadout vista entre as equipes."
     )
     team_rounds = context.data.rounds()
     team_rounds = team_rounds[team_rounds["match_id"].isin(context.selected_match_ids)]
@@ -53,13 +53,11 @@ def render(context: AppContext) -> None:
 
 
 def _show_equipment_and_results(team_rounds: pd.DataFrame) -> None:
-    st.subheader("Equipamento inicial e vitórias")
+    st.subheader("1. Quanto o dinheiro gasto em armas compra de rounds?")
     own_equipment, equipment_difference = win_rate_by_loadout(team_rounds)
     difference_column, opponent_column = st.columns(2)
-    difference_column.markdown("**Diferença de equipamento entre as equipes**")
-    difference_column.caption(
-        "Acima de zero, o equipamento desta equipe valia mais que o do adversário. "
-        "Este gráfico inclui todos os rounds."
+    difference_column.markdown(
+        "**Diferença de loadout entre a equipe e o adversário.** Acima de zero, a equipe gastou mais. (todos os rounds)"
     )
     difference_column.altair_chart(
         rate_chart(
@@ -71,10 +69,8 @@ def _show_equipment_and_results(team_rounds: pd.DataFrame) -> None:
         ),
         width="stretch",
     )
-    opponent_column.markdown("**Contra adversários com mais de 20 mil créditos em equipamento**")
-    opponent_column.caption(
-        "O eixo separa as equipes pelo valor do próprio equipamento. "
-        "Ficam fora os rounds de pistol e os rounds 2 e 14."
+    opponent_column.markdown(
+        "**Pelo loadout da equipe quando o adversário comprou tudo** (20 mil ou mais, rounds normais)"
     )
     opponent_column.altair_chart(
         rate_chart(
@@ -86,7 +82,10 @@ def _show_equipment_and_results(team_rounds: pd.DataFrame) -> None:
         ),
         width="stretch",
     )
-    with st.expander("Tabelas de equipamento e resultados"):
+    with st.expander(
+        "Números: ganho de vitória por 1.000 créditos a mais, loadout da equipe sem olhar o adversário, "
+        "e o cruzamento loadout da equipe x loadout do adversário"
+    ):
         st.caption(
             "A variação por mil créditos compara as taxas de faixas vizinhas, "
             "levando em conta a diferença entre seus valores médios de equipamento. "
@@ -99,8 +98,8 @@ def _show_equipment_and_results(team_rounds: pd.DataFrame) -> None:
             heatmap_chart(
                 rates,
                 counts,
-                "equipamento inicial do adversário",
-                "equipamento inicial da equipe",
+                "loadout do adversário",
+                "loadout da equipe",
                 "% de rounds vencidos",
             ),
             width="stretch",
@@ -113,8 +112,8 @@ def _equipment_comparison(table: pd.DataFrame, group_column: str, rate_label: st
         group_column,
         "esperado_pelo_dinheiro",
         "vitoria",
-        "comparação por equipamento inicial",
-        "vitórias observadas",
+        "esperado pelo dinheiro",
+        "venceu de fato",
         rate_label,
         count_column="rounds",
         x_domain=[0, 1],
@@ -122,7 +121,7 @@ def _equipment_comparison(table: pd.DataFrame, group_column: str, rate_label: st
 
 
 def _show_following_rounds(team_rounds: pd.DataFrame) -> None:
-    st.subheader("Resultados depois de uma vitória ou derrota")
+    st.subheader("2. Perder um round abala a equipe no round seguinte?")
     st.caption(
         "A comparação por equipamento usa a taxa de vitória dos rounds com uma "
         "diferença parecida no valor inicial das duas equipes. A referência deixa "
@@ -131,13 +130,14 @@ def _show_following_rounds(team_rounds: pd.DataFrame) -> None:
         "a força das equipes e outros fatores da partida."
     )
     st.caption(
-        "Clutch e thrifty são destaques registrados pelo jogo para certas vitórias. "
-        "Eles formam um grupo separado de derrotas aqui, sem indicar que o round era fácil."
+        "Round fácil perdido é quando a equipe perdeu um round em que o adversário venceu em desvantagem "
+        "(clutch ou thrifty). Quadrado mostra quantos rounds seguintes a equipe deveria vencer só pelo "
+        "dinheiro que tinha. Círculo mostra quantos venceu de fato."
     )
     close_rounds = team_rounds[team_rounds["match_id"].isin(close_match_ids(team_rounds))]
     all_column, close_column = st.columns(2)
     result_labels = {
-        "perdeu round fácil (clutch ou thrifty do adversário)": "perdeu para clutch ou thrifty",
+        "perdeu round fácil (clutch ou thrifty do adversário)": "perdeu round fácil",
     }
     all_column.markdown("**Todas as partidas**")
     all_column.altair_chart(
@@ -149,10 +149,8 @@ def _show_following_rounds(team_rounds: pd.DataFrame) -> None:
         width="stretch",
     )
     close_match_count = close_rounds["match_id"].nunique()
-    close_column.markdown(f"**Partidas com placar final próximo** com {close_match_count} partidas")
-    close_column.caption(
-        "São partidas que terminaram com até 4 rounds de diferença. "
-        "A seleção usa o resultado final e não garante equipes de força parecida."
+    close_column.markdown(
+        f"**Só partidas equilibradas** (até 4 rounds de diferença no placar final, {close_match_count} partidas)"
     )
     close_column.altair_chart(
         _equipment_comparison(
@@ -163,7 +161,9 @@ def _show_following_rounds(team_rounds: pd.DataFrame) -> None:
         width="stretch",
     )
     streak_column, close_streak_column = st.columns(2)
-    streak_column.markdown("**Derrotas seguidas antes do round em todas as partidas**")
+    streak_column.markdown(
+        "**Quantos rounds seguidos a equipe tinha perdido antes deste**, todas as partidas"
+    )
     streak_column.altair_chart(
         _equipment_comparison(
             after_streak(team_rounds),
@@ -172,7 +172,9 @@ def _show_following_rounds(team_rounds: pd.DataFrame) -> None:
         ),
         width="stretch",
     )
-    close_streak_column.markdown("**Derrotas seguidas nas partidas com placar final próximo**")
+    close_streak_column.markdown(
+        "**Quantos rounds seguidos a equipe tinha perdido antes deste**, só partidas equilibradas"
+    )
     close_streak_column.altair_chart(
         _equipment_comparison(
             after_streak(close_rounds),
@@ -184,7 +186,7 @@ def _show_following_rounds(team_rounds: pd.DataFrame) -> None:
 
 
 def _show_pistol_cycles(team_rounds: pd.DataFrame) -> None:
-    st.subheader("Os três rounds depois do pistol")
+    st.subheader("3. Quem perde o pistol deve economizar ou comprar no round 2?")
     st.caption(
         "Pistol é o primeiro round de cada metade, nos rounds 1 e 13. "
         "O gráfico acompanha quem perdeu esse round. As faixas eco, leve e force "
@@ -192,10 +194,12 @@ def _show_pistol_cycles(team_rounds: pd.DataFrame) -> None:
         "e acima de 8 mil créditos."
     )
     pistol_column, cycle_column = st.columns([1, 3])
-    pistol_column.markdown("**Vitórias no pistol por lado**")
+    pistol_column.markdown("**Round pistol**, quantos cada lado vence")
     display_table(pistol_by_side(team_rounds), width="content", container=pistol_column)
     overall_cycles, cycles_by_side = second_round_cycle(team_rounds)
-    cycle_column.markdown("**Vitórias nos três rounds seguintes de quem perdeu o pistol**")
+    cycle_column.markdown(
+        "**Equipe que perdeu o pistol, o que ela gastou no round 2 e quantos dos rounds 2, 3 e 4 venceu.**"
+    )
     cycle_column.caption(
         "As três taxas e a soma usam os mesmos ciclos completos. "
         "Se a partida terminou antes, o ciclo aparece na tabela como incompleto. "
@@ -205,17 +209,17 @@ def _show_pistol_cycles(team_rounds: pd.DataFrame) -> None:
         grouped_bar_chart(
             overall_cycles[["vitoria_round_2", "vitoria_round_3", "vitoria_round_4"]].rename(
                 columns={
-                    "vitoria_round_2": "primeiro round depois do pistol",
-                    "vitoria_round_3": "segundo round depois do pistol",
-                    "vitoria_round_4": "terceiro round depois do pistol",
+                    "vitoria_round_2": "round 2",
+                    "vitoria_round_3": "round 3",
+                    "vitoria_round_4": "round 4",
                 }
             ),
             [WON_COLOR, TRADE_COLOR, NEUTRAL_COLOR],
-            "% de rounds vencidos nos ciclos completos",
+            "% de rounds vencidos",
         ),
         width="stretch",
     )
-    with st.expander("Números dos ciclos no total e por lado"):
+    with st.expander("Números dos rounds 2 a 4, no total e por lado"):
         st.caption(
             "A taxa anterior usa somente rounds que aconteceram antes do pistol. "
             "Ela fica vazia quando não há rounds anteriores."
@@ -225,20 +229,23 @@ def _show_pistol_cycles(team_rounds: pd.DataFrame) -> None:
 
 
 def _show_first_victim_and_survivors(team_rounds: pd.DataFrame, fights: pd.DataFrame) -> None:
-    st.subheader("Equipamento da primeira vítima e jogadores que sobreviveram")
+    st.subheader("4. Perder o jogador mais caro custa mais? E sobreviver a um round perdido vale quanto?")
     st.caption(
         "As primeiras mortes são comparadas com a taxa de vitória da equipe "
         "na própria partida. As armas e os valores são os do início do round."
     )
     expensive_column, operator_column = st.columns(2)
-    expensive_column.markdown("**Primeira vítima com o equipamento mais caro da equipe**")
+    expensive_column.markdown(
+        "**Comparação quando o primeiro a morrer é o jogador com maior loadout da equipe**, "
+        "em relação a média da equipe na partida."
+    )
     expensive_column.caption("O grupo só inclui o maior valor quando não há empate com um aliado.")
     display_table(
         economic_first_death(fights, "mais_caro_do_time"),
         width="content",
         container=expensive_column,
     )
-    operator_column.markdown("**Primeira vítima que começou com Operator**")
+    operator_column.markdown("**Quando o primeiro a morrer tinha um Operator**")
     display_table(
         economic_first_death(
             fights.assign(operator=fights["arma_vitima"] == "Operator"),
@@ -259,10 +266,10 @@ def _show_first_victim_and_survivors(team_rounds: pd.DataFrame, fights: pd.DataF
     equipment_column.bar_chart(
         surviving_players["loadout_seguinte"],
         color=[WON_COLOR],
-        y_label="valor do equipamento inicial em créditos",
+        y_label="loadout do round seguinte",
         x_label="sobreviventes",
     )
-    wins_column.markdown("**Vitórias no round seguinte**")
+    wins_column.markdown("**Chance de vencer o round seguinte**, conforme quantos sobreviveram")
     wins_column.altair_chart(
         rate_chart(
             surviving_players,
@@ -281,19 +288,23 @@ def _show_next_equipment_and_post_plant(
     fights: pd.DataFrame,
     context: AppContext,
 ) -> None:
-    st.subheader("Sobreviventes e mortes depois do plant")
+    st.subheader("5. Vale a pena caçar quem está guardando para o próximo round?")
     st.caption(
-        "Plant é a instalação da spike. Estes dados mostram quem sobreviveu e "
-        "quem morreu depois disso, mas não registram quem estava caçando um adversário."
+        "Os arquivos não dizem quem foi atrás de quem, então considera-se quanto cada sobrevivente vale para "
+        "quem venceu e para quem perdeu o round, e como terminam as lutas depois do plant quando o ataque já "
+        "está em vantagem."
     )
     equipment_column, exchange_column = st.columns(2)
     next_equipment, round_counts = next_loadout_by_outcome(team_rounds, fights)
-    equipment_column.markdown("**Equipamento no round seguinte por resultado e sobreviventes**")
+    equipment_column.markdown(
+        "**Quanto a equipe tem para gastar no round seguinte**, conforme quantos sobreviveram, "
+        "para quem venceu e para quem perdeu o round"
+    )
     equipment_column.altair_chart(
         grouped_bar_chart(
             next_equipment.rename_axis(index="sobreviventes"),
             [WON_COLOR, LOST_COLOR],
-            "valor do equipamento inicial em créditos",
+            "loadout do round seguinte",
             ".0f",
         ),
         width="stretch",
@@ -301,11 +312,9 @@ def _show_next_equipment_and_post_plant(
     plants = context.data.plants()
     plants = plants[plants["match_id"].isin(context.selected_match_ids)]
     post_plant_deaths = post_plant_exchange(plants, fights)
-    exchange_column.markdown("**Mortes do ataque entre as mortes depois do plant**")
-    exchange_column.caption(
-        "Só entram rounds que o ataque venceu. Em 3 contra 2, por exemplo, "
-        "havia 3 atacantes e 2 defensores vivos no plant. Essa taxa não inclui "
-        "os rounds em que o ataque perdeu."
+    exchange_column.markdown(
+        "**Parte das mortes depois do plant que são de atacantes**, por situação no plant "
+        "(atacantes x defensores vivos), em rounds que o ataque venceu"
     )
     exchange_column.altair_chart(
         rate_chart(
@@ -313,14 +322,14 @@ def _show_next_equipment_and_post_plant(
             "situacao",
             "parte_do_ataque",
             "mortes_pos_plant",
-            "% das mortes após o plant que são de atacantes",
+            "% das mortes depois do plant que são de atacantes",
             color=ATTACK_COLOR,
         ),
         width="stretch",
     )
-    with st.expander("Números por sobreviventes e jogadores vivos no plant"):
+    with st.expander("Números por sobreviventes e por situação no plant"):
         display_table(
-            round_counts.rename(columns=lambda column: f"rounds em que {column}"),
+            round_counts.rename(columns=lambda column: f"rounds, {column}"),
             width="content",
             container=st,
         )

@@ -6,7 +6,7 @@ Conferência feita em 20 de outubro de 2026 com a seleção padrão de 335 parti
 
 O dashboard é a entrada do aplicativo e apresenta o resumo da pesquisa. Dois botões levam à ferramenta de análise pós-jogo ou à área de dados exploratórios e análises. A ferramenta fica separada das análises que deram origem aos resultados.
 
-O menu principal mantém essas três áreas visíveis. Dentro da área exploratória estão as abas Primeiro abate, Trocas e isolamento, Ritmo dos rounds, Economia, Plant e desarme, Previsão, Conclusões, Explorar dados e Qualidade dos dados. Somente a aba escolhida executa sua análise. Ao sair e voltar, a última aba consultada é restaurada.
+O menu principal mantém essas três áreas visíveis. Dentro da área exploratória estão as abas Abertura, Trocas e isolamento, Colapso e estilo, Economia, Plant e defuse, Previsão, Conclusões, Explorar dados e Qualidade dos dados. Somente a aba escolhida executa sua análise. Ao sair e voltar, a última aba consultada é restaurada.
 
 Os filtros laterais continuam compartilhados pelas três áreas. Os atalhos de equipes e exemplos do dashboard abrem a ferramenta na seleção correspondente e atualizam a opção marcada no menu principal.
 

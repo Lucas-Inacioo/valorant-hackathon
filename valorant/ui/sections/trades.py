@@ -40,7 +40,7 @@ def render(context: AppContext) -> None:
     )
     distance_column, phase_column = st.columns(2)
     isolation_distance = distance_column.slider(
-        "Distância para considerar uma morte isolada",
+        "Distância a partir da qual a morte conta como isolada (unidades do jogo, cerca de 100 por metro)",
         500,
         3000,
         SOLO_DISTANCE,
@@ -51,12 +51,7 @@ def render(context: AppContext) -> None:
         "Momento do round",
         ["todas", "pré-plant", "pós-plant"],
         horizontal=True,
-        format_func={
-            "todas": "Todos",
-            "pré-plant": "Antes do plant",
-            "pós-plant": "Depois do plant",
-        }.get,
-        help="Plant é a instalação da spike. Depois dele, a defesa precisa desarmá-la.",
+        help="Depois do plant os papéis se invertem: a defesa precisa entrar no site para desarmar.",
     )
     deaths = context.data.deaths()
     deaths = deaths[deaths["diagnostico_tatico"]].copy()
@@ -80,15 +75,15 @@ def _show_summary(
 ) -> None:
     nearby_and_facing = fights[fights["troca_possivel"] == TRADE_POSSIBLE]
     deaths_column, trades_column, isolated_column, missed_column = st.columns(4)
-    deaths_column.metric("Mortes analisadas", len(deaths))
+    deaths_column.metric("Mortes", len(deaths))
     trades_column.metric("Mortes trocadas", display_number(deaths["trocada"].mean(), ".0%"))
     isolated_column.metric(
-        "Mortes isoladas",
+        "Mortes isoladas (entre as que tinham aliado vivo)",
         display_number(deaths_with_allies["isolada"].mean(), ".0%"),
         help="Calculada somente entre mortes com pelo menos um aliado vivo.",
     )
     missed_column.metric(
-        "Sem troca com aliado perto e olhando",
+        "Trocas possíveis que não aconteceram",
         display_number(1 - nearby_and_facing["trocada"].mean(), ".0%"),
         help="Casos com um aliado a até 2000 unidades do adversário e com o olhar voltado para ele.",
     )
@@ -100,17 +95,23 @@ def _show_summary(
 
 
 def _show_win_differences(deaths_with_allies: pd.DataFrame) -> None:
-    st.subheader("Diferença nas vitórias com troca ou aliado perto")
+    st.subheader("1. Quanto vale trocar abates, e quanto vale ter um aliado perto?")
     st.caption(
-        "Comparamos mortes com e sem cada condição, mantendo iguais as quantidades "
-        "de aliados e adversários vivos. Cada barra reúne essas diferenças por "
-        "quantidade de aliados, com mais peso para as situações com mais mortes. "
-        "O mesmo round pode entrar várias vezes. Essa comparação não mede o "
-        "efeito da troca ou a qualidade da decisão."
+        "O eixo mostra quantos aliados da vítima continuaram vivos no instante em que ela morreu. "
+        "Por exemplo, a barra 1 reúne mortes em que a equipe tinha 2 vivos e ficou com 1. "
+        "Cada barra compara a taxa de vitória do round entre mortes trocadas e não trocadas "
+        "ou entre mortes com aliado perto e sem. A comparação só junta mortes com o mesmo número "
+        "de aliados e de inimigos vivos nesse instante, para não refletir o fato de a equipe já "
+        "estar em vantagem numérica. Valores acima de zero ajudam a vencer o round. Exemplo de "
+        "leitura da barra 1 em morte trocada: a situação era 2x2, um jogador morreu e virou 1x2. "
+        "Se o aliado que sobrou trocou o abate, virou 1x1. A barra diz que, com a troca, a equipe "
+        "vence cerca de 16 pontos a mais do que ficando no 1x2 sem trocar. A barra é a média de "
+        "todas as quantidades de inimigos (1x1, 1x2, 1x3 e assim por diante), por isso o exemplo "
+        "é uma ilustração."
     )
     for condition, label in [
-        ("trocada", "Morte trocada em até 5 segundos"),
-        ("aliado_perto", "Pelo menos um aliado dentro do limite de isolamento"),
+        ("trocada", "Morte trocada"),
+        ("aliado_perto", "Aliado a menos do limite de isolamento"),
     ]:
         situations = win_rate_by_situation(deaths_with_allies, condition)
         if situations.empty:
@@ -124,16 +125,16 @@ def _show_win_differences(deaths_with_allies: pd.DataFrame) -> None:
         st.altair_chart(
             grouped_bar_chart(
                 weighted_differences.unstack("lado").rename_axis(
-                    index="aliados vivos após a morte"
+                    index="aliados da vítima vivos no instante da morte"
                 ),
                 [ATTACK_COLOR, DEFENSE_COLOR],
-                "diferença na taxa de vitória",
+                "diferença na vitória",
                 "+.0%",
                 height=260,
             ),
             width="stretch",
         )
-        with st.expander(f"Números por jogadores vivos para {label.lower()}"):
+        with st.expander(f"Números de cada situação (aliados x inimigos vivos): {label.lower()}"):
             st.caption(
                 "Em 3 contra 2, por exemplo, restavam 3 aliados da vítima e "
                 "2 adversários. Cada situação precisa ter pelo menos 60 mortes, "
@@ -148,7 +149,7 @@ def _show_win_differences(deaths_with_allies: pd.DataFrame) -> None:
 
 
 def _show_nearby_ally_comparison(fights: pd.DataFrame) -> None:
-    st.subheader("Aliado perto do adversário e troca observada")
+    st.subheader("2. Quando a troca era possível, ela aconteceu?")
     st.caption(
         "Um aliado está perto quando fica a até 2000 unidades do adversário que "
         "fez o abate. O olhar está voltado para ele quando a diferença de direção "
@@ -157,14 +158,14 @@ def _show_nearby_ally_comparison(fights: pd.DataFrame) -> None:
     )
     trade_groups = trade_possibility_summary(fights, ["lado"]).rename(
         index={
-            TRADE_POSSIBLE: "aliado perto e olhando para o adversário",
-            "aliado em alcance olhando para outro lado": "aliado perto e olhando para outro lado",
+            TRADE_POSSIBLE: "aliado perto, olhando para o inimigo",
+            "aliado em alcance olhando para outro lado": "aliado perto, olhando para outro lado",
             "sem aliado em alcance": "nenhum aliado perto",
         },
         level="troca_possivel",
     )
     trades_column, wins_column = st.columns(2)
-    trades_column.markdown("**Mortes trocadas em cada grupo**")
+    trades_column.markdown("**Quantas mortes foram trocadas**, considerando se algum aliado da vítima estava a menos de 20 m do inimigo que a matou e olhando para ele")
     trades_column.altair_chart(
         rate_chart(
             trade_groups,
@@ -177,7 +178,7 @@ def _show_nearby_ally_comparison(fights: pd.DataFrame) -> None:
         ),
         width="stretch",
     )
-    wins_column.markdown("**Vitórias da equipe da vítima nos mesmos grupos**")
+    wins_column.markdown("**Quantos rounds a equipe da vítima venceu**, nas mesmas três situações")
     wins_column.altair_chart(
         rate_chart(
             trade_groups,
@@ -193,22 +194,22 @@ def _show_nearby_ally_comparison(fights: pd.DataFrame) -> None:
 
 
 def _show_distance_bands(deaths_with_allies: pd.DataFrame) -> None:
-    st.subheader("Distância até o aliado mais próximo")
+    st.subheader("3. A que distância do aliado mais próximo o jogador morreu?")
     st.caption(
-        "As distâncias são medidas em unidades do jogo no momento da morte. "
-        "Cada faixa mostra a parte das mortes que foi trocada e a parte em que "
-        "a equipe da vítima venceu o round."
+        "Mortes agrupadas pela distância até o aliado vivo mais próximo, em unidades do jogo "
+        "(100 unidades são cerca de 1 metro). Morte trocada: quantas foram trocadas. "
+        "Equipe venceu o round: quantos desses rounds a equipe da vítima ainda venceu."
     )
     for side_column, side in zip(st.columns(2), ["ataque", "defesa"]):
         side_deaths = deaths_with_allies[deaths_with_allies["lado"] == side]
-        side_column.markdown(f"**Vítima {SIDE_PHRASES[side]}**")
+        side_column.markdown(f"**Jogador que morreu estava {SIDE_PHRASES[side]}**")
         distance_rates = summary_by_distance_band(side_deaths)[["fracao_trocadas", "venceu_round"]]
         distance_rates = distance_rates.rename(
             columns={
                 "fracao_trocadas": "morte trocada",
                 "venceu_round": "equipe venceu o round",
             }
-        ).rename_axis(index="distância até o aliado mais próximo em unidades do jogo")
+        ).rename_axis(index="distância até o aliado mais próximo (unidades do jogo)")
         side_column.altair_chart(
             grouped_bar_chart(
                 distance_rates,
@@ -217,7 +218,7 @@ def _show_distance_bands(deaths_with_allies: pd.DataFrame) -> None:
             ),
             width="stretch",
         )
-    with st.expander("Números por lado e resultado, com as primeiras mortes separadas"):
+    with st.expander("Números por lado e resultado do round, e o primeiro abate separado em isolado ou trocado"):
         display_table(
             summary_by_round_outcome(deaths_with_allies, ["lado"]).rename(
                 index=ROUND_OUTCOME_LABELS,
@@ -236,14 +237,14 @@ def _show_distance_bands(deaths_with_allies: pd.DataFrame) -> None:
             first_deaths["trocada"] = first_deaths["trocada"].map(
                 {False: "não trocada", True: "trocada"}
             )
-            side_column.markdown(f"**Primeira vítima {SIDE_PHRASES[side]}**")
+            side_column.markdown(f"**Primeira morte do round, jogador que morreu estava {SIDE_PHRASES[side]}**")
             display_table(first_deaths, hide_index=True, width="content", container=side_column)
 
 
 def _show_ally_and_region_comparison(deaths_with_allies: pd.DataFrame) -> None:
-    st.subheader("Posição dos aliados e ocupação da região")
+    st.subheader("4. Onde estavam os aliados, e a morte foi em área própria ou do adversário?")
     allies_column, region_column = st.columns(2)
-    allies_column.markdown("**Vitórias conforme a posição dos aliados**")
+    allies_column.markdown("**Quantos rounds a equipe venceu**, conforme onde estavam os aliados")
     allies_column.caption(
         "Em grupo significa ter um aliado dentro do limite escolhido. "
         "Separado do grupo significa estar longe dos aliados, com pelo menos "
@@ -266,7 +267,7 @@ def _show_ally_and_region_comparison(deaths_with_allies: pd.DataFrame) -> None:
         ),
         width="stretch",
     )
-    region_column.markdown("**Vitórias conforme a ocupação da região**")
+    region_column.markdown("**Quantos rounds a equipe venceu**, conforme de quem é a região")
     region_column.caption(
         "A ocupação usa posições dos primeiros confrontos até 20 segundos, "
         "com um registro por round. A região é própria quando pelo menos 65% "
@@ -287,28 +288,26 @@ def _show_ally_and_region_comparison(deaths_with_allies: pd.DataFrame) -> None:
         ),
         width="stretch",
     )
-    with st.expander("Números de posição, região e função do agente"):
+    with st.expander("Números de posição dos aliados e de região, e o isolamento separado por função do agente"):
         display_table(allies_summary, width="content", container=st)
         display_table(
             territory_summary(deaths_with_allies, ["lado"]), width="content", container=st
         )
-        st.markdown("**Isolamento por função do agente**")
-        st.caption(
-            "A comparação por jogadores vivos usa a taxa de vitória com a mesma "
-            "quantidade de aliados e adversários. A diferença para essa taxa é "
-            "calculada primeiro em cada grupo. Depois comparamos as mortes "
-            "isoladas com as acompanhadas."
+        st.markdown(
+            "**Por função do agente.** Acima do esperado: taxa de vitória do round menos o esperado "
+            "para a mesma quantidade de vivos. Custo do isolamento: essa mesma conta para mortes "
+            "isoladas menos para mortes acompanhadas."
         )
         display_table(death_cost_by_role(deaths_with_allies), width="content", container=st)
 
 
 def _show_team_trades(fights: pd.DataFrame, context: AppContext) -> None:
-    st.subheader("Trocas por equipe")
+    st.subheader("5. Quantas trocas possíveis viraram troca? Por equipe")
     st.caption(
-        "Só entram equipes com pelo menos 150 mortes analisadas. A tabela mostra "
-        "quantas mortes foram trocadas quando havia aliado perto e olhando para "
-        "o adversário. O dano no autor do abate é o total registrado durante "
-        "o round, por isso não mostra uma reação a essa morte."
+        "Só equipes com 150 ou mais mortes. Uma troca é possível quando um aliado estava a menos "
+        "de 20 m de quem matou, olhando para ele, e é considerada uma troca convertida quando ela "
+        "de fato ocorreu. O dano no autor do abate é o total registrado durante o round, por isso "
+        "não mostra uma reação a essa morte."
     )
     named_fights = fights.assign(
         time_killer=fights["time_vitima"].map({"Blue": "Red", "Red": "Blue"})

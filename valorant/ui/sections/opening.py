@@ -36,11 +36,8 @@ from valorant.ui.tables import display_number, openings_by_callout
 
 
 def render(context: AppContext) -> None:
-    st.header("Primeiro abate")
-    st.caption(
-        "O primeiro abate é a primeira morte causada por um adversário no round. "
-        "O relógio começa depois da fase de compra."
-    )
+    st.header("Abertura")
+    st.caption("O tempo conta a partir do início do round, depois da fase de compra.")
     first_abates = context.data.first_blood()
     first_abates = first_abates[first_abates["match_id"].isin(context.selected_match_ids)]
     _show_summary(first_abates)
@@ -55,12 +52,12 @@ def _show_summary(first_abates: pd.DataFrame) -> None:
     rounds_column, time_column, wins_column = st.columns(3)
     rounds_column.metric("Rounds com primeiro abate definido", len(first_abates))
     time_column.metric(
-        "Tempo do primeiro abate",
+        "Segundo típico do primeiro abate (mediana)",
         display_number(first_abates["segundos"].median(), suffix=" s"),
         help="Mediana do tempo. Metade dos primeiros abates aconteceu antes e metade depois.",
     )
     wins_column.metric(
-        "Vitórias de quem fez o primeiro abate",
+        "Quem consegue o primeiro abate vence o round",
         display_number(first_abates["abriu_venceu"].mean(), ".1%"),
     )
     ambiguous_rounds = first_abates.attrs.get("rounds_abertura_ambigua", 0)
@@ -74,7 +71,9 @@ def _show_summary(first_abates: pd.DataFrame) -> None:
 
 
 def _show_abate_timing(first_abates: pd.DataFrame) -> None:
-    st.subheader("Resultado conforme o tempo do primeiro abate")
+    st.subheader(
+        "1. Quem consegue o primeiro abate vence o round? Isso muda conforme o tempo em que ele acontece?"
+    )
     st.caption(
         "A taxa mostra quantos rounds foram vencidos pela equipe que fez o primeiro abate. "
         "Ataque e defesa aparecem separados."
@@ -86,14 +85,16 @@ def _show_abate_timing(first_abates: pd.DataFrame) -> None:
             "faixa",
             "abriu_venceu",
             "rounds",
-            "% de rounds vencidos por quem fez o primeiro abate",
+            "% de rounds vencidos pela equipe que conseguiu o primeiro abate",
             group_column="lado_abriu",
             group_colors=SIDE_COLORS,
             order=TIME_LABELS,
         ),
         width="stretch",
     )
-    count_column.markdown("**Quantidade de primeiros abates em cada faixa de tempo**")
+    count_column.markdown(
+        "**Em que segundo o primeiro abate acontece**, separado pelo lado que fez o abate"
+    )
     counts_by_time = pd.crosstab(first_abates["faixa"], first_abates["lado_abriu"]).reindex(
         TIME_LABELS
     )
@@ -119,11 +120,12 @@ def _show_abate_timing(first_abates: pd.DataFrame) -> None:
 
 
 def _show_results_by_map(first_abates: pd.DataFrame, context: AppContext) -> None:
-    st.subheader("Diferença entre o ataque e a defesa em cada mapa")
+    st.subheader("2. Em que mapa o primeiro abate do ataque pesa mais?")
     st.caption(
-        "Comparamos a taxa de vitória do ataque quando ele faz o primeiro abate com "
-        "a taxa quando a defesa faz esse abate. Por exemplo, de 40% para 60% são "
-        "20 pontos percentuais. A diferença também pode refletir a força das equipes."
+        "Diferença entre quantos rounds o ataque vence quando a equipe atacante consegue o "
+        "primeiro abate e quantos vence quando a equipe defensora consegue o primeiro abate. "
+        "Barra maior significa que, naquele mapa, conseguir o primeiro abate muda mais o round. "
+        "Mapas em ordem de quantidade de rounds, entre parênteses."
     )
     results_by_map = summary_by_map(first_abates).rename(index=context.map_names)
     chart_column, table_column = st.columns([3, 2])
@@ -144,7 +146,7 @@ def _show_results_by_map(first_abates: pd.DataFrame, context: AppContext) -> Non
 
 
 def _show_attack_locations(first_abates: pd.DataFrame, context: AppContext) -> None:
-    st.subheader("Onde o ataque faz o primeiro abate")
+    st.subheader("3. Em que lugar do mapa o ataque consegue o primeiro abate")
     selected_map, map_metadata = select_map(
         context,
         "Mapa",
@@ -162,10 +164,13 @@ def _show_attack_locations(first_abates: pd.DataFrame, context: AppContext) -> N
     results_by_region = openings_by_callout(attack_abates, map_metadata)
     map_win_rate = attack_abates["abriu_venceu"].mean()
     st.caption(
-        "As marcas usam a posição do defensor que morreu antes do plant. "
-        "Cada região reúne os abates mais próximos dela. Marcas maiores indicam "
-        f"mais abates. Círculos indicam taxas acima da média do mapa de {map_win_rate:.0%} "
-        "e quadrados indicam taxas abaixo dela. Poucos abates deixam a taxa menos precisa."
+        "Cada círculo é uma região do mapa, com o nome que os jogadores usam para ela. "
+        "Só foram considerados o primeiro abate de cada round do ataque, antes do plant, e "
+        "agrupados na região mais próxima de onde o defensor morreu. O tamanho do círculo "
+        "mostra quantos primeiros abates aconteceram ali, enquanto a cor e a forma quantos "
+        f"desses rounds o ataque venceu, em relação à média do mapa ({map_win_rate:.0%}). "
+        "Círculo: matar um defensor ali quase garante o round. Quadrado: mesmo matando ali, "
+        "o round continua em aberto."
     )
     map_column, table_column = st.columns([3, 2])
     if st.checkbox("Mostrar cada abate em vez das regiões"):
@@ -208,11 +213,12 @@ def _show_attack_locations(first_abates: pd.DataFrame, context: AppContext) -> N
 
 
 def _show_victim_roles(context: AppContext) -> None:
-    st.subheader("Função de quem morreu primeiro")
+    st.subheader(
+        "4. Qual função de agente morre primeiro, e isso muda o custo do primeiro abate?"
+    )
     st.caption(
-        "A função é a classe do agente no jogo, como duelista, iniciador, controlador "
-        "ou sentinela. O primeiro gráfico compara a presença de cada função nas "
-        "equipes com sua presença entre as primeiras mortes."
+        "Dividindo os agentes em duelistas, iniciadores, controladores ou sentinelas, "
+        "considerando a lista pública de agentes, usada só para dar nome ao código do personagem."
     )
     max_seconds = st.slider(
         "Considerar só primeiros abates até este segundo do round",
@@ -226,7 +232,7 @@ def _show_victim_roles(context: AppContext) -> None:
     deaths = deaths[deaths["match_id"].isin(context.selected_match_ids)]
     first_deaths_by_role = first_death_by_role(deaths, max_seconds)
     share_column, wins_column = st.columns(2)
-    share_column.markdown("**Presença nas equipes e nas primeiras mortes**")
+    share_column.markdown("**Quem morre primeiro e frequência nas composições de times**")
     share_column.altair_chart(
         grouped_bar_chart(
             role_share(deaths, max_seconds),
@@ -235,23 +241,28 @@ def _show_victim_roles(context: AppContext) -> None:
         ),
         width="stretch",
     )
-    wins_column.markdown("**Vitórias da equipe que perdeu o primeiro jogador**")
+    wins_column.markdown(
+        "**Quantos rounds a equipe ainda vence depois de perder o primeiro jogador**, "
+        "separado pela função do jogador perdido"
+    )
     wins_column.altair_chart(
         rate_chart(
             first_deaths_by_role,
             "funcao",
             "vitoria_da_vitima",
             "rounds",
-            "% de rounds vencidos pela equipe da vítima",
+            "% de rounds vencidos pela equipe que perdeu o primeiro jogador",
             group_column="lado",
             group_colors=SIDE_COLORS,
             order=ROLE_ORDER,
         ),
         width="stretch",
     )
-    with st.expander("Números por função, troca e agente"):
+    with st.expander("Tabelas por função, por troca e por agente"):
         display_table(first_deaths_by_role, width="content", container=st)
-        st.markdown("**Com e sem troca**")
+        st.markdown(
+            "**Com ou sem troca.** A função de quem morreu importa quando ninguém vinga a morte?"
+        )
         st.caption(
             "Uma morte conta como trocada quando um aliado mata o adversário que "
             "a causou em até 5 segundos."
@@ -259,13 +270,15 @@ def _show_victim_roles(context: AppContext) -> None:
         display_table(
             first_death_by_role_and_trade(deaths, max_seconds), width="content", container=st
         )
-        st.markdown("**Agentes com pelo menos 30 primeiras mortes**")
-        st.caption("As diferenças incluem o agente, quem o escolheu e as partidas em que jogou.")
+        st.markdown(
+            "**Por agente**, só agentes com 30 ou mais primeiras mortes. Cuidado: a diferença "
+            "entre agentes mistura o agente com o perfil de quem costuma escolhê-lo."
+        )
         display_table(first_death_by_agent(deaths, max_seconds), width="content", container=st)
 
 
 def _show_timing_by_round(first_abates: pd.DataFrame) -> None:
-    st.subheader("Tempo do primeiro abate ao longo da partida")
+    st.subheader("5. O primeiro abate fica mais cedo ou mais tarde ao longo da partida?")
     timing_by_round = (
         first_abates[first_abates["round"] <= 24]
         .groupby("round")["segundos"]
@@ -282,9 +295,10 @@ def _show_timing_by_round(first_abates: pd.DataFrame) -> None:
         .round(1)
     )
     st.caption(
-        "A linha mostra a mediana em cada round da partida. A faixa escura reúne "
-        "a metade central dos tempos e a clara reúne os 80% centrais. O gráfico ao "
-        "lado conta os rounds que entraram nessa comparação, sem prorrogação."
+        "Para cada round da partida, o segundo em que o primeiro abate acontece. A linha "
+        "apresenta o valor típico, com metade dos rounds abaixo e metade acima. A faixa escura "
+        "onde ficam os 50% centrais e a faixa clara os 80% centrais. O gráfico ao lado mostra "
+        "a frequência de partidas que chegaram até cada round."
     )
     time_column, count_column = st.columns([3, 2])
     time_column.altair_chart(quantile_band_chart(timing_by_round), width="stretch")

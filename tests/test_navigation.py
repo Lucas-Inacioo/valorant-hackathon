@@ -47,7 +47,7 @@ class NavigationTests(unittest.TestCase):
         self.assertEqual(EXPLORATORY_AREA, app.radio(key="navigation_area").value)
         self.assertEqual(list(EXPLORATORY_SECTIONS), [tab.label for tab in app.tabs])
         opened = [element.value for element in app.markdown if element.value.startswith("Tela aberta")]
-        self.assertEqual(["Tela aberta Primeiro abate"], opened, "Only the selected analysis should execute")
+        self.assertEqual(["Tela aberta Abertura"], opened, "Only the selected analysis should execute")
 
     def test_selected_tab_survives_leaving_research_and_shortcuts_sync_main_menu(self):
         app = self.app()
