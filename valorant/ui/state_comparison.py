@@ -53,7 +53,7 @@ def render_references(context: AppContext, recorded: RecordedRound):
     )
     st.caption(
         "A taxa mostra quantos desses rounds o ataque venceu. Ela só aparece com pelo menos 20 rounds de 5 outras partidas. "
-        "O intervalo de 95% vem de sortear partidas inteiras e repetir a conta. Essa taxa não avalia o mérito de quem fez o lance."
+        "O intervalo de 95% vem de sortear partidas inteiras e repetir a conta."
     )
     references = round_references(context, recorded)
     if references.empty:

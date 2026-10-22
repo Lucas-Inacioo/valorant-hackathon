@@ -17,7 +17,6 @@ SECTIONS = {
     "Colapso e estilo": "round_patterns",
     "Economia": "economy",
     "Plant e defuse": "spike",
-    "Previsão": "prediction",
     "Conclusões": "conclusions",
     "Explorar dados": "exploration",
     "Qualidade dos dados": "quality",

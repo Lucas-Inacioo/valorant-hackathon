@@ -44,7 +44,6 @@ def render(context: AppContext) -> None:
     st.caption(
         "As observações ajudam a escolher lances para rever, evitando precisar rever uma partida inteira."
     )
-    st.write("A seção Previsão avalia o uso de partidas anteriores para antecipar resultados de outros jogos.")
     with st.expander("Ver a lista de partidas"):
         display_table(
             inventory.drop(

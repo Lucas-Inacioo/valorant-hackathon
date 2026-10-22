@@ -17,15 +17,7 @@ from valorant.data.fields import (
 from valorant.data.metadata import load_maps_by_url
 from valorant.data.quality import dataset_quality, eligible_match_ids
 from valorant.analysis.plants import build_plants_table
-from valorant.analysis.prediction import (
-    forecast_accuracy,
-    in_match_accuracy,
-    load_matches,
-    match_pairs,
-    permutation_ceiling,
-    team_features,
-    tournament_ranking,
-)
+from valorant.analysis.prediction import load_matches
 from valorant.analysis.round_style import build_round_styles
 from valorant.analysis.setups import build_setups_table
 from valorant.analysis.fights import build_fights_table
@@ -171,21 +163,6 @@ def load_state_references(signature, match_ids, exclude_match_id):
 
 
 @st.cache_data(show_spinner=False)
-def load_predictions(signature, match_ids):
-    matches = load_analysis_table(signature, match_ids, "matches")
-    features = team_features(load_analysis_table(signature, match_ids, "deaths"), matches)
-    pairs = match_pairs(matches, features)
-    chance_95, chance_median = permutation_ceiling(pairs)
-    return {
-        "dentro": in_match_accuracy(pairs),
-        "acaso": (chance_median, chance_95),
-        "outras": forecast_accuracy(matches, features, only_previous=False),
-        "anteriores": forecast_accuracy(matches, features, only_previous=True),
-        "rankings": tournament_ranking(matches, features),
-    }
-
-
-@st.cache_data(show_spinner=False)
 def load_match_review(signature, match_ids, match):
     from valorant.analysis.post_match import build_match_review
 
@@ -281,9 +258,6 @@ class AnalysisData:
 
     def states(self, exclude_match_id):
         return load_state_references(self.data_version, self.match_ids, exclude_match_id)
-
-    def predictions(self):
-        return load_predictions(self.data_version, self.match_ids)
 
     def fields(self):
         return load_field_tables(self.data_version, self.match_ids)
