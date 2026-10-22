@@ -185,9 +185,6 @@ def show_players(selection: PostMatchSelection):
         ).drop(columns=["Identificador"], errors="ignore"),
         hide_index=True,
     )
-    st.caption(
-        "As observações descrevem ações e contextos registrados. Um round pode envolver mais de um jogador, por isso a soma desta coluna não representa o total de derrotas da equipe."
-    )
     options = selection.team_players
     if st.session_state.get("pos_player") not in options:
         st.session_state["pos_player"] = options[0]
