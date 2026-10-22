@@ -55,6 +55,7 @@ PATTERNS = {
         "Morreu a mais de 1000 unidades do aliado mais próximo enquanto pelo menos dois aliados ocupavam a mesma região do mapa.",
         "A separação tinha um objetivo combinado com a equipe?",
         "Mortes com ao menos dois aliados vivos e regiões identificadas",
+        summary="{occurrences} de {opportunities} mortes tinham dois ou mais aliados vivos. Morreu a mais de 1000 unidades do aliado mais próximo enquanto pelo menos dois aliados ocupavam a mesma região do mapa.",
     ),
     "isolated_opening_untraded": ReviewPattern(
         "Primeira morte longe do apoio e sem troca",
