@@ -255,7 +255,6 @@ def show_fight_context(selection: PostMatchSelection, recorded: RecordedRound, e
             & (fights["event_id"] == event["event_id"])
         ]
         columns = {
-            "arma_vitima": "Arma inicial da vítima",
             "dist_killer": "Distância de quem fez o abate em unidades",
             "dist_aliado_mais_proximo": "Aliado mais próximo em unidades",
             "dano_no_killer": "Dano no autor durante o round",

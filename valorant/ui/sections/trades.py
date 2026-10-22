@@ -3,7 +3,6 @@
 import pandas as pd
 import streamlit as st
 
-from valorant.analysis.agent_roles import death_cost_by_role
 from valorant.analysis.deaths import (
     SOLO_DISTANCE,
     context_summary,
@@ -287,12 +286,6 @@ def _show_ally_and_region_comparison(deaths_with_allies: pd.DataFrame) -> None:
         display_table(
             territory_summary(deaths_with_allies, ["lado"]), width="content", container=st
         )
-        st.markdown(
-            "**Por função do agente.** Acima do esperado: taxa de vitória do round menos o esperado "
-            "para a mesma quantidade de vivos. Custo do isolamento: essa mesma conta para mortes "
-            "isoladas menos para mortes acompanhadas."
-        )
-        display_table(death_cost_by_role(deaths_with_allies), width="content", container=st)
 
 
 def _show_team_trades(fights: pd.DataFrame, context: AppContext) -> None:

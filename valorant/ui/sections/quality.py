@@ -13,7 +13,6 @@ COVERAGE_LABELS = {
     "mortes_excluidas": "Mortes fora dessas análises",
     "com_posicao_autor": "Mortes com posição de quem fez o abate",
     "com_proxy_geometrica": "Mortes com classificação de proximidade calculável",
-    "com_arma_inicial_conhecida": "Mortes com arma inicial da vítima conhecida",
 }
 
 

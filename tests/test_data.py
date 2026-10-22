@@ -104,7 +104,7 @@ class DataRegressionTests(unittest.TestCase):
             }
         ]
         self.assertEqual(aggregate_damage(result)["a", "c"], 60)
-        row = fight_rows(match, {})[0]
+        row = fight_rows(match)[0]
         self.assertEqual(row["dano_no_killer"], 25)
         self.assertEqual(row["fontes_dano_adversario_round"], 2)
         self.assertEqual(row["classe_luta"], MULTIPLE_DAMAGE)

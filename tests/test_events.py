@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pandas as pd
 
-from valorant.analysis.agent_roles import SIDE_ROLE_INDEX, death_cost_by_role, first_death_by_role
 from valorant.analysis.first_blood import first_blood_table, summary_by_map, wilson_interval
 from valorant.analysis.events import (
     alive_before_puuids,
@@ -88,9 +87,7 @@ def match(rr):
 
 
 def deaths(rr):
-    frame = pd.DataFrame(death_rows(match(rr), Path("test.json")), columns=DEATH_COLUMNS)
-    frame["funcao"], frame["agente"] = "duelista", "agent"
-    return frame
+    return pd.DataFrame(death_rows(match(rr), Path("test.json")), columns=DEATH_COLUMNS)
 
 
 class EventTests(unittest.TestCase):
@@ -284,16 +281,13 @@ class EventTests(unittest.TestCase):
         self.assertEqual("flanco", with_solo_flag(frame, 500).iloc[0]["contexto"])
         self.assertEqual("isolado", allies_context({"x": 0, "y": 0}, [{"x": 2000, "y": 0}], ["A"]))
 
-    def test_empty_filters_and_missing_roles_keep_their_schemas(self):
+    def test_empty_filters_keep_their_schemas(self):
         frame = deaths(round_result([]))
         self.assertEqual(
             ["lado", "situacao", "mortes", "sem", "com", "diferenca"],
             list(win_rate_by_situation(with_solo_flag(frame, 500), "trocada").columns),
         )
         self.assertTrue(summary_by_map(first_blood_table(frame)).empty)
-        self.assertEqual(SIDE_ROLE_INDEX.tolist(), first_death_by_role(frame).index.tolist())
-        self.assertTrue(first_death_by_role(frame)["ic95_baixo"].isna().all())
-        self.assertEqual(8, len(death_cost_by_role(with_solo_flag(frame, 500))))
         self.assertTrue(all(math.isnan(value) for value in wilson_interval(math.nan, math.nan)))
 
 

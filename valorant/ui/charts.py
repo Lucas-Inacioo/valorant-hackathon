@@ -1,9 +1,11 @@
 """Gráficos reutilizáveis que recebem tabelas e preservam os dados de análise."""
 
+import math
+
 import altair as alt
 import pandas as pd
 
-from valorant.analysis.agent_roles import with_interval
+from valorant.analysis.first_blood import wilson_interval
 from valorant.ui.presentation import display_value, field_label
 
 LOST_COLOR = "#ff7f0e"
@@ -68,6 +70,21 @@ def category_axis(column, order):
         title=None,
         axis=alt.Axis(labelOverlap=False, labelLimit=340),
     )
+
+
+def with_interval(table, rate_column, count_column):
+    """Wilson descritivo; dependência entre rounds não é incorporada."""
+    intervals = [
+        (
+            wilson_interval(round(rate * count), count)
+            if pd.notna(rate) and pd.notna(count) and count > 0
+            else (math.nan, math.nan)
+        )
+        for rate, count in zip(table[rate_column], table[count_column])
+    ]
+    table["ic95_baixo"] = [low for low, _ in intervals]
+    table["ic95_alto"] = [high for _, high in intervals]
+    return table
 
 
 def rate_chart(

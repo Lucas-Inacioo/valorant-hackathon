@@ -246,32 +246,6 @@ Essa referência considera os vivos, mas não toda a situação do round. Uma di
 
 Os tempos observados não sustentam a afirmação de que quase todos os defuses acontecem perto do limite de 45 segundos.
 
-## 9. Função do agente
-
-Duelista, iniciador, controlador e sentinela são as funções dos agentes nos metadados locais. A participação nas escalações conta jogadores, sem observadores. A primeira tabela compara essa participação com a presença entre as primeiras vítimas.
-
-| Função | escalações | primeira morte no ataque | primeira morte na defesa |
-| --- | --- | --- | --- |
-| duelista | 0,361 | 0,523 | 0,464 |
-| iniciador | 0,214 | 0,114 | 0,168 |
-| controlador | 0,237 | 0,166 | 0,188 |
-| sentinela | 0,187 | 0,197 | 0,181 |
-
-A segunda tabela usa somente primeiras vítimas identificadas individualmente. Mortes simultâneas sem uma vítima única ficam fora. A diferença da média da equipe subtrai a taxa de vitória daquela equipe nos outros rounds da mesma partida, sem incluir o round analisado.
-
-| Lado | Função | Rounds | Troca em até 5 s | Vitória da equipe da vítima | Diferença da média da equipe | Limite inferior de 95% | Limite superior de 95% |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| ataque | duelista | 1853 | 0,280 | 0,317 | -0,152 | 0,297 | 0,339 |
-| ataque | iniciador | 403 | 0,310 | 0,342 | -0,115 | 0,298 | 0,390 |
-| ataque | controlador | 587 | 0,172 | 0,342 | -0,131 | 0,305 | 0,382 |
-| ataque | sentinela | 699 | 0,134 | 0,305 | -0,170 | 0,272 | 0,340 |
-| defesa | duelista | 1390 | 0,174 | 0,245 | -0,226 | 0,223 | 0,268 |
-| defesa | iniciador | 503 | 0,167 | 0,249 | -0,209 | 0,213 | 0,288 |
-| defesa | controlador | 562 | 0,157 | 0,258 | -0,208 | 0,224 | 0,296 |
-| defesa | sentinela | 541 | 0,111 | 0,237 | -0,219 | 0,203 | 0,274 |
-
-Essa subtração não separa a influência de força da equipe, lado, equipamento ou adversário. Os limites de 95% usam Wilson e são descritivos. Intervalos sobrepostos não provam que perder primeiro agentes de funções diferentes tenha o mesmo custo.
-
 ## 10. Distância e direção dos aliados nas trocas
 
 O teste procura um aliado a até 2.000 unidades do jogo e verifica se sua direção está a até 45 graus da direção do autor do abate. Proximidade e direção compatíveis significam apenas que essas duas condições foram atendidas.
@@ -386,4 +360,3 @@ Os filtros de torneios, versões e qualidade recalculam as referências na inter
 | Mortes fora da análise de combate | 521 |
 | Com posição do autor do abate | 46123 |
 | Com classificação de proximidade calculável | 46123 |
-| Com arma inicial conhecida | 46173 |

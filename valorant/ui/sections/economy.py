@@ -236,7 +236,7 @@ def _show_first_victim_and_survivors(team_rounds: pd.DataFrame, fights: pd.DataF
         "As primeiras mortes são comparadas com a taxa de vitória da equipe "
         "na própria partida. As armas e os valores são os do início do round."
     )
-    expensive_column, operator_column = st.columns(2)
+    expensive_column, _ = st.columns(2)
     expensive_column.markdown(
         "**Comparação quando o primeiro a morrer é o jogador com maior loadout da equipe**, "
         "em relação à média da equipe na partida."
@@ -246,15 +246,6 @@ def _show_first_victim_and_survivors(team_rounds: pd.DataFrame, fights: pd.DataF
         economic_first_death(fights, "mais_caro_do_time"),
         width="content",
         container=expensive_column,
-    )
-    operator_column.markdown("**Quando o primeiro a morrer tinha um Operator**")
-    display_table(
-        economic_first_death(
-            fights.assign(operator=fights["arma_vitima"] == "Operator"),
-            "operator",
-        ),
-        width="content",
-        container=operator_column,
     )
     surviving_players = save_effect(team_rounds, fights)
     surviving_players = surviving_players[surviving_players["rounds"] >= 20]

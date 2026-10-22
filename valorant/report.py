@@ -14,7 +14,6 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 
-from valorant.analysis.agent_roles import first_death_by_role, role_share
 from valorant.analysis.deaths import build_deaths_table, with_solo_flag
 from valorant.analysis.economy import (
     after_previous_round,
@@ -112,7 +111,6 @@ COLUMN_LABELS = {
     "50%": "Metade dos casos até",
     "75%": "Três quartos dos casos até",
     "max": "Maior tempo",
-    "funcao": "Função",
     "lado": "Lado",
     "acima_do_time": "Diferença da média da equipe",
     "ic95_baixo": "Limite inferior de 95%",
@@ -161,7 +159,6 @@ COVERAGE_LABELS = {
     "mortes_excluidas": "Mortes fora da análise de combate",
     "com_posicao_autor": "Com posição do autor do abate",
     "com_proxy_geometrica": "Com classificação de proximidade calculável",
-    "com_arma_inicial_conhecida": "Com arma inicial conhecida",
 }
 
 
@@ -515,23 +512,6 @@ def plants_section(data):
     ]
 
 
-def agent_role_section(data):
-    return [
-        "## 9. Função do agente",
-        "Duelista, iniciador, controlador e sentinela são as funções dos agentes nos metadados locais. "
-        "A participação nas escalações conta jogadores, sem observadores. A primeira tabela compara "
-        "essa participação com a presença entre as primeiras vítimas.",
-        markdown_table(role_share(data.deaths)),
-        "A segunda tabela usa somente primeiras vítimas identificadas individualmente. Mortes "
-        "simultâneas sem uma vítima única ficam fora. A diferença da média da equipe subtrai a taxa "
-        "de vitória daquela equipe nos outros rounds da mesma partida, sem incluir o round analisado.",
-        markdown_table(first_death_by_role(data.deaths)),
-        "Essa subtração não separa a influência de força da equipe, lado, equipamento ou adversário. "
-        "Os limites de 95% usam Wilson e são descritivos. Intervalos sobrepostos não provam que "
-        "perder primeiro agentes de funções diferentes tenha o mesmo custo.",
-    ]
-
-
 def geometry_section(data):
     return [
         "## 10. Distância e direção dos aliados nas trocas",
@@ -677,7 +657,6 @@ REPORT_SECTIONS = (
     prediction_section,
     economy_section,
     plants_section,
-    agent_role_section,
     geometry_section,
     collapse_section,
     damage_section,

@@ -1,4 +1,4 @@
-"""Minimapas, conversão de coordenada de jogo para a imagem e nomes de agentes, com metadados públicos da valorant-api.com.
+"""Minimapas e conversão de coordenada de jogo para a imagem, com metadados públicos de mapas da valorant-api.com.
 
 A imagem, constantes e listas são lidas localmente de data/maps/. Atualização
 remota exige executar explicitamente ``python -m valorant.data.metadata --download``. Estes são
@@ -15,22 +15,6 @@ from valorant.paths import DATA_DIR
 
 MAPS_DIR = DATA_DIR / "maps"
 MAPS_METADATA_URL = "https://valorant-api.com/v1/maps"
-AGENTS_METADATA_URL = "https://valorant-api.com/v1/agents?isPlayableCharacter=true"
-WEAPONS_METADATA_URL = "https://valorant-api.com/v1/weapons"
-WEAPON_CATEGORY_LABELS = {
-    "Rifles": "rifle",
-    "Pistols": "pistola",
-    "SMGs": "SMG",
-    "Shotguns": "shotgun",
-    "Sniper Rifles": "sniper",
-    "Heavy Weapons": "pesada",
-}
-ROLE_LABELS = {
-    "Duelist": "duelista",
-    "Initiator": "iniciador",
-    "Controller": "controlador",
-    "Sentinel": "sentinela",
-}
 
 
 def _read_metadata(name):
@@ -49,33 +33,6 @@ def load_maps_by_url():
     """Metadados indexados por mapUrl, que é o matchInfo.mapId dos JSONs."""
     all_maps = _read_metadata("maps.json")
     return {map_meta["mapUrl"]: map_meta for map_meta in all_maps}
-
-
-def load_agents_by_id():
-    """Nome e função (duelista, iniciador, controlador, sentinela) indexados pelo characterId dos JSONs."""
-    agents = _read_metadata("agents.json")
-    return {
-        agent["uuid"]: {
-            "agente": agent["displayName"],
-            "funcao": ROLE_LABELS.get((agent.get("role") or {}).get("displayName"), "desconhecida"),
-        }
-        for agent in agents
-    }
-
-
-def load_weapons_by_id():
-    """Nome, custo e categoria indexados pelo id de arma dos JSONs (economy.weapon e finishingDamage.damageItem), em maiúsculas."""
-    weapons = _read_metadata("weapons.json")
-    return {
-        weapon["uuid"].upper(): {
-            "arma": weapon["displayName"],
-            "custo": weapon["shopData"]["cost"] if weapon["shopData"] else 0,
-            "categoria": WEAPON_CATEGORY_LABELS.get(
-                weapon["shopData"]["category"] if weapon["shopData"] else "", "outra"
-            ),
-        }
-        for weapon in weapons
-    }
 
 
 def minimap_file(map_meta):
@@ -130,8 +87,6 @@ def download_metadata(target_dir=MAPS_DIR):
     target.mkdir(parents=True, exist_ok=True)
     urls = {
         "maps.json": MAPS_METADATA_URL,
-        "agents.json": AGENTS_METADATA_URL,
-        "weapons.json": WEAPONS_METADATA_URL,
     }
     origins = {}
     for name, url in urls.items():

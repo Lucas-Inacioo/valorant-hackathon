@@ -1,12 +1,7 @@
 """Tela de explorar dados."""
 
 import streamlit as st
-from valorant.analysis.fights import (
-    distance_matrix,
-    distance_summary,
-    fight_class_summary,
-    player_range_discipline,
-)
+from valorant.analysis.fights import fight_class_summary
 from valorant.ui.context import AppContext
 from valorant.ui.tables import players_summary
 from valorant.ui.presentation import display_table
@@ -20,30 +15,6 @@ def render(context: AppContext) -> None:
     fights = context.data.fights()[
         context.data.fights()["match_id"].isin(context.selected_match_ids)
     ]
-    st.subheader("Arma da vítima e distância de quem matou")
-    summary_column, matrix_column = st.columns(2)
-    display_table(distance_summary(fights), width="content", container=summary_column)
-    distance_shares = distance_matrix(fights)
-    display_table(
-        distance_shares,
-        percentage_columns=distance_shares.columns,
-        width="content",
-        container=matrix_column,
-    )
-    name_by_puuid = context.players.drop_duplicates("puuid").set_index("puuid")["jogador"]
-    short_table, sniper_table = player_range_discipline(fights, name_by_puuid)
-    short_column, sniper_column = st.columns(2)
-    short_column.markdown(
-        "**Mortes com submetralhadora ou escopeta inicial a longa distância**. Entram jogadores com pelo menos 10 mortes com essas armas."
-    )
-    display_table(short_table, hide_index=True, width="content", container=short_column)
-    sniper_column.markdown(
-        "**Mortes com fuzil de precisão inicial a curta distância**. Entram jogadores com pelo menos 10 mortes com essas armas."
-    )
-    display_table(sniper_table, hide_index=True, width="content", container=sniper_column)
-    st.caption(
-        "As distâncias vêm em unidades do jogo. Consideramos longa distância a partir de 2500 unidades e curta até 1000. A aproximação de 100 unidades por metro não foi validada."
-    )
     st.subheader("Dano recebido e causado ao longo do round")
     st.caption(
         "Categorias pelo dano recebido de adversários ao longo do round, independentemente de assistência. Não identificam foco simultâneo ou reação naquela luta. A arma atribuída à vítima é o equipamento inicial."

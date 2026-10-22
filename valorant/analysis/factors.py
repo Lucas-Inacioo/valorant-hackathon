@@ -40,16 +40,6 @@ DEATH_FACTORS = [
         "no_adversario",
     ),
     (
-        "arma inicial de curto alcance e morte distante",
-        "começou o round com submetralhadora ou escopeta e o autor do abate estava a cerca de 25 m ou mais. A arma usada naquele instante é desconhecida",
-        "arma_curta_em_duelo_longo",
-    ),
-    (
-        "sniper inicial e morte próxima",
-        "começou o round com sniper e o autor do abate estava a cerca de 10 m ou menos. A arma usada naquele instante é desconhecida",
-        "sniper_em_duelo_curto",
-    ),
-    (
         "sem dano no autor registrado no round",
         "não causou dano registrado no autor do abate durante o round inteiro. Isso não informa se houve reação naquele confronto",
         "sem_reacao",

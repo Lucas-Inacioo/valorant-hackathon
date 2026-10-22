@@ -12,7 +12,6 @@ from collections import Counter
 
 from valorant.data.fields import DEFAULT_DATA_DIR, find_match_files, load_match
 from valorant.data.metadata import (
-    load_agents_by_id,
     load_maps_by_url,
     nearest_callout,
     super_region,
@@ -285,13 +284,6 @@ def build_deaths_table(data_dir=DEFAULT_DATA_DIR, match_ids=None):
     for match, match_file, map_meta in matches_with_meta:
         rows += death_rows(match, match_file, map_meta)
     deaths = pd.DataFrame(rows, columns=DEATH_COLUMNS)
-    agents_by_id = load_agents_by_id()
-    deaths["agente"] = deaths["personagem"].map(
-        lambda character: agents_by_id.get(character, {}).get("agente", "?")
-    )
-    deaths["funcao"] = deaths["personagem"].map(
-        lambda character: agents_by_id.get(character, {}).get("funcao", "?")
-    )
     defender_share = defender_share_by_region(
         [(match, map_meta) for match, _, map_meta in matches_with_meta if map_meta]
     )

@@ -10,22 +10,16 @@ import pandas as pd
 
 from valorant.data.fields import DEFAULT_DATA_DIR
 from valorant.data.quality import eligible_match_ids, iter_selected_matches
-from valorant.data.metadata import load_weapons_by_id
 from valorant.analysis.events import alive_puuids, final_alive_puuids, round_events
 from valorant.analysis.deaths import build_deaths_table, distance
 
 # Proximidade e direção não verificam linha de tiro, paredes, smokes ou recarga.
 TRADE_RANGE = 2000
 FACING_DEGREES = 45
-DISTANCE_BANDS = [0, 1000, 2500, float("inf")]
-DISTANCE_LABELS = ["curta (até 10 m)", "média (10 a 25 m)", "longa (25 m+)"]
-SHORT_RANGE_CATEGORIES = {"SMG", "shotgun"}
 TRADE_POSSIBLE = "proximidade e direção compatíveis"
 MULTIPLE_DAMAGE = "dano de múltiplos adversários no round"
 SINGLE_DAMAGE = "dano de um adversário no round"
 NO_DAMAGE = "sem dano adversário registrado no round"
-WEAPON_SOURCE = "economy.weapon (equipamento inicial do round)"
-NON_WEAPON_LABELS = {"Ability": "habilidade", "Bomb": "spike", "Fall": "queda", "Melee": "faca"}
 HALF_END_ROUNDS = {12, 24}
 
 
@@ -79,11 +73,10 @@ def fight_coverage(fights):
         "mortes_excluidas": len(fights) - len(tactical),
         "com_posicao_autor": int(tactical["dist_killer"].notna().sum()),
         "com_proxy_geometrica": int(tactical["troca_possivel"].ne("?").sum()),
-        "com_arma_inicial_conhecida": int(tactical["arma_vitima"].ne("?").sum()),
     }
 
 
-def fight_rows(match, weapons_by_id):
+def fight_rows(match):
     team_by_puuid = {player["puuid"]: player["teamId"] for player in match["players"]}
     rows = []
     for round_result in match["roundResults"]:
@@ -117,10 +110,6 @@ def fight_rows(match, weapons_by_id):
             facing = [
                 ally for ally in in_range if facing_angle(ally, killer_location) <= FACING_DEGREES
             ]
-            victim_weapon = weapons_by_id.get(
-                (economy_by_puuid[victim].get("weapon") or "").upper(),
-                {"arma": "?", "custo": 0, "categoria": "?"},
-            )
             victim_loadout = economy_by_puuid[victim]["loadoutValue"]
             teammates_loadout = [
                 loadout
@@ -153,12 +142,6 @@ def fight_rows(match, weapons_by_id):
                         else math.nan
                     ),
                     "tipo_morte": finishing["damageType"],
-                    "arma_killer": weapons_by_id.get(finishing["damageItem"].upper(), {}).get(
-                        "arma", NON_WEAPON_LABELS.get(finishing["damageType"], "arma de agente")
-                    ),
-                    "arma_vitima": victim_weapon["arma"],
-                    "fonte_arma_vitima": WEAPON_SOURCE,
-                    "categoria_vitima": victim_weapon["categoria"],
                     "loadout_vitima": victim_loadout,
                     "mais_caro_do_time": victim_loadout > max(teammates_loadout, default=0),
                     "dano_no_killer": damage_to_killer,
@@ -194,11 +177,10 @@ def fight_rows(match, weapons_by_id):
 
 def build_fights_table(deaths=None, data_dir=DEFAULT_DATA_DIR, match_ids=None):
     """A tabela de mortes com as colunas de luta. Recebe a tabela de mortes pronta para não recalcular."""
-    weapons_by_id = load_weapons_by_id()
     match_ids = eligible_match_ids(data_dir) if match_ids is None else set(match_ids)
     rows = []
     for _, match in iter_selected_matches(data_dir, match_ids):
-        rows += fight_rows(match, weapons_by_id)
+        rows += fight_rows(match)
     deaths = build_deaths_table(data_dir, match_ids=match_ids) if deaths is None else deaths
     if match_ids is not None:
         deaths = deaths[deaths["match_id"].isin(match_ids)]
@@ -210,10 +192,6 @@ def build_fights_table(deaths=None, data_dir=DEFAULT_DATA_DIR, match_ids=None):
         "segundos",
         "dist_killer",
         "tipo_morte",
-        "arma_killer",
-        "arma_vitima",
-        "fonte_arma_vitima",
-        "categoria_vitima",
         "loadout_vitima",
         "mais_caro_do_time",
         "dano_no_killer",
@@ -233,15 +211,6 @@ def build_fights_table(deaths=None, data_dir=DEFAULT_DATA_DIR, match_ids=None):
     else:
         details = details.drop(columns="event_id")
     fights = deaths.merge(details, on=keys, how="left", validate="one_to_one")
-    fights["faixa_distancia"] = pd.cut(
-        fights["dist_killer"], DISTANCE_BANDS, labels=DISTANCE_LABELS, include_lowest=True
-    )
-    fights["arma_curta_em_duelo_longo"] = fights["categoria_vitima"].isin(
-        SHORT_RANGE_CATEGORIES
-    ) & (fights["dist_killer"] >= DISTANCE_BANDS[2])
-    fights["sniper_em_duelo_curto"] = (fights["categoria_vitima"] == "sniper") & (
-        fights["dist_killer"] <= DISTANCE_BANDS[1]
-    )
     return fights
 
 
@@ -258,64 +227,6 @@ def trade_possibility_summary(fights, group_columns=()):
         )
         .round(3)
     )
-
-
-def distance_summary(fights):
-    """Por categoria da arma da vítima: mortes por arma, distância mediana do killer, fração de duelos longos, troca e vitória."""
-    fights = tactical_fights(fights)
-    weapon_deaths = fights[
-        (fights["tipo_morte"] == "Weapon") & fights["dist_killer"].notna()
-    ].copy()
-    weapon_deaths["longa"] = weapon_deaths["dist_killer"] >= DISTANCE_BANDS[2]
-    return (
-        weapon_deaths.groupby("categoria_vitima")
-        .agg(
-            mortes=("vitima", "size"),
-            dist_mediana=("dist_killer", "median"),
-            duelo_longo=("longa", "mean"),
-            trocada=("trocada", "mean"),
-            venceu_round=("venceu_round", "mean"),
-        )
-        .sort_values("mortes", ascending=False)
-        .round(3)
-    )
-
-
-def distance_matrix(fights):
-    """Fração das mortes de cada categoria de arma por faixa de distância do killer."""
-    fights = tactical_fights(fights)
-    weapon_deaths = fights[(fights["tipo_morte"] == "Weapon") & fights["dist_killer"].notna()]
-    return pd.crosstab(
-        weapon_deaths["categoria_vitima"], weapon_deaths["faixa_distancia"], normalize="index"
-    ).round(3)
-
-
-def player_range_discipline(fights, name_by_puuid, min_deaths=10):
-    """Duas tabelas por jogador: mortes com SMG ou shotgun e a fração em duelo longo, mortes com sniper e a fração em duelo curto."""
-    fights = tactical_fights(fights)
-    weapon_deaths = fights[(fights["tipo_morte"] == "Weapon") & fights["dist_killer"].notna()]
-    short = (
-        weapon_deaths[weapon_deaths["categoria_vitima"].isin(SHORT_RANGE_CATEGORIES)]
-        .groupby("vitima")
-        .agg(
-            mortes_arma_curta=("vitima", "size"),
-            em_duelo_longo=("arma_curta_em_duelo_longo", "mean"),
-        )
-    )
-    snipers = (
-        weapon_deaths[weapon_deaths["categoria_vitima"] == "sniper"]
-        .groupby("vitima")
-        .agg(mortes_sniper=("vitima", "size"), em_duelo_curto=("sniper_em_duelo_curto", "mean"))
-    )
-    tables = []
-    for table, count_column, rate_column in [
-        (short, "mortes_arma_curta", "em_duelo_longo"),
-        (snipers, "mortes_sniper", "em_duelo_curto"),
-    ]:
-        table = table[table[count_column] >= min_deaths].copy()
-        table.insert(0, "jogador", table.index.map(name_by_puuid))
-        tables.append(table.sort_values(rate_column, ascending=False).round(3))
-    return tables
 
 
 def team_summary(fights, min_deaths=150):
@@ -498,16 +409,10 @@ def main():
     print(f"Mortes: {len(fights)}, com posição do killer: {fights['dist_killer'].notna().sum()}\n")
     print("Proximidade e direção compatíveis, por lado:")
     print(trade_possibility_summary(fights, ["lado"]).to_string(), "\n")
-    print("Distância por categoria da arma da vítima:")
-    print(distance_summary(fights).to_string(), "\n")
-    print(distance_matrix(fights).to_string(), "\n")
     print("Classe da luta, por lado:")
     print(fight_class_summary(fights, ["lado"]).to_string(), "\n")
     print("Primeira morte do jogador mais caro do time:")
     print(economic_first_death(fights, "mais_caro_do_time").to_string(), "\n")
-    fights["operator"] = fights["arma_vitima"] == "Operator"
-    print("Primeira morte de quem tem Operator:")
-    print(economic_first_death(fights, "operator").to_string(), "\n")
     from valorant.analysis.economy import build_rounds_table
 
     print("Sobreviventes de um round perdido e o round seguinte:")

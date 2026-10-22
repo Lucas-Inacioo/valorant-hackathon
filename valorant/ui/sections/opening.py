@@ -3,13 +3,6 @@
 import pandas as pd
 import streamlit as st
 
-from valorant.analysis.agent_roles import (
-    ROLE_ORDER,
-    first_death_by_agent,
-    first_death_by_role,
-    first_death_by_role_and_trade,
-    role_share,
-)
 from valorant.analysis.first_blood import (
     TIME_LABELS,
     plant_summary,
@@ -44,7 +37,6 @@ def render(context: AppContext) -> None:
     _show_abate_timing(first_abates)
     _show_results_by_map(first_abates, context)
     _show_attack_locations(first_abates, context)
-    _show_victim_roles(context)
     _show_timing_by_round(first_abates)
 
 
@@ -210,71 +202,6 @@ def _show_attack_locations(first_abates: pd.DataFrame, context: AppContext) -> N
         width="stretch",
         container=table_column,
     )
-
-
-def _show_victim_roles(context: AppContext) -> None:
-    st.subheader(
-        "4. Qual função de agente morre primeiro, e isso muda o custo do primeiro abate?"
-    )
-    st.caption(
-        "Dividindo os agentes em duelistas, iniciadores, controladores ou sentinelas, "
-        "considerando a lista pública de agentes, usada só para dar nome ao código do personagem."
-    )
-    max_seconds = st.slider(
-        "Considerar só primeiros abates até este segundo do round",
-        10,
-        150,
-        150,
-        step=10,
-        key="role_max_seconds",
-    )
-    deaths = context.data.deaths()
-    deaths = deaths[deaths["match_id"].isin(context.selected_match_ids)]
-    first_deaths_by_role = first_death_by_role(deaths, max_seconds)
-    share_column, wins_column = st.columns(2)
-    share_column.markdown("**Quem morre primeiro e frequência nas composições de times**")
-    share_column.altair_chart(
-        grouped_bar_chart(
-            role_share(deaths, max_seconds),
-            [NEUTRAL_COLOR, ATTACK_COLOR, DEFENSE_COLOR],
-            "fração",
-        ),
-        width="stretch",
-    )
-    wins_column.markdown(
-        "**Quantos rounds a equipe ainda vence depois de perder o primeiro jogador**, "
-        "separado pela função do jogador perdido"
-    )
-    wins_column.altair_chart(
-        rate_chart(
-            first_deaths_by_role,
-            "funcao",
-            "vitoria_da_vitima",
-            "rounds",
-            "% de rounds vencidos pela equipe que perdeu o primeiro jogador",
-            group_column="lado",
-            group_colors=SIDE_COLORS,
-            order=ROLE_ORDER,
-        ),
-        width="stretch",
-    )
-    with st.expander("Tabelas por função, por troca e por agente"):
-        display_table(first_deaths_by_role, width="content", container=st)
-        st.markdown(
-            "**Com ou sem troca.** A função de quem morreu importa quando ninguém vinga a morte?"
-        )
-        st.caption(
-            "Uma morte conta como trocada quando um aliado mata o adversário que "
-            "a causou em até 5 segundos."
-        )
-        display_table(
-            first_death_by_role_and_trade(deaths, max_seconds), width="content", container=st
-        )
-        st.markdown(
-            "**Por agente**, só agentes com 30 ou mais primeiras mortes. Cuidado: a diferença "
-            "entre agentes mistura o agente com o perfil de quem costuma escolhê-lo."
-        )
-        display_table(first_death_by_agent(deaths, max_seconds), width="content", container=st)
 
 
 def _show_timing_by_round(first_abates: pd.DataFrame) -> None:
