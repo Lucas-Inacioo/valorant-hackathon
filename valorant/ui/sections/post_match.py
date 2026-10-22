@@ -58,9 +58,6 @@ def show_match_details(selection: PostMatchSelection):
 
 def render(context: AppContext) -> None:
     st.header("Análise pós-jogo")
-    st.write(
-        "Veja o que se repetiu na partida, escolha os pontos para treinar e abra os lances que ajudam a entendê-los."
-    )
     selection = select_match_and_team(context)
     info = selection.match_info
     st.caption(
