@@ -65,10 +65,7 @@ def show_training_points(selection: PostMatchSelection, player_id=ALL_PLAYERS):
     observed = summary[summary["occurrences"] > 0]
     points = observed[~observed["positive"] & ~observed["context_only"]]
     st.subheader("Pontos para rever")
-    st.caption(
-        "A ordem considera quantos rounds perdidos tiveram cada padrão e com que frequência ele apareceu. "
-        "Vários sinais do mesmo lance contam como um único round. Os lances ajudam a entender o que vale treinar."
-    )
+    st.caption("Vários sinais do mesmo lance contam como um único round.")
     if points.empty:
         st.info("Não há ocorrências desses padrões com informação suficiente nesta seleção.")
     for row in points.head(3).itertuples():
@@ -137,9 +134,6 @@ def show_team(selection: PostMatchSelection):
     columns[2].metric(
         "Rounds perdidos com pontos para rever",
         review_points.loc[~review_points["won_round"], "round"].nunique(),
-    )
-    st.caption(
-        "O último número conta rounds distintos com observações da lista. A revisão do lance permite avaliar a responsabilidade de cada jogador."
     )
     by_side = rounds.groupby("side")["won_round"].agg(rounds="size", wins="sum").reset_index()
     by_side["losses"] = by_side["rounds"] - by_side["wins"]
