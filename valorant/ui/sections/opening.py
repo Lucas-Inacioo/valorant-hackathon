@@ -50,7 +50,7 @@ def render(context: AppContext) -> None:
 
 def _show_summary(first_abates: pd.DataFrame) -> None:
     rounds_column, time_column, wins_column = st.columns(3)
-    rounds_column.metric("Rounds com primeiro abate definido", len(first_abates))
+    rounds_column.metric("Rounds com pelo menos um abate, sem empate na abertura", len(first_abates))
     time_column.metric(
         "Segundo típico do primeiro abate (mediana)",
         display_number(first_abates["segundos"].median(), suffix=" s"),
@@ -159,7 +159,7 @@ def _show_attack_locations(first_abates: pd.DataFrame, context: AppContext) -> N
         & first_abates["antes_do_plant"]
     ].dropna(subset=["vitima_x", "vitima_y"])
     if map_metadata is None or attack_abates.empty:
-        st.info("Não há imagem do mapa ou primeiros abates do ataque nesta seleção.")
+        st.info("Este mapa não tem imagem disponível ou não tem primeiros abates do ataque nos filtros escolhidos.")
         return
     results_by_region = openings_by_callout(attack_abates, map_metadata)
     map_win_rate = attack_abates["abriu_venceu"].mean()

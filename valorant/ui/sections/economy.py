@@ -162,7 +162,7 @@ def _show_following_rounds(team_rounds: pd.DataFrame) -> None:
     )
     streak_column, close_streak_column = st.columns(2)
     streak_column.markdown(
-        "**Quantos rounds seguidos a equipe tinha perdido antes deste**, todas as partidas"
+        "**Quantos rounds seguidos, na mesma metade, a equipe tinha perdido antes deste**, todas as partidas"
     )
     streak_column.altair_chart(
         _equipment_comparison(
@@ -173,7 +173,7 @@ def _show_following_rounds(team_rounds: pd.DataFrame) -> None:
         width="stretch",
     )
     close_streak_column.markdown(
-        "**Quantos rounds seguidos a equipe tinha perdido antes deste**, só partidas equilibradas"
+        "**Quantos rounds seguidos, na mesma metade, a equipe tinha perdido antes deste**, só partidas equilibradas"
     )
     close_streak_column.altair_chart(
         _equipment_comparison(
@@ -198,7 +198,9 @@ def _show_pistol_cycles(team_rounds: pd.DataFrame) -> None:
     display_table(pistol_by_side(team_rounds), width="content", container=pistol_column)
     overall_cycles, cycles_by_side = second_round_cycle(team_rounds)
     cycle_column.markdown(
-        "**Equipe que perdeu o pistol, o que ela gastou no round 2 e quantos dos rounds 2, 3 e 4 venceu.**"
+        "**Equipe que perdeu o pistol, o que ela gastou no round 2 e quantos dos rounds 2, 3 e 4 venceu.** "
+        "Nas tabelas, taxa prévia é a taxa de vitória da equipe nos rounds anteriores ao pistol, que só existe "
+        "na segunda metade, para ver se quem força é uma equipe melhor ou pior."
     )
     cycle_column.caption(
         "As três taxas e a soma usam os mesmos ciclos completos. "
@@ -237,7 +239,7 @@ def _show_first_victim_and_survivors(team_rounds: pd.DataFrame, fights: pd.DataF
     expensive_column, operator_column = st.columns(2)
     expensive_column.markdown(
         "**Comparação quando o primeiro a morrer é o jogador com maior loadout da equipe**, "
-        "em relação a média da equipe na partida."
+        "em relação à média da equipe na partida."
     )
     expensive_column.caption("O grupo só inclui o maior valor quando não há empate com um aliado.")
     display_table(
@@ -256,13 +258,11 @@ def _show_first_victim_and_survivors(team_rounds: pd.DataFrame, fights: pd.DataF
     )
     surviving_players = save_effect(team_rounds, fights)
     surviving_players = surviving_players[surviving_players["rounds"] >= 20]
-    st.caption(
-        "Abaixo contamos os jogadores vivos ao fim dos rounds perdidos. "
-        "Só aparecem grupos com pelo menos 20 rounds. Ficam fora as transições "
-        "em que a economia é reiniciada, como a troca de metade."
-    )
     equipment_column, wins_column = st.columns(2)
-    equipment_column.markdown("**Equipamento inicial no round seguinte**")
+    equipment_column.markdown(
+        "**Quanto a equipe tem para gastar no round seguinte**, conforme quantos jogadores sobreviveram "
+        "ao round perdido (sem os rounds 12 e 24 nem a prorrogação, em que o dinheiro zera)"
+    )
     equipment_column.bar_chart(
         surviving_players["loadout_seguinte"],
         color=[WON_COLOR],

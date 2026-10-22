@@ -28,7 +28,7 @@ def render(context: AppContext) -> None:
     plants = context.data.plants()
     plants = plants[plants["match_id"].isin(context.selected_match_ids)]
     plants_column, defuse_column, time_column = st.columns(3)
-    plants_column.metric("Rounds com spike plantada", len(plants))
+    plants_column.metric("Rounds com spike plantada com o round em disputa", len(plants))
     defuse_column.metric("Desarmados pela defesa", display_number(plants["defusada"].mean(), ".1%"))
     time_column.metric(
         "Segundo típico do plant (mediana)",
@@ -77,14 +77,6 @@ def _defuse_comparison(table: pd.DataFrame, group_column: str):
 
 def _show_defuses_by_time_and_site(plants: pd.DataFrame, context: AppContext) -> None:
     st.subheader("2. O segundo do plant e o site mudam a chance de desarme?")
-    st.caption(
-        "A comparação por jogadores vivos usa a taxa de desarme dos plants com "
-        "a mesma quantidade de jogadores de cada lado. Um plant com 3 atacantes "
-        "e 2 defensores usa a taxa dos casos de 3 contra 2 nesta seleção. "
-        "Em cada grupo, fazemos a média dessas taxas, com mais peso para as "
-        "situações mais frequentes. É uma comparação dos dados, sem prever o "
-        "resultado nem medir o efeito do local ou do tempo."
-    )
     time_column, site_column = st.columns(2)
     time_column.markdown("**Pelo segundo em que a spike foi plantada**")
     rates_by_time = summary_by_plant_time(plants)
@@ -169,7 +161,7 @@ def _show_plant_locations(plants: pd.DataFrame, context: AppContext) -> None:
 
 def _show_player_positions(context: AppContext) -> None:
     st.subheader("4. O posicionamento no momento do plant muda o desarme? E como a defesa retoma o site?")
-    st.caption("No instante do plant, comparado com o esperado pelos vivos. Atacantes no site mostra quantos estavam a menos de 15 metros da spike. Olhando para fora a parte dos aliados de quem plantou que estava de costas para a spike, ou seja, vigiando as entradas. Distância da defesa é a mediana da distância dos defensores até a spike.")
+    st.caption("No instante do plant, comparado com o esperado pelos vivos. Atacantes no site mostra quantos estavam a menos de 15 metros da spike. Olhando para fora a parte dos aliados de quem plantou que estava de costas para a spike. Distância da defesa é a mediana da distância dos defensores até a spike.")
     setups = context.data.setups()
     setups = setups[setups["match_id"].isin(context.selected_match_ids)]
     attackers_column, watching_column, defense_column = st.columns(3)
@@ -196,9 +188,6 @@ def _show_player_positions(context: AppContext) -> None:
         width="stretch",
     )
     defense_column.markdown("**Distância da defesa até a spike no momento do plant**")
-    defense_column.caption(
-        "Mediana das distâncias dos defensores vivos no plant, em unidades do jogo."
-    )
     defense_distances = defuse_by(setups, "faixa_defesa")
     defense_column.altair_chart(
         _defuse_comparison(

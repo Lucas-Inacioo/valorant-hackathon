@@ -189,7 +189,6 @@ VALUE_LABELS = {
     "default": "plant depois de 40 s",
     "execução rápida": "plant até 40 s",
     "plant excluído": "plant fora da análise",
-    "flanco": "separado do grupo",
     "Eliminated": "equipe eliminada",
     "Bomb defused": "spike desarmada",
     "Bomb detonated": "spike explodiu",

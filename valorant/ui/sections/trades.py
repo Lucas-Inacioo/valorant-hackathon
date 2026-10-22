@@ -33,11 +33,6 @@ from valorant.ui.tables import display_number
 
 def render(context: AppContext) -> None:
     st.header("Trocas e isolamento")
-    st.caption(
-        "Uma morte conta como trocada quando um aliado mata o adversário que a "
-        "causou em até 5 segundos. Uma morte é isolada quando todos os aliados "
-        "vivos estão além da distância escolhida abaixo."
-    )
     distance_column, phase_column = st.columns(2)
     isolation_distance = distance_column.slider(
         "Distância a partir da qual a morte conta como isolada (unidades do jogo, cerca de 100 por metro)",
@@ -243,17 +238,22 @@ def _show_distance_bands(deaths_with_allies: pd.DataFrame) -> None:
 
 def _show_ally_and_region_comparison(deaths_with_allies: pd.DataFrame) -> None:
     st.subheader("4. Onde estavam os aliados, e a morte foi em área própria ou do adversário?")
+    st.markdown("""
+À esquerda, onde estavam os aliados vivos no momento da morte.
+
+- **Em grupo.** Pelo menos um aliado dentro do limite de isolamento.
+- **Flanco.** Nenhum aliado perto, e dois ou mais aliados, todos juntos em outra área do mapa.
+- **Isolado.** Nenhum aliado perto, e os aliados espalhados pelo mapa ou só um aliado vivo longe.
+
+À direita, de quem costuma ser a região onde o jogador morreu, medido por quem estava ali no primeiro confronto de cada round, até os 20 segundos.
+
+- **Própria.** 65% ou mais dos jogadores ali são do mesmo lado da vítima.
+- **Do adversário.** 35% ou menos.
+- **Disputada.** Entre os dois.
+""")
     allies_column, region_column = st.columns(2)
     allies_column.markdown("**Quantos rounds a equipe venceu**, conforme onde estavam os aliados")
-    allies_column.caption(
-        "Em grupo significa ter um aliado dentro do limite escolhido. "
-        "Separado do grupo significa estar longe dos aliados, com pelo menos "
-        "dois deles na mesma grande região. Os demais casos contam como isolados."
-    )
-    allies_summary = context_summary(deaths_with_allies, ["lado"]).rename(
-        index={"flanco": "separado do grupo"},
-        level="contexto",
-    )
+    allies_summary = context_summary(deaths_with_allies, ["lado"])
     allies_column.altair_chart(
         rate_chart(
             allies_summary,
@@ -263,17 +263,11 @@ def _show_ally_and_region_comparison(deaths_with_allies: pd.DataFrame) -> None:
             "% de rounds vencidos pela equipe da vítima",
             group_column="lado",
             group_colors=SIDE_COLORS,
-            order=["em grupo", "separado do grupo", "isolado", "último vivo"],
+            order=["em grupo", "flanco", "isolado", "último vivo"],
         ),
         width="stretch",
     )
     region_column.markdown("**Quantos rounds a equipe venceu**, conforme de quem é a região")
-    region_column.caption(
-        "A ocupação usa posições dos primeiros confrontos até 20 segundos, "
-        "com um registro por round. A região é própria quando pelo menos 65% "
-        "das posições são do lado da vítima e do adversário quando são até 35%. "
-        "Entre esses valores, ela é disputada."
-    )
     known_regions = deaths_with_allies[deaths_with_allies["territorio"] != "?"]
     region_column.altair_chart(
         rate_chart(
@@ -306,8 +300,8 @@ def _show_team_trades(fights: pd.DataFrame, context: AppContext) -> None:
     st.caption(
         "Só equipes com 150 ou mais mortes. Uma troca é possível quando um aliado estava a menos "
         "de 20 m de quem matou, olhando para ele, e é considerada uma troca convertida quando ela "
-        "de fato ocorreu. O dano no autor do abate é o total registrado durante o round, por isso "
-        "não mostra uma reação a essa morte."
+        "de fato ocorreu. Também foi considerado um caso para 'sem dano no autor', quando o jogador "
+        "morreu sem ter causado dano em quem o matou ao longo do round."
     )
     named_fights = fights.assign(
         time_killer=fights["time_vitima"].map({"Blue": "Red", "Red": "Blue"})
