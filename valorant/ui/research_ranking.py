@@ -4,7 +4,6 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from valorant.analysis.first_blood import wilson_interval
 from valorant.analysis.rank_comparison import compare_rankings
 from valorant.analysis.research import team_ranking
 from valorant.ui.presentation import display_table
@@ -93,19 +92,15 @@ def show_methods(team_matches, ranking, comparison, performance):
             "Esses pares compartilham equipes e não são observações independentes."
         )
         st.write(
-            "Os intervalos de 95% usam 500 reamostragens de partidas inteiras, mantendo as duas equipes juntas. "
-            "O grupo de equipes é o mesmo do ranking original. Uma equipe que fica sem jogos em uma reamostragem "
-            "não entra naquela conta. A conta não trata cada round como um jogo independente. "
-            "Os intervalos descrevem esta agenda e não corrigem a força dos adversários ou mudanças de elenco."
+            "Os intervalos de 95% usam 500 reamostragens de partidas inteiras, mantendo as duas equipes juntas."
         )
-        st.caption(f"Foram {comparison.valid_resamples} reamostragens com Spearman calculável.")
         st.write(
             "AUC avalia escores de classificação contra classes conhecidas. Aqui o desempenho é uma taxa, "
             "então usamos Spearman e concordância sem criar uma divisão arbitrária de equipes boas e ruins. "
-            "Todas as medidas usam as mesmas partidas já encerradas. A comparação não é uma avaliação de previsão."
+            "Todas as medidas usam as mesmas partidas já encerradas."
         )
         st.markdown(
-            "Consulte as definições na [documentação de Spearman](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.spearmanr.html) "
+            "Se quiser entender melhor, as documentações usadas estão na [documentação de Spearman](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.spearmanr.html) "
             "e na [documentação de ROC-AUC](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html)."
         )
         sensitivity = []
@@ -115,20 +110,6 @@ def show_methods(team_matches, ranking, comparison, performance):
                                 "Spearman": result.spearman, "Concordância": result.concordance})
         st.markdown("**O resultado muda ao exigir mais partidas?**")
         display_table(pd.DataFrame(sensitivity), hide_index=True, percentage_columns=["Concordância"])
-        intervals = ranking[["team_name", "matches", "decided_matches", "match_wins", "match_win_rate"]].copy()
-        limits = [wilson_interval(row.match_wins, row.decided_matches) for row in intervals.itertuples()]
-        intervals["Limite inferior de 95%"] = [item[0] for item in limits]
-        intervals["Limite superior de 95%"] = [item[1] for item in limits]
-        st.markdown("**Quanto sabemos sobre as vitórias em partidas?**")
-        display_table(
-            intervals.rename(columns={"team_name": "Equipe", "matches": "Partidas", "decided_matches": "Com vencedor", "match_wins": "Vitórias", "match_win_rate": "Taxa de vitória"}),
-            hide_index=True,
-            percentage_columns=["Taxa de vitória", "Limite inferior de 95%", "Limite superior de 95%"],
-        )
-        st.caption(
-            "Os intervalos individuais de Wilson tratam partidas como tentativas independentes e servem como descrição. "
-            "A repetição de adversários e o calendário limitam essa aproximação."
-        )
 
 
 def show_ranking(context, team_matches, tournament):
@@ -182,6 +163,5 @@ def show_ranking(context, team_matches, tournament):
     })
     st.caption("A lista começa com mais lances por 100 rounds. No desempenho, a primeira posição é a maior taxa de vitória. Posições empatadas são preservadas.")
     display_table(table, hide_index=True, percentage_columns=["Rounds com revisão", "Vitórias em rounds", "Vitórias em partidas"])
-    st.download_button("Baixar ranking em CSV", data=table.to_csv(index=False).encode("utf-8-sig"), file_name="ranking_equipes.csv", mime="text/csv", key="dashboard_download")
     show_methods(team_matches, ranking, comparison, performance)
     show_team_link(team_matches, ranking)
