@@ -171,8 +171,7 @@ def show_ranking(context, team_matches, tournament):
     )
     st.caption(
         "A referência inicial usa vitórias em rounds porque poucas partidas produzem muitos empates na taxa de vitória em jogos. "
-        "Rounds da mesma partida compartilham condições. A incerteza continua sendo avaliada por partida. "
-        "Os torneios têm adversários diferentes. Use o recorte por torneio para consultar cada competição."
+        "Rounds da mesma partida compartilham condições."
     )
     comparison_charts(ranking, performance)
     ranking["performance_rank"] = ranking[performance].rank(ascending=False, method="min")
