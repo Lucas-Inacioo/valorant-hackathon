@@ -61,7 +61,7 @@ def render_navigation():
     st.session_state["navigation_area"] = section_area(section)
     st.sidebar.radio(
         "Navegação", MAIN_AREAS, key="navigation_area", on_change=select_main_area,
-        captions=["Resumo dos achados", "Ferramenta para revisar partidas", "De onde vieram os resultados"],
+        captions=["Resumo dos achados", "Ferramenta proposta", "De onde vieram os resultados"],
     )
     return section
 
