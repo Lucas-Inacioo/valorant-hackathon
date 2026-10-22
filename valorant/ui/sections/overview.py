@@ -42,9 +42,7 @@ def render(context: AppContext) -> None:
     show_evidence_context(context, data, match_ids)
     show_ranking(context, teams, tournament)
     st.caption(
-        "As observações ajudam a escolher lances para rever. A base registra instantes, sem trajetória contínua "
-        "ou linha de tiro. Uma frequência menor também pode refletir diferença na disponibilidade de posições. "
-        "As associações não demonstram que um jogador causou a derrota."
+        "As observações ajudam a escolher lances para rever, evitando precisar rever uma partida inteira."
     )
     st.write("A seção Previsão avalia o uso de partidas anteriores para antecipar resultados de outros jogos.")
     with st.expander("Ver a lista de partidas"):
