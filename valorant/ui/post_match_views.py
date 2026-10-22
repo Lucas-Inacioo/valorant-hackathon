@@ -69,7 +69,7 @@ def show_training_points(selection: PostMatchSelection, player_id=ALL_PLAYERS):
     st.caption("Vários sinais do mesmo lance contam como um único round.")
     if points.empty:
         st.info("Não há ocorrências desses padrões com informação suficiente nesta seleção.")
-    for row in points.head(3).itertuples():
+    for row in points.itertuples():
         st.markdown(f"**{row.pattern}**")
         base_label = row.opportunity_label[:1].lower() + row.opportunity_label[1:]
         frequency = f"{row.occurrences} de {row.opportunities} {base_label}"
