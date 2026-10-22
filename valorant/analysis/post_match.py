@@ -61,6 +61,7 @@ PATTERNS = {
         "O autor do primeiro abate do round eliminou um jogador que estava longe dos aliados e não morreu em até 5 segundos.",
         "Como preparar esse primeiro contato para que haja apoio ou uma saída?",
         "Primeiras mortes individuais com aliado vivo e posição disponível",
+        summary="{occurrences} de {opportunities} primeiras mortes da rodada tinham um ou mais aliados vivos, mas nenhum a até 1000 unidades, e o autor do abate não foi eliminado em até 5 segundos.",
     ),
     "untraded_with_nearby_ally": ReviewPattern(
         "Sem troca com aliado perto",
