@@ -80,14 +80,14 @@ PATTERNS = {
     ),
     "trade_kill": ReviewPattern(
         "Abate que trocou um colega",
-        "Abateu o adversário que havia matado um colega nos 5 segundos anteriores. Eventos simultâneos também entram e não demonstram uma reação.",
+        "Abateu o adversário que havia matado um colega nos 5 segundos anteriores.",
         "Que distância e combinação de contatos permitiram essa troca?",
         "Abates adversários do jogador",
         positive=True,
     ),
     "opening_kill": ReviewPattern(
         "Fez o primeiro abate",
-        "Fez o primeiro abate adversário do round quando havia um único abate naquele instante. Aberturas simultâneas não são atribuídas a uma pessoa.",
+        "Fez o primeiro abate do round.",
         "Como repetir a preparação desse primeiro contato?",
         "Rounds com primeiro abate individual identificado e participação do jogador",
         positive=True,
@@ -108,7 +108,7 @@ PATTERNS = {
     ),
     "won_after_disadvantage": ReviewPattern(
         "Vitória após desvantagem numérica",
-        "A equipe venceu um round em que teve menos jogadores vivos em algum instante registrado. Cada round entra uma vez.",
+        "A equipe venceu um round em que teve menos jogadores vivos que o oponente em algum instante.",
         "Que decisões e contatos ajudaram a recuperar esse round?",
         "Rounds com desvantagem numérica observada",
         positive=True,
