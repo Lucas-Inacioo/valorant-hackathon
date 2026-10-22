@@ -38,6 +38,8 @@ class ReviewPattern:
     opportunity_label: str
     positive: bool = False
     context_only: bool = False
+    # Frase do card de revisão, com a contagem já embutida.
+    summary: str = ""
 
 
 PATTERNS = {
@@ -46,6 +48,7 @@ PATTERNS = {
         "Morreu com aliado vivo, mas nenhum aliado estava a até 1000 unidades de jogo.",
         "O jogador precisava fazer esse contato sozinho ou poderia esperar apoio?",
         "Mortes com aliado vivo e posição disponível",
+        summary="{occurrences} de {opportunities} mortes tinham um ou mais aliados vivos, mas nenhum a até 1000 unidades.",
     ),
     "away_from_group": ReviewPattern(
         "Morte longe do grupo",

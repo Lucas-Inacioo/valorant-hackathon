@@ -3,6 +3,7 @@
 import pandas as pd
 import streamlit as st
 
+from valorant.analysis.post_match import PATTERNS
 from valorant.ui.post_match_selection import (
     ALL_PATTERNS,
     ALL_PLAYERS,
@@ -72,11 +73,10 @@ def show_training_points(selection: PostMatchSelection, player_id=ALL_PLAYERS):
         st.markdown(f"**{row.pattern}**")
         base_label = row.opportunity_label[:1].lower() + row.opportunity_label[1:]
         frequency = f"{row.occurrences} de {row.opportunities} {base_label}"
-        st.write(
-            f"{frequency}. Apareceu em {row.round_count} rounds diferentes, dos quais {row.lost_round_count} foram perdidos."
-        )
-        st.caption(row.description)
-        st.write(row.review_question)
+        summary = PATTERNS[row.pattern_id].summary
+        st.write(summary.format(occurrences=row.occurrences, opportunities=row.opportunities) if summary else f"{frequency}. {row.description}")
+        st.write(f"Ocorreu em {row.round_count} rounds diferentes, dos quais {row.lost_round_count} foram perdidos.")
+        st.write(f"Pergunta a ser feita: {row.review_question}")
         st.button(
             "Rever os lances",
             key=f"review_pattern_{row.pattern_id}",
