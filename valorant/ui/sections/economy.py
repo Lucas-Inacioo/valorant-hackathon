@@ -234,7 +234,7 @@ def _show_first_victim_and_survivors(team_rounds: pd.DataFrame, fights: pd.DataF
     st.subheader("4. Perder o jogador mais caro custa mais? E sobreviver a um round perdido vale quanto?")
     st.caption(
         "As primeiras mortes são comparadas com a taxa de vitória da equipe "
-        "na própria partida. As armas e os valores são os do início do round."
+        "na própria partida. Os valores são os do início do round."
     )
     expensive_column, _ = st.columns(2)
     expensive_column.markdown(

@@ -10,14 +10,14 @@ from valorant.ui.presentation import display_table
 def render(context: AppContext) -> None:
     st.header("Explorar dados")
     st.markdown(
-        "Aqui ficam outras consultas sobre armas iniciais, distância e dano ao longo do round. Você também pode ver os números dos jogadores e os campos presentes nos arquivos."
+        "Aqui ficam outras consultas sobre dano ao longo do round. Você também pode ver os números dos jogadores e os campos presentes nos arquivos."
     )
     fights = context.data.fights()[
         context.data.fights()["match_id"].isin(context.selected_match_ids)
     ]
     st.subheader("Dano recebido e causado ao longo do round")
     st.caption(
-        "Categorias pelo dano recebido de adversários ao longo do round, independentemente de assistência. Não identificam foco simultâneo ou reação naquela luta. A arma atribuída à vítima é o equipamento inicial."
+        "Categorias pelo dano recebido de adversários ao longo do round, independentemente de assistência. Não identificam foco simultâneo ou reação naquela luta."
     )
     display_table(fight_class_summary(fights, ["lado"]), width="content", container=st)
     st.subheader("Abates, mortes e pontuação dos jogadores")

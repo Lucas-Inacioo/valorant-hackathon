@@ -20,7 +20,7 @@ def render(context: AppContext) -> None:
     st.header("Qualidade dos dados")
     st.write(
         "Cobertura é a quantidade de registros com a informação necessária para uma análise. "
-        "Quando falta posição, arma ou uma comparação suficiente, o painel mantém essa lacuna."
+        "Quando falta posição ou uma comparação suficiente, o painel mantém essa lacuna."
     )
     st.subheader("Arquivos disponíveis")
     st.caption("Estes totais incluem toda a base local, mesmo as partidas fora dos filtros.")

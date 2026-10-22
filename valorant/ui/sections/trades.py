@@ -281,7 +281,7 @@ def _show_ally_and_region_comparison(deaths_with_allies: pd.DataFrame) -> None:
         ),
         width="stretch",
     )
-    with st.expander("Números de posição dos aliados e de região, e o isolamento separado por função do agente"):
+    with st.expander("Números de posição dos aliados e de região"):
         display_table(allies_summary, width="content", container=st)
         display_table(
             territory_summary(deaths_with_allies, ["lado"]), width="content", container=st

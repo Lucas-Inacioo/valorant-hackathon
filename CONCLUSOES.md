@@ -246,7 +246,7 @@ Essa referência considera os vivos, mas não toda a situação do round. Uma di
 
 Os tempos observados não sustentam a afirmação de que quase todos os defuses acontecem perto do limite de 45 segundos.
 
-## 10. Distância e direção dos aliados nas trocas
+## 9. Distância e direção dos aliados nas trocas
 
 O teste procura um aliado a até 2.000 unidades do jogo e verifica se sua direção está a até 45 graus da direção do autor do abate. Proximidade e direção compatíveis significam apenas que essas duas condições foram atendidas.
 
@@ -261,7 +261,7 @@ O teste procura um aliado a até 2.000 unidades do jogo e verifica se sua direç
 
 A conta usa duas dimensões e não verifica linha de tiro, paredes, fumaça, altura, cegueira, munição ou recarga. Quando falta a direção, ela permanece desconhecida. A ausência de troca não demonstra erro de um jogador.
 
-## 11. Mortes em sequência
+## 10. Mortes em sequência
 
 Colapso é uma janela de até dez segundos com pelo menos três vítimas distintas da mesma equipe, mortas por adversários válidos, sem abate da própria equipe no intervalo. A tabela também mostra janelas com três mortes e algum abate da própria equipe. Mortes por spike ou ambiente e eventos após o encerramento observável ficam fora.
 
@@ -272,7 +272,7 @@ Colapso é uma janela de até dez segundos com pelo menos três vítimas distint
 
 Se as mortes ocorrem em regiões diferentes, o registro indica múltiplas regiões. A sequência de mortes descreve o que aconteceu, mas não identifica se mira ou posição causou o colapso.
 
-## 12. Dano registrado e arma inicial
+## 11. Dano registrado
 
 As categorias contam quantos adversários causaram dano à vítima durante o round inteiro. Dano de vários adversários não significa fogo simultâneo. O dano recebido pelo autor do abate também é somado no round e não identifica uma reação naquela vida.
 
@@ -283,9 +283,9 @@ As categorias contam quantos adversários causaram dano à vítima durante o rou
 | defesa | dano de múltiplos adversários no round | 8433 | 1572,670 | 0,191 | 0,296 |
 | defesa | dano de um adversário no round | 14481 | 1588,678 | 0,193 | 0,279 |
 
-Assistência não conta como prova de dano, e registros repetidos de dano são somados. A arma da vítima é a registrada no início do round porque armas coletadas e trocadas não são conhecidas. As distâncias nas mortes, sozinhas, não demonstram bom uso de alcance nem erro.
+Assistência não conta como prova de dano, e registros repetidos de dano são somados. As distâncias nas mortes, sozinhas, não demonstram bom uso de alcance nem erro.
 
-## 13. Sobrevivência e equipamento no round seguinte
+## 12. Sobrevivência e equipamento no round seguinte
 
 A tabela usa equipes que perderam o round. Sobrevivente é quem está vivo no último registro de posições disponível, incluindo quem voltou à vida. A comparação com o próximo round exclui transições no fim de uma metade e na prorrogação. Os valores de equipamento são os registrados no começo de cada round.
 
@@ -299,7 +299,7 @@ A tabela usa equipes que perderam o round. Sobrevivente é quem está vivo no ú
 
 As médias não medem o valor de salvar um jogador. As equipes também diferem em equipamento inicial, bônus e força. Os dados não identificam a intenção de caçar adversários. Recortar apenas vitórias do ataque não mostra se essa escolha compensa nem qual troca de abates seria aceitável.
 
-## 14. Tempo do plant e resultado
+## 13. Tempo do plant e resultado
 
 Os grupos usam o momento em que a spike foi plantada. Plant em até 40 segundos corresponde ao antigo nome execução rápida, e plant depois de 40 segundos corresponde ao antigo nome default. O relógio não revela a intenção da equipe. Sem plant e plant excluído têm grupos próprios.
 
@@ -319,7 +319,7 @@ A próxima tabela usa apenas plants válidos. A referência é a taxa de vitóri
 
 Plantar cedo e vencer podem ocorrer juntos sem que um cause o outro. A tabela não registra tentativas que falharam antes do plant. Comparar médias com a equipe atrás ou à frente no placar também não demonstra como cada equipe adapta seu jogo. Um round sem plant pode terminar em vitória ou derrota do ataque.
 
-## 15. Posições no plant e no defuse
+## 14. Posições no plant e no defuse
 
 A distância mediana da defesa é o valor central das distâncias dos defensores até a spike no plant. Com quantidade par de defensores, usa-se a média dos dois valores centrais. A referência por vivos e seus limites de Wilson seguem a definição da seção de defuse.
 

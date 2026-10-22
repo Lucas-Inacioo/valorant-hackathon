@@ -267,7 +267,7 @@ def show_fight_context(selection: PostMatchSelection, recorded: RecordedRound, e
             hide_index=True,
         )
         st.caption(
-            "A arma corresponde ao início do round e pode ter sido trocada depois. O dano é o total registrado no round inteiro "
+            "O dano é o total registrado no round inteiro "
             "e não mostra quando houve reação. A ocupação da região vem dos primeiros confrontos desta partida. "
             "As distâncias estão em unidades do jogo e o mapa não permite verificar a linha de tiro."
         )

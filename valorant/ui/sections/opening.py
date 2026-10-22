@@ -205,7 +205,7 @@ def _show_attack_locations(first_abates: pd.DataFrame, context: AppContext) -> N
 
 
 def _show_timing_by_round(first_abates: pd.DataFrame) -> None:
-    st.subheader("5. O primeiro abate fica mais cedo ou mais tarde ao longo da partida?")
+    st.subheader("4. O primeiro abate fica mais cedo ou mais tarde ao longo da partida?")
     timing_by_round = (
         first_abates[first_abates["round"] <= 24]
         .groupby("round")["segundos"]
