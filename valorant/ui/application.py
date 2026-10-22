@@ -33,7 +33,7 @@ def build_context() -> AppContext | None:
     ]
     match_ids = tuple(sorted(selected_matches["match_id"]))
     st.sidebar.caption(
-        "Os filtros valem para todas as análises. O documento de conclusões usa a base padrão."
+        "Os filtros valem para todas as análises."
     )
     return AppContext(
         data=AnalysisData(data_version, match_ids),
