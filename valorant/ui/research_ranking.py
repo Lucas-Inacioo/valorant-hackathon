@@ -136,7 +136,7 @@ def show_ranking(context, team_matches, tournament):
     st.subheader("Ranking das equipes por lances a revisar")
     st.write(
         "Um lance é um evento com pelo menos um dos padrões de revisão explicados acima. Quando três padrões apontam "
-        "o mesmo evento da mesma equipe, ele conta uma única vez. Acertos e condições como equipamento inferior "
+        "o mesmo evento da mesma equipe, ele conta uma única vez. Acertos (padrões positivos) e condições como equipamento inferior "
         "ficam fora dessa contagem."
     )
     first, second = st.columns(2)
