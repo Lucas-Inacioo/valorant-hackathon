@@ -16,7 +16,6 @@ from valorant.ui.post_match_occurrences import render_occurrence_navigation
 from valorant.ui.presentation import display_table
 from valorant.ui.replay import RecordedRound, render_event_buttons, render_recorded_event
 from valorant.ui.state_comparison import render_references
-from valorant.ui.tables import display_number
 
 
 def _round_numbers(values):
@@ -192,55 +191,8 @@ def show_players(selection: PostMatchSelection):
         "Jogador", options, format_func=selection.player_names.get, key="pos_player"
     )
     show_training_points(selection, player_id)
-    show_shared_situations(selection, player_id)
     with st.expander("Consultar os rounds deste jogador"):
         show_round_table(selection, player_id)
-
-
-def show_shared_situations(selection: PostMatchSelection, player_id):
-    with st.expander("Situações da equipe nos rounds deste jogador"):
-        rounds = selection.review.rounds
-        player_rounds = rounds[
-            (rounds["team_id"] == selection.team_id)
-            & rounds["participating_player_ids"].map(lambda players: player_id in players)
-        ]["round"]
-        observations = _scope_observations(selection)
-        shared = observations[
-            (
-                (observations["player_id"].isna() & observations["round"].isin(player_rounds))
-                | (observations["related_player_id"] == player_id)
-            )
-            & (observations["player_id"].isna() | observations["player_id"].ne(player_id))
-        ]
-        st.caption(
-            "Aqui entram observações coletivas dos rounds em que o jogador participou e lances de colegas que o envolveram. "
-            "Elas ficam separadas das ações individuais e não entram nas contagens pessoais."
-        )
-        if shared.empty:
-            st.write("Não há outras situações registradas para esta seleção.")
-            return
-        display_table(
-            shared[["round", "player_name", "pattern", "won_round"]]
-            .assign(
-                won_round=lambda table: table["won_round"].map({True: "vitória", False: "derrota"})
-            )
-            .rename(
-                columns={
-                    "round": "Round",
-                    "player_name": "Ação de",
-                    "pattern": "Observação",
-                    "won_round": "Resultado",
-                }
-            ),
-            hide_index=True,
-        )
-        first_round = int(shared.sort_values(["won_round", "round"]).iloc[0]["round"])
-        st.button(
-            "Rever esses lances como equipe",
-            key="review_shared_rounds",
-            on_click=jump_to_evidence,
-            args=(selection, ALL_PATTERNS, ALL_PLAYERS, first_round),
-        )
 
 
 def show_fight_context(selection: PostMatchSelection, recorded: RecordedRound, event_index):

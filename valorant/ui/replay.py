@@ -133,11 +133,6 @@ def render_recorded_event(recorded_round: RecordedRound, event_index: int, map_m
             alt=description,
             width="stretch",
         )
-        map_column.caption(
-            "A estrela marca quem fez um abate e o X marca quem morreu naquele instante. "
-            "Quando os dois símbolos aparecem juntos, o jogador abateu e morreu no mesmo instante. "
-            + ("O anel marca o jogador escolhido." if recorded_round.highlight_selected else "")
-        )
     else:
         map_column.info("A imagem deste mapa não está disponível. Consulte as posições na tabela.")
     if recorded_round.highlight_selected:
@@ -148,9 +143,4 @@ def render_recorded_event(recorded_round: RecordedRound, event_index: int, map_m
         event_position_table(event, recorded_round.player_names, recorded_round.player_teams),
         hide_index=True,
         container=position_column,
-    )
-    st.caption(
-        "As posições foram registradas nos eventos e mostram o estado após as ações daquele instante. "
-        "Eventos simultâneos compartilham esse estado. Um jogador sem posição registrada não aparece no mapa. "
-        "O mapa também não informa se havia parede ou smoke entre os jogadores."
     )

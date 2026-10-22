@@ -48,8 +48,8 @@ def round_references(context: AppContext, recorded: RecordedRound):
 def render_references(context: AppContext, recorded: RecordedRound):
     st.subheader("Como terminaram rounds em situações parecidas")
     st.write(
-        "Uma situação reúne a quantidade de jogadores vivos, o momento antes ou depois do plant, "
-        "a diferença de equipamento inicial e a faixa de tempo. Antes do plant, o tempo conta desde o fim da compra. Depois, conta desde o plant. A comparação procura essa mesma combinação em outras partidas selecionadas, sem exigir o mesmo mapa ou as mesmas equipes. Ela pode incluir jogos posteriores, por isso descreve a base já observada."
+        "Uma situação reúne a quantidade de jogadores vivos, o momento (antes ou depois do plant), "
+        "a diferença de equipamento inicial e a faixa de tempo. A comparação procura essa mesma combinação em outras partidas selecionadas, sem exigir o mesmo mapa ou as mesmas equipes."
     )
     st.caption(
         "A taxa mostra quantos desses rounds o ataque venceu. Ela só aparece com pelo menos 20 rounds de 5 outras partidas. "
