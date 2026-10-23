@@ -104,21 +104,19 @@ class PostMatchTests(unittest.TestCase):
         self.assertEqual(1, player.occurrences)
         self.assertEqual(1, player.rounds_with_observations)
         self.assertEqual(1, player.lost_round_count)
-        self.assertEqual(1, pattern(review, "Blue", "isolated_opening_untraded").lost_round_count)
+        self.assertEqual(1, pattern(review, "Blue", "opening_untraded").lost_round_count)
         self.assertEqual(1, review.round_summary("Blue").won_round.eq(False).sum())
 
-    def test_isolation_denominator_excludes_last_alive_and_missing_position(self):
+    def test_untraded_first_death_counts_near_or_far_from_allies(self):
         results = [
             round_result([kill("r1", "b1", 1000)]),
-            round_result([kill("r1", "b1", 1000, ["r1", "r2", "r3"])]),
-            round_result([kill("r1", "b1", 1000, [])]),
             round_result([kill("r1", "b1", 1000, positions={"b2": {"x": 100, "y": 0}})]),
+            round_result([kill("r1", "b1", 1000), kill("b2", "r1", 2000, ["b2", "b3", "r2", "r3"])]),
         ]
         review = build_match_review(match(*results), pd.DataFrame())
-        isolated = pattern(review, "Blue", "isolated_opening_untraded", "b1")
-        self.assertEqual(2, isolated.opportunities)
-        self.assertEqual(1, isolated.occurrences)
-        self.assertEqual(0.5, isolated.rate)
+        untraded = pattern(review, "Blue", "opening_untraded", "b1")
+        self.assertEqual(3, untraded.opportunities)
+        self.assertEqual(2, untraded.occurrences)
 
     def test_trade_is_assigned_to_actor_and_uses_kills_as_denominator(self):
         result = round_result(
@@ -137,7 +135,7 @@ class PostMatchTests(unittest.TestCase):
         self.assertEqual("b2", observation.player_id)
         self.assertEqual("b1", observation.related_player_id)
         self.assertEqual(1, observation.event_index)
-        self.assertEqual(0, pattern(review, "Blue", "isolated_opening_untraded").occurrences)
+        self.assertEqual(0, pattern(review, "Blue", "opening_untraded").occurrences)
 
     def test_simultaneous_opening_has_no_individual_attribution_or_fake_advantage(self):
         result = round_result(
@@ -149,7 +147,7 @@ class PostMatchTests(unittest.TestCase):
         review = build_match_review(match(result), details(result))
         self.assertFalse(review.opportunities["pattern_id"].eq("opening_kill").any())
         self.assertFalse(review.opportunities["pattern_id"].eq("numerical_advantage_lost").any())
-        self.assertFalse(review.observations["pattern_id"].eq("isolated_opening_untraded").any())
+        self.assertFalse(review.observations["pattern_id"].eq("opening_untraded").any())
 
     def test_resurrection_keeps_both_deaths_without_creating_three_distinct_victims(self):
         result = round_result(
@@ -189,7 +187,7 @@ class PostMatchTests(unittest.TestCase):
             roundResultCode="Defuse",
         )
         review = build_match_review(match(result), details(result))
-        isolated = review.observations.query("pattern_id == 'isolated_opening_untraded'")
+        isolated = review.observations.query("pattern_id == 'opening_untraded'")
         self.assertEqual([1], list(isolated.event_index))
         self.assertEqual(["b1"], list(isolated.player_id))
         self.assertEqual(1, review.round_summary("Blue").iloc[0].event_index)
@@ -325,15 +323,6 @@ class PostMatchTests(unittest.TestCase):
         self.assertEqual(3, evidence.enemies_before)
         self.assertIn("ressurreição", evidence.description)
 
-    def test_partial_ally_coordinates_do_not_prove_isolation(self):
-        result = round_result(
-            [kill("r1", "b1", 1000, positions={"b2": {"x": 3000, "y": 0}, "b3": {}})]
-        )
-        review = build_match_review(match(result), details(result))
-        for pattern_id in ("isolated_opening_untraded",):
-            self.assertFalse(review.opportunities.pattern_id.eq(pattern_id).any())
-            self.assertFalse(review.observations.pattern_id.eq(pattern_id).any())
-
     def test_pattern_priority_uses_rate_after_unique_round_counts(self):
         results = [
             round_result(
@@ -425,7 +414,7 @@ class PostMatchTests(unittest.TestCase):
     def test_pattern_filter_preserves_rounds_without_matching_observation(self):
         result = round_result([kill("r1", "b1", 1000)])
         review = build_match_review(match(result, round_result()), details(result))
-        rounds = review.round_summary("Blue", "b1", "isolated_opening_untraded")
+        rounds = review.round_summary("Blue", "b1", "opening_untraded")
         self.assertEqual([1, 2], list(rounds["round"]))
         self.assertEqual([1, 0], list(rounds.occurrences))
         self.assertEqual(["Blue", "Blue"], list(rounds.team_id))

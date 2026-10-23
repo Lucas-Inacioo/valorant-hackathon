@@ -13,7 +13,6 @@ import math
 
 import pandas as pd
 
-from valorant.analysis.deaths import SOLO_DISTANCE
 from valorant.analysis.events import (
     PLAYING_TEAMS,
     alive_before_puuids,
@@ -43,12 +42,12 @@ class ReviewPattern:
 
 
 PATTERNS = {
-    "isolated_opening_untraded": ReviewPattern(
+    "opening_untraded": ReviewPattern(
         "Primeira morte sem troca",
-        "O autor do primeiro abate do round eliminou um jogador que estava longe dos aliados e não morreu em até 5 segundos.",
+        "O autor do primeiro abate do round não morreu em até 5 segundos.",
         "Como preparar esse primeiro contato para que haja apoio ou uma saída?",
-        "Primeiras mortes individuais com aliado vivo e posição disponível",
-        summary="{occurrences} de {opportunities} primeiras mortes da rodada tinham um ou mais aliados vivos, mas nenhum a até 1000 unidades, e o autor do abate não foi eliminado em até 5 segundos.",
+        "Primeiras mortes individuais",
+        summary="Em {occurrences} de {opportunities} primeiras mortes da rodada, o autor do abate não foi eliminado em até 5 segundos.",
     ),
     "untraded_with_nearby_ally": ReviewPattern(
         "Sem troca com aliado perto",
@@ -508,19 +507,11 @@ def build_match_review(match, deaths, rounds=None, styles=None):
                         and facing_angle(ally, actor_location) <= FACING_DEGREES
                     ):
                         observe("nearby_ally_without_trade", victim_team, ally_id, event, victim)
+            if len(opening) == 1 and event["event_id"] == opening[0]["event_id"]:
+                opportunity("opening_untraded", victim_team, victim, event)
+                if not traded:
+                    observe("opening_untraded", victim_team, victim, event, actor)
             if geometry_known:
-                location = event["victim_location"]
-                nearest = min(
-                    math.hypot(
-                        row["location"]["x"] - location["x"], row["location"]["y"] - location["y"]
-                    )
-                    for row in allies
-                )
-                isolated = nearest > SOLO_DISTANCE
-                if len(opening) == 1 and event["event_id"] == opening[0]["event_id"]:
-                    opportunity("isolated_opening_untraded", victim_team, victim, event)
-                    if isolated and not traded:
-                        observe("isolated_opening_untraded", victim_team, victim, event, actor)
                 possible = detail.get("troca_possivel")
                 if isinstance(possible, str) and possible not in {"", "?"}:
                     opportunity("untraded_with_nearby_ally", victim_team, victim, event)

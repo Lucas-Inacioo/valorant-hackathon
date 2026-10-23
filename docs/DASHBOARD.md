@@ -18,7 +18,7 @@ Os padrões são primeira morte sem troca, vantagem numérica invertida e três 
 
 Um lance corresponde a uma partida, equipe, round e evento. Quando vários padrões apontam esse mesmo evento, ele conta uma vez. O resultado do round não decide se o lance entra na contagem. Entram rounds vencidos e perdidos.
 
-Foram encontrados 9.329 registros de padrões, que correspondem a 8.898 lances únicos de equipe. As observações aparecem em 7.066 rounds de equipe. As duas equipes de uma partida têm sua própria contagem, por isso o total de rounds de equipe é 13.176.
+Foram encontrados 11.395 registros de padrões, que correspondem a 10.531 lances únicos de equipe. As observações aparecem em 8.243 rounds de equipe. As duas equipes de uma partida têm sua própria contagem, por isso o total de rounds de equipe é 13.176.
 
 O ranking mostra tanto o total de lances quanto a frequência por cem rounds. A frequência divide o total de lances pelos rounds jogados e multiplica por cem. Ela pode passar de cem porque um round pode ter vários lances. As taxas agregadas usam o total da exposição, sem fazer uma média simples de porcentagens de partidas com durações diferentes.
 
@@ -38,14 +38,14 @@ A concordância compara pares com desempenho diferente. A equipe com menos lance
 
 | Desempenho observado | Equipes | Spearman | Intervalo de 95% | Concordância | Intervalo de 95% |
 | --- | --- | --- | --- | --- | --- |
-| Vitórias em rounds | 59 | 0,881 | 0,756 a 0,909 | 86,2% | 79,3% a 87,6% |
-| Vitórias em partidas | 59 | 0,817 | 0,638 a 0,851 | 83,7% | 74,6% a 84,7% |
+| Vitórias em rounds | 59 | 0,905 | 0,825 a 0,938 | 87,7% | 82,7% a 89,9% |
+| Vitórias em partidas | 59 | 0,864 | 0,697 a 0,875 | 86,7% | 77,2% a 86,4% |
 
 Na comparação por rounds há 1.708 pares com desempenho diferente e três empates de desempenho. Na comparação por partidas há 1.608 pares comparáveis e 103 empates de desempenho.
 
 Os intervalos usam 500 reamostragens de partidas inteiras, com semente zero, mantendo as duas equipes juntas. A coorte do ranking original permanece fixa. Uma equipe sem exposição numa reamostragem fica fora da conta daquela reamostragem. As 500 reamostragens da seleção padrão tiveram Spearman calculável. Esses intervalos descrevem a agenda registrada e não corrigem todas as dependências de equipes e adversários recorrentes.
 
-O dashboard também mostra a referência apenas pela frequência de mortes por cem rounds. Sua correlação de Spearman com vitórias em rounds é 0,95 nas mesmas 59 equipes. Isso mostra por que a associação de 0,88 dos lances não deve ser apresentada como ganho de previsão. A revisão serve para localizar situações concretas a estudar e não foi validada como uma nova medida de força das equipes.
+O dashboard também mostra a referência apenas pela frequência de mortes por cem rounds. Sua correlação de Spearman com vitórias em rounds é 0,95 nas mesmas 59 equipes. Isso mostra por que a associação de 0,90 dos lances não deve ser apresentada como ganho de previsão. A revisão serve para localizar situações concretas a estudar e não foi validada como uma nova medida de força das equipes.
 
 AUC usa escores de classificação e classes conhecidas. Como a referência aqui é uma taxa contínua, o dashboard preserva a ordenação com Spearman e concordância, sem criar classes artificiais de equipes boas e ruins. As definições estão na [documentação de Spearman](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.spearmanr.html) e na [documentação de ROC-AUC](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html).
 
