@@ -62,6 +62,19 @@ def select_random_team(context: AppContext):
         st.session_state["review_view"] = "Equipe"
 
 
+def match_label(file_name):
+    """Equipes, placar, mapa e data no lugar do nome do arquivo."""
+    try:
+        parsed = parse_match_name(Path(file_name))
+    except ValueError:
+        return file_name
+    day, month, _ = parsed["date"].split("-")
+    return (
+        f'{parsed["team1"]} {parsed["score1"]} x {parsed["score2"]} {parsed["team2"]}, '
+        f'{parsed["map"].capitalize()}, {day}/{month}'
+    )
+
+
 def select_match_and_team(context: AppContext) -> PostMatchSelection:
     files = context.selected_matches["arquivo"].tolist()
     st.button(
@@ -74,7 +87,7 @@ def select_match_and_team(context: AppContext) -> PostMatchSelection:
     )
     if st.session_state.get("pos_match") not in files:
         st.session_state["pos_match"] = files[0]
-    chosen_file = st.selectbox("Partida", files, key="pos_match")
+    chosen_file = st.selectbox("Partida", files, format_func=match_label, key="pos_match")
     match_info = context.selected_matches[context.selected_matches["arquivo"] == chosen_file].iloc[
         0
     ]

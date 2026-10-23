@@ -58,12 +58,23 @@ def _show_pattern_table(summary):
         )
 
 
+CARD_ORDER = [
+    "isolated_opening_untraded",
+    "collapse",
+    "numerical_advantage_lost",
+    "away_from_group",
+    "isolated_death",
+]
+
+
 def show_training_points(selection: PostMatchSelection, player_id=ALL_PLAYERS):
     summary = selection.review.pattern_summary(
         selection.team_id, None if player_id == ALL_PLAYERS else player_id
     )
     observed = summary[summary["occurrences"] > 0]
     points = observed[~observed["positive"] & ~observed["context_only"]]
+    # A troca é o sinal mais forte nos dados, a distância sozinha não muda a vitória.
+    points = points.sort_values("pattern_id", key=lambda ids: ids.map(lambda key: CARD_ORDER.index(key) if key in CARD_ORDER else len(CARD_ORDER)), kind="stable")
     st.subheader("Pontos para rever")
     st.caption("Vários sinais do mesmo lance contam como um único round.")
     if points.empty:
