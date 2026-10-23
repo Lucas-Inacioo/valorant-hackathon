@@ -20,7 +20,7 @@ ALLY_COLOR = "#1f77b4"
 ENEMY_COLOR = "#d62728"
 TEAM_COLORS = {"Blue": ALLY_COLOR, "Red": ENEMY_COLOR}
 # Comprimento da linha de olhar em unidades do jogo.
-LOOK_LENGTH = 700
+LOOK_LENGTH = 1000
 
 
 def describe_event(event, name_by_puuid, round_result):
@@ -162,8 +162,8 @@ def draw_round_map(
             [start[0], end[0]],
             [start[1], end[1]],
             color=color_of(puuid),
-            linewidth=1.6,
-            alpha=0.9,
+            linewidth=2.4,
+            alpha=0.95,
             zorder=4,
             solid_capstyle="round",
         )
@@ -451,7 +451,7 @@ def legend_handles(ally_team=None, *, highlight_selected=True):
             linestyle="",
             label="morreu no instante",
         ),
-        Line2D([], [], color="#555555", linewidth=1.6, label="para onde olhava"),
+        Line2D([], [], color="#555555", linewidth=2.4, label="para onde olhava"),
     ]
     if highlight_selected:
         handles.append(

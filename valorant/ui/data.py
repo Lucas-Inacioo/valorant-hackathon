@@ -92,9 +92,11 @@ STORE_DIR = DEFAULT_DATA_DIR / "cache"
 
 @functools.cache
 def code_version():
-    """Qualquer mudança no código invalida o que foi guardado em disco."""
+    """Mudanças no código que calcula as tabelas invalidam o que foi guardado. Telas e gráficos não entram."""
+    package = Path(__file__).resolve().parents[1]
+    sources = [*package.glob("analysis/*.py"), *package.glob("data/*.py"), package / "paths.py", Path(__file__)]
     digest = hashlib.sha256()
-    for path in sorted(Path(__file__).resolve().parents[1].rglob("*.py")):
+    for path in sorted(sources):
         digest.update(path.read_bytes())
     return digest.hexdigest()
 
