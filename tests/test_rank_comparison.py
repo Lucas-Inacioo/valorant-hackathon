@@ -71,6 +71,8 @@ class RankComparisonTests(unittest.TestCase):
         self.assertGreaterEqual(1, first.spearman_high)
         self.assertLessEqual(0, first.concordance_low)
         self.assertGreaterEqual(1, first.concordance_high)
+        self.assertTrue(first.spearman_low <= first.spearman <= first.spearman_high)
+        self.assertTrue(first.concordance_low <= first.concordance <= first.concordance_high)
 
     def test_bootstrap_resamples_whole_matches_and_drops_unseen_teams(self):
         matches, ranking = self.fixture()

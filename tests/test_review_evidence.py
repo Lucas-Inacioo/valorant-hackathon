@@ -23,14 +23,14 @@ class ReviewEvidenceTests(unittest.TestCase):
                 ("excluded", 10, False, True), ("a", np.nan, True, False),
             ]
         ])
-        table, contrasts = first_death_comparison(SimpleNamespace(support_deaths=support), {"a", "b"})
-        self.assertEqual([1, 1, 1, 1], table["Casos"].tolist())
-        self.assertEqual([1, 0, 0, 1], table["Vitórias"].tolist())
-        self.assertEqual(1, contrasts[0][1][0])
-        self.assertEqual(-1, contrasts[1][1][0])
-        local, _ = first_death_comparison(SimpleNamespace(support_deaths=support), {"a"})
-        self.assertEqual([1, 1, 0, 0], local["Casos"].tolist())
-        self.assertTrue(local.iloc[2:]["Vitória da equipe"].isna().all())
+        table, contrast = first_death_comparison(SimpleNamespace(support_deaths=support), {"a", "b"})
+        self.assertEqual(["Com troca", "Sem troca"], table["Resposta"].tolist())
+        self.assertEqual([2, 2], table["Casos"].tolist())
+        self.assertEqual([1, 1], table["Vitórias"].tolist())
+        self.assertEqual(0, contrast[0])
+        local, local_contrast = first_death_comparison(SimpleNamespace(support_deaths=support), {"a"})
+        self.assertEqual([1, 1], local["Casos"].tolist())
+        self.assertEqual(1, local_contrast[0])
 
     def fixture(self):
         rounds = pd.DataFrame([
