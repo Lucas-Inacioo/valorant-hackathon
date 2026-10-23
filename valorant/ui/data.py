@@ -145,8 +145,8 @@ def stored_on_disk(function):
     return wrapper
 
 
+# Fica fora do disco porque guarda o caminho dos arquivos, que muda de uma máquina para outra.
 @st.cache_data(show_spinner=False)
-@stored_on_disk
 def load_inventory(signature):
     match_rows, player_rows, round_rows = ([], [], [])
     for match_file in find_match_files(DEFAULT_DATA_DIR):
