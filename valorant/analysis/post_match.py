@@ -43,13 +43,6 @@ class ReviewPattern:
 
 
 PATTERNS = {
-    "isolated_death": ReviewPattern(
-        "Morte longe do apoio",
-        "Morreu com aliado vivo, mas nenhum aliado estava a até 1000 unidades de jogo.",
-        "O jogador precisava fazer esse contato sozinho ou poderia esperar apoio?",
-        "Mortes com aliado vivo e posição disponível",
-        summary="{occurrences} de {opportunities} mortes tinham um ou mais aliados vivos, mas nenhum a até 1000 unidades.",
-    ),
     "away_from_group": ReviewPattern(
         "Morte longe do grupo",
         "Morreu a mais de 1000 unidades do aliado mais próximo enquanto pelo menos dois aliados ocupavam a mesma região do mapa.",
@@ -531,9 +524,6 @@ def build_match_review(match, deaths, rounds=None, styles=None):
                     for row in allies
                 )
                 isolated = nearest > SOLO_DISTANCE
-                opportunity("isolated_death", victim_team, victim, event)
-                if isolated:
-                    observe("isolated_death", victim_team, victim, event, actor)
                 if len(opening) == 1 and event["event_id"] == opening[0]["event_id"]:
                     opportunity("isolated_opening_untraded", victim_team, victim, event)
                     if isolated and not traded:
