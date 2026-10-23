@@ -78,7 +78,7 @@ def map_names_from_file_names(matches):
     """O nome do mapa vem do fim do nome do arquivo; vota o mais comum por nome interno do mapId."""
     return (
         matches.groupby("mapa_interno")["mapa_do_arquivo"]
-        .agg(lambda names: names.mode()[0])
+        .agg(lambda names: names.mode()[0].capitalize())
         .to_dict()
     )
 

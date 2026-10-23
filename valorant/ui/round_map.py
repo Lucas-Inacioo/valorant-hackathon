@@ -15,6 +15,7 @@ from valorant.analysis.events import alive_puuids, is_enemy_kill
 
 ALLY_COLOR = "#1f77b4"
 ENEMY_COLOR = "#d62728"
+TEAM_COLORS = {"Blue": ALLY_COLOR, "Red": ENEMY_COLOR}
 
 
 def describe_event(event, name_by_puuid, round_result):
@@ -66,10 +67,7 @@ def draw_round_map(
         return fraction_x * width, fraction_y * height
 
     def color_of(puuid):
-        team = team_by_puuid.get(puuid)
-        if team is None:
-            return "#777777"
-        return ALLY_COLOR if team == ally_team else ENEMY_COLOR
+        return TEAM_COLORS.get(team_by_puuid.get(puuid), "#777777")
 
     def marker_of(puuid):
         return "o" if team_by_puuid.get(puuid) == ally_team else "^"
@@ -147,7 +145,7 @@ def draw_round_map(
             )
             drawn.add(puuid)
     figure.legend(
-        handles=legend_handles(highlight_selected=highlight_selected),
+        handles=legend_handles(ally_team, highlight_selected=highlight_selected),
         loc="lower center",
         bbox_to_anchor=(0.5, 0.015),
         ncol=3,
@@ -364,25 +362,28 @@ def draw_player(
         )
 
 
-def legend_handles(*, highlight_selected=True):
+def legend_handles(ally_team=None, *, highlight_selected=True):
+    # A cor segue a equipe da partida, Blue ou Red, e a forma separa aliado de inimigo.
+    ally_color = TEAM_COLORS.get(ally_team, ALLY_COLOR)
+    enemy_color = ENEMY_COLOR if ally_color == ALLY_COLOR else ALLY_COLOR
     handles = [
-        Line2D([], [], marker="o", color=ALLY_COLOR, linestyle="", label="aliado vivo"),
+        Line2D([], [], marker="o", color=ally_color, linestyle="", label="aliado vivo"),
         Line2D(
             [],
             [],
             marker="o",
             markerfacecolor="none",
-            color=ALLY_COLOR,
+            color=ally_color,
             linestyle="",
             label="aliado morto",
         ),
-        Line2D([], [], marker="^", color=ENEMY_COLOR, linestyle="", label="inimigo vivo"),
+        Line2D([], [], marker="^", color=enemy_color, linestyle="", label="inimigo vivo"),
         Line2D(
             [],
             [],
             marker="^",
             markerfacecolor="none",
-            color=ENEMY_COLOR,
+            color=enemy_color,
             linestyle="",
             label="inimigo morto",
         ),

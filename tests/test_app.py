@@ -34,6 +34,7 @@ class AppIntegrationTests(unittest.TestCase):
     def test_all_sections_and_audited_filter_regressions(self):
         from streamlit.testing.v1 import AppTest
 
+        from valorant.paths import DATA_DIR
         from valorant.ui.navigation import EXPLORATORY_SECTIONS, MAIN_AREAS, SECTIONS
         from valorant.ui.presentation import field_label
 
@@ -343,7 +344,8 @@ class AppIntegrationTests(unittest.TestCase):
                 lambda: app.radio(key="review_view").set_value("Equipe"),
                 check_team_summary,
             )
-            recorded_files = list(app.selectbox(key="pos_match").options)
+            # As opções mostram equipes e placar, então os nomes dos arquivos vêm da pasta de dados.
+            recorded_files = [path.name for path in DATA_DIR.rglob("*.json")]
             regression_file = next(
                 filename for filename in recorded_files if filename.startswith("RUSH2_007_")
             )
