@@ -97,14 +97,14 @@ class PostMatchTests(unittest.TestCase):
         table = details(result)
         review = build_match_review(match(result), pd.concat([table, table]))
         rows = review.observations.query("player_id == 'b1'")
-        self.assertEqual(4, len(rows))
+        self.assertEqual(3, len(rows))
         self.assertTrue((rows["event_index"] == 0).all())
-        self.assertEqual(4, rows["observation_id"].nunique())
+        self.assertEqual(3, rows["observation_id"].nunique())
         player = review.player_summary("Blue").query("player_id == 'b1'").iloc[0]
-        self.assertEqual(3, player.occurrences)
+        self.assertEqual(2, player.occurrences)
         self.assertEqual(1, player.rounds_with_observations)
         self.assertEqual(1, player.lost_round_count)
-        self.assertEqual(1, pattern(review, "Blue", "isolated_death").lost_round_count)
+        self.assertEqual(1, pattern(review, "Blue", "isolated_opening_untraded").lost_round_count)
         self.assertEqual(1, review.round_summary("Blue").won_round.eq(False).sum())
 
     def test_isolation_denominator_excludes_last_alive_and_missing_position(self):
@@ -115,7 +115,7 @@ class PostMatchTests(unittest.TestCase):
             round_result([kill("r1", "b1", 1000, positions={"b2": {"x": 100, "y": 0}})]),
         ]
         review = build_match_review(match(*results), pd.DataFrame())
-        isolated = pattern(review, "Blue", "isolated_death", "b1")
+        isolated = pattern(review, "Blue", "isolated_opening_untraded", "b1")
         self.assertEqual(2, isolated.opportunities)
         self.assertEqual(1, isolated.occurrences)
         self.assertEqual(0.5, isolated.rate)
@@ -160,13 +160,13 @@ class PostMatchTests(unittest.TestCase):
             ]
         )
         review = build_match_review(match(result), details(result))
-        isolated = pattern(review, "Blue", "isolated_death", "b1")
-        self.assertEqual(2, isolated.occurrences)
-        self.assertEqual(2, isolated.opportunities)
-        self.assertEqual(1, isolated.round_count)
+        untraded = pattern(review, "Blue", "untraded_with_nearby_ally", "b1")
+        self.assertEqual(2, untraded.occurrences)
+        self.assertEqual(2, untraded.opportunities)
+        self.assertEqual(1, untraded.round_count)
         self.assertEqual(0, pattern(review, "Blue", "collapse").occurrences)
         b1_deaths = review.observations.query(
-            "pattern_id == 'isolated_death' and player_id == 'b1'"
+            "pattern_id == 'untraded_with_nearby_ally' and player_id == 'b1'"
         )
         self.assertEqual([0, 2], list(b1_deaths.event_index))
 
@@ -189,7 +189,7 @@ class PostMatchTests(unittest.TestCase):
             roundResultCode="Defuse",
         )
         review = build_match_review(match(result), details(result))
-        isolated = review.observations.query("pattern_id == 'isolated_death'")
+        isolated = review.observations.query("pattern_id == 'isolated_opening_untraded'")
         self.assertEqual([1], list(isolated.event_index))
         self.assertEqual(["b1"], list(isolated.player_id))
         self.assertEqual(1, review.round_summary("Blue").iloc[0].event_index)
@@ -330,7 +330,7 @@ class PostMatchTests(unittest.TestCase):
             [kill("r1", "b1", 1000, positions={"b2": {"x": 3000, "y": 0}, "b3": {}})]
         )
         review = build_match_review(match(result), details(result))
-        for pattern_id in ("isolated_death", "isolated_opening_untraded", "away_from_group"):
+        for pattern_id in ("isolated_opening_untraded", "away_from_group"):
             self.assertFalse(review.opportunities.pattern_id.eq(pattern_id).any())
             self.assertFalse(review.observations.pattern_id.eq(pattern_id).any())
 
@@ -425,7 +425,7 @@ class PostMatchTests(unittest.TestCase):
     def test_pattern_filter_preserves_rounds_without_matching_observation(self):
         result = round_result([kill("r1", "b1", 1000)])
         review = build_match_review(match(result, round_result()), details(result))
-        rounds = review.round_summary("Blue", "b1", "isolated_death")
+        rounds = review.round_summary("Blue", "b1", "isolated_opening_untraded")
         self.assertEqual([1, 2], list(rounds["round"]))
         self.assertEqual([1, 0], list(rounds.occurrences))
         self.assertEqual(["Blue", "Blue"], list(rounds.team_id))
