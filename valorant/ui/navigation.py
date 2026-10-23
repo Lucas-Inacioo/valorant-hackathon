@@ -67,7 +67,7 @@ def render_dashboard_paths():
     tool, research = st.columns(2)
     with tool.container(border=True):
         st.markdown("**Ferramenta de análise pós-jogo**")
-        st.write("Esse é o meu entregável para a Hackaton, lances decisivos para a partida são selecionados e podem ser revisados em um mapa.")
+        st.write("Esse é o meu entregável para o Hackathon, lances decisivos para a partida são selecionados e podem ser revisados em um mapa.")
         st.button("Abrir ferramenta de análise pós-jogo", key="dashboard_go_post_match", type="primary",
                   on_click=navigate, args=(POST_MATCH,))
     with research.container(border=True):
