@@ -38,12 +38,12 @@ A concordância compara pares com desempenho diferente. A equipe com menos lance
 
 | Desempenho observado | Equipes | Spearman | Intervalo de 95% | Concordância | Intervalo de 95% |
 | --- | --- | --- | --- | --- | --- |
-| Vitórias em rounds | 59 | 0,905 | 0,825 a 0,938 | 87,7% | 82,7% a 89,9% |
-| Vitórias em partidas | 59 | 0,864 | 0,697 a 0,875 | 86,7% | 77,2% a 86,4% |
+| Vitórias em rounds | 59 | 0,905 | 0,840 a 0,953 | 87,7% | 83,9% a 91,1% |
+| Vitórias em partidas | 59 | 0,864 | 0,761 a 0,939 | 86,7% | 81,7% a 91,0% |
 
 Na comparação por rounds há 1.708 pares com desempenho diferente e três empates de desempenho. Na comparação por partidas há 1.608 pares comparáveis e 103 empates de desempenho.
 
-Os intervalos usam 500 reamostragens de partidas inteiras, com semente zero, mantendo as duas equipes juntas. A coorte do ranking original permanece fixa. Uma equipe sem exposição numa reamostragem fica fora da conta daquela reamostragem. As 500 reamostragens da seleção padrão tiveram Spearman calculável. Esses intervalos descrevem a agenda registrada e não corrigem todas as dependências de equipes e adversários recorrentes.
+Os intervalos usam 500 reamostragens de partidas inteiras, com semente zero, mantendo as duas equipes juntas. Reamostrar partidas deixa as taxas das equipes mais ruidosas e puxa as correlações para baixo, por isso o intervalo usa a variação das reamostragens em volta do valor observado. A coorte do ranking original permanece fixa. Uma equipe sem exposição numa reamostragem fica fora da conta daquela reamostragem. As 500 reamostragens da seleção padrão tiveram Spearman calculável. Esses intervalos descrevem a agenda registrada e não corrigem todas as dependências de equipes e adversários recorrentes.
 
 O dashboard também mostra a referência apenas pela frequência de mortes por cem rounds. Sua correlação de Spearman com vitórias em rounds é 0,95 nas mesmas 59 equipes. Isso mostra por que a associação de 0,90 dos lances não deve ser apresentada como ganho de previsão. A revisão serve para localizar situações concretas a estudar e não foi validada como uma nova medida de força das equipes.
 
@@ -61,16 +61,14 @@ Em 2.850 rounds de equipe houve três mortes de pessoas diferentes em até dez s
 
 O painel também cruza as análises já existentes nas outras abas. Não foram coletados novos dados, alterados os arquivos das partidas ou treinados modelos adicionais. Todas as tabelas acompanham os filtros laterais e o recorte local de torneio.
 
-A primeira comparação separa primeiras mortes individuais por proximidade do aliado e troca efetivamente registrada. A vitória é sempre da equipe da vítima.
+A primeira comparação separa primeiras mortes individuais pela troca efetivamente registrada. A vitória é sempre da equipe da vítima.
 
-| Primeira morte | Resposta | Casos | Vitórias | Taxa de vitória |
-| --- | --- | --- | --- | --- |
-| Com aliado próximo | Com troca | 907 | 398 | 43,9% |
-| Com aliado próximo | Sem troca | 2.065 | 457 | 22,1% |
-| Longe dos aliados | Com troca | 406 | 195 | 48,0% |
-| Longe dos aliados | Sem troca | 3.159 | 828 | 26,2% |
+| Resposta | Casos | Vitórias | Taxa de vitória |
+| --- | --- | --- | --- |
+| Com troca | 1.313 | 593 | 45,2% |
+| Sem troca | 5.224 | 1.285 | 24,6% |
 
-A diferença com troca menos sem troca é de 21,8 pontos percentuais nos dois grupos, com arredondamento. Os intervalos de 95% são de 18,7 a 25,0 pontos no grupo próximo e de 17,2 a 25,6 no distante. Eles usam a função existente `cluster_contrast`, com 500 reamostragens de partidas inteiras e semente zero. Essa separação não controla equipamento, equipe ou todos os jogadores vivos e não demonstra o ganho causal de executar uma troca.
+A diferença com troca menos sem troca é de 20,6 pontos percentuais, com intervalo de 95% de 17,7 a 23,2 pontos. Ele usa a função existente `cluster_contrast`, com 500 reamostragens de partidas inteiras e semente zero. Essa separação não controla equipamento, equipe ou todos os jogadores vivos e não demonstra o ganho causal de executar uma troca.
 
 A sequência de três perdas sem resposta aparece em 2.850 rounds de equipe, com 184 vitórias e 2.666 derrotas. Nos 10.326 rounds sem essa sequência registrada houve 6.404 vitórias, ou 62,0%. O grupo de referência inclui rounds sem três mortes próximas, por isso não significa três mortes equivalentes que receberam resposta. A diferença bruta de vitórias é de menos 55,6 pontos, com intervalo de menos 56,6 a menos 54,4 pontos. A sequência não atribui culpa ao primeiro jogador morto.
 
