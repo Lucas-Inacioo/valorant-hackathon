@@ -32,11 +32,11 @@ rows = [
          pattern_id=pattern, pattern=pattern, round=round_number, event_index=event,
          time_ms=(event + 1) * 1000, won_round=round_number == 3, review_question="O que rever?")
     for identifier, player, pattern, round_number, event in [
-        ("a1", "a", "away_from_group", 1, 1),
-        ("a2", "a", "away_from_group", 2, 0),
-        ("a3", "a", "away_from_group", 3, 1),
+        ("a1", "a", "isolated_opening_untraded", 1, 1),
+        ("a2", "a", "isolated_opening_untraded", 2, 0),
+        ("a3", "a", "isolated_opening_untraded", 3, 1),
         ("a4", "a", "other_pattern", 1, 1),
-        ("b1", "b", "away_from_group", 1, 0),
+        ("b1", "b", "isolated_opening_untraded", 1, 0),
     ]
 ]
 class Review:
@@ -70,7 +70,7 @@ else:
     player = st.selectbox("Jogador", ["a", "b"], key="pos_player") if view == "Jogadores" else "Todos"
     st.selectbox("Round para consultar", [1, 2, 3], key="overview_round")
     st.button("Rever os lances", key="fixture_review", on_click=jump_to_evidence,
-              args=(selection, "away_from_group", player))
+              args=(selection, "isolated_opening_untraded", player))
     st.button("Rever como equipe", key="fixture_shared", on_click=jump_to_evidence,
               args=(selection, "all", "Todos"))
 '''
@@ -85,7 +85,7 @@ class OccurrenceNavigationTests(unittest.TestCase):
     def assert_occurrence(self, app, number, count, round_number, event_number):
         self.assertFalse(app.exception)
         self.assertEqual("a", app.selectbox(key="pos_player").value)
-        self.assertEqual("away_from_group", app.selectbox(key="review_pattern").value)
+        self.assertEqual("isolated_opening_untraded", app.selectbox(key="review_pattern").value)
         self.assertEqual(round_number - 1, app.selectbox(key="pos_round").value)
         captions = [caption.value for caption in app.caption]
         self.assertIn(f"Ocorrência {number} de {count}", captions)

@@ -22,7 +22,7 @@ class ResearchTests(unittest.TestCase):
         observations = pd.DataFrame([
             dict(team_id=team, round=number, event_index=event, pattern_id=pattern, won_round=True)
             for team, number, event, pattern in [
-                ("Blue", 1, 0, "isolated_opening_untraded"), ("Blue", 1, 0, "away_from_group"),
+                ("Blue", 1, 0, "isolated_opening_untraded"), ("Blue", 1, 0, "numerical_advantage_lost"),
                 ("Blue", 1, 1, "collapse"), ("Blue", 2, 0, "numerical_advantage_lost"),
                 ("Red", 3, 0, "isolated_opening_untraded"), ("Blue", 1, 3, "opening_kill"),
                 ("Blue", 2, None, "lower_starting_equipment"),

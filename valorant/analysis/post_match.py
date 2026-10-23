@@ -43,13 +43,6 @@ class ReviewPattern:
 
 
 PATTERNS = {
-    "away_from_group": ReviewPattern(
-        "Morte longe do grupo",
-        "Morreu a mais de 1000 unidades do aliado mais próximo enquanto pelo menos dois aliados ocupavam a mesma região do mapa.",
-        "A separação tinha um objetivo combinado com a equipe?",
-        "Mortes com ao menos dois aliados vivos e regiões identificadas",
-        summary="{occurrences} de {opportunities} mortes tinham dois ou mais aliados vivos. Morreu a mais de 1000 unidades do aliado mais próximo enquanto pelo menos dois aliados ocupavam a mesma região do mapa.",
-    ),
     "isolated_opening_untraded": ReviewPattern(
         "Primeira morte longe do apoio e sem troca",
         "O autor do primeiro abate do round eliminou um jogador que estava longe dos aliados e não morreu em até 5 segundos.",
@@ -528,16 +521,6 @@ def build_match_review(match, deaths, rounds=None, styles=None):
                     opportunity("isolated_opening_untraded", victim_team, victim, event)
                     if isolated and not traded:
                         observe("isolated_opening_untraded", victim_team, victim, event, actor)
-                region = detail.get("regiao")
-                if (
-                    len(allies) >= 2
-                    and isinstance(region, str)
-                    and region not in {"", "?"}
-                    and "aliados_mesma_regiao" in detail
-                ):
-                    opportunity("away_from_group", victim_team, victim, event)
-                    if isolated and detail["aliados_mesma_regiao"] is True:
-                        observe("away_from_group", victim_team, victim, event, actor)
                 possible = detail.get("troca_possivel")
                 if isinstance(possible, str) and possible not in {"", "?"}:
                     opportunity("untraded_with_nearby_ally", victim_team, victim, event)

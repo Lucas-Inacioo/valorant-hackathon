@@ -97,11 +97,11 @@ class PostMatchTests(unittest.TestCase):
         table = details(result)
         review = build_match_review(match(result), pd.concat([table, table]))
         rows = review.observations.query("player_id == 'b1'")
-        self.assertEqual(3, len(rows))
+        self.assertEqual(2, len(rows))
         self.assertTrue((rows["event_index"] == 0).all())
-        self.assertEqual(3, rows["observation_id"].nunique())
+        self.assertEqual(2, rows["observation_id"].nunique())
         player = review.player_summary("Blue").query("player_id == 'b1'").iloc[0]
-        self.assertEqual(2, player.occurrences)
+        self.assertEqual(1, player.occurrences)
         self.assertEqual(1, player.rounds_with_observations)
         self.assertEqual(1, player.lost_round_count)
         self.assertEqual(1, pattern(review, "Blue", "isolated_opening_untraded").lost_round_count)
@@ -330,7 +330,7 @@ class PostMatchTests(unittest.TestCase):
             [kill("r1", "b1", 1000, positions={"b2": {"x": 3000, "y": 0}, "b3": {}})]
         )
         review = build_match_review(match(result), details(result))
-        for pattern_id in ("isolated_opening_untraded", "away_from_group"):
+        for pattern_id in ("isolated_opening_untraded",):
             self.assertFalse(review.opportunities.pattern_id.eq(pattern_id).any())
             self.assertFalse(review.observations.pattern_id.eq(pattern_id).any())
 
