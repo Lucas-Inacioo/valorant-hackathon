@@ -1,5 +1,7 @@
 """Eventos do round e posições dos jogadores sobre o minimapa."""
 
+import math
+
 import matplotlib
 import numpy as np
 
@@ -12,10 +14,13 @@ from PIL import Image
 
 from valorant.data.metadata import game_to_image_fraction, minimap_file
 from valorant.analysis.events import alive_puuids, is_enemy_kill
+from valorant.analysis.fights import TRADE_RANGE
 
 ALLY_COLOR = "#1f77b4"
 ENEMY_COLOR = "#d62728"
 TEAM_COLORS = {"Blue": ALLY_COLOR, "Red": ENEMY_COLOR}
+# Comprimento da linha de olhar em unidades do jogo.
+LOOK_LENGTH = 700
 
 
 def describe_event(event, name_by_puuid, round_result):
@@ -144,6 +149,24 @@ def draw_round_map(
                 is_victim=puuid in victims_now,
             )
             drawn.add(puuid)
+    # Só quem participa do evento ganha a linha de olhar, para o mapa não ficar poluído.
+    for puuid, location, radians in looking_players(current_event, team_by_puuid):
+        start = to_pixels(location)
+        end = to_pixels(
+            {
+                "x": location["x"] + LOOK_LENGTH * math.cos(radians),
+                "y": location["y"] + LOOK_LENGTH * math.sin(radians),
+            }
+        )
+        axes.plot(
+            [start[0], end[0]],
+            [start[1], end[1]],
+            color=color_of(puuid),
+            linewidth=1.6,
+            alpha=0.9,
+            zorder=4,
+            solid_capstyle="round",
+        )
     figure.legend(
         handles=legend_handles(ally_team, highlight_selected=highlight_selected),
         loc="lower center",
@@ -157,6 +180,35 @@ def draw_round_map(
     figure.subplots_adjust(left=0.01, right=0.99, top=0.99, bottom=0.16)
     plt.close(figure)
     return figure
+
+
+def looking_players(event, team_by_puuid):
+    """Quem fez a ação e, num abate, os aliados da vítima a até TRADE_RANGE de quem abateu."""
+    rows = {
+        row["puuid"]: row
+        for row in event.get("locations", [])
+        if _has_coordinates(row.get("location"))
+        and isinstance(row.get("viewRadians"), (int, float))
+        and math.isfinite(row["viewRadians"])
+    }
+    actor = rows.get(event.get("actor"))
+    if actor is None:
+        return []
+    involved = [actor]
+    if event.get("kind") == "kill":
+        victim_team = team_by_puuid.get(event.get("victim"))
+        involved += [
+            row
+            for puuid, row in rows.items()
+            if puuid != event.get("actor")
+            and team_by_puuid.get(puuid) == victim_team
+            and math.dist(
+                (row["location"]["x"], row["location"]["y"]),
+                (actor["location"]["x"], actor["location"]["y"]),
+            )
+            <= TRADE_RANGE
+        ]
+    return [(row["puuid"], row["location"], row["viewRadians"]) for row in involved]
 
 
 def _has_coordinates(location):
@@ -399,6 +451,7 @@ def legend_handles(ally_team=None, *, highlight_selected=True):
             linestyle="",
             label="morreu no instante",
         ),
+        Line2D([], [], color="#555555", linewidth=1.6, label="para onde olhava"),
     ]
     if highlight_selected:
         handles.append(

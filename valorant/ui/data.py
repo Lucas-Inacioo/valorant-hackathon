@@ -1,7 +1,11 @@
 """Leitura e cache das análises. A seleção de partidas faz parte da chave do cache."""
 
 from datetime import datetime
+import functools
+import gzip
+import hashlib
 from pathlib import Path
+import pickle
 from zoneinfo import ZoneInfo
 import pandas as pd
 import streamlit as st
@@ -15,7 +19,7 @@ from valorant.data.fields import (
     summarize_fields,
 )
 from valorant.data.metadata import load_maps_by_url
-from valorant.data.quality import dataset_quality, eligible_match_ids
+from valorant.data.quality import content_signature, dataset_quality, eligible_match_ids
 from valorant.analysis.plants import build_plants_table
 from valorant.analysis.prediction import load_matches
 from valorant.analysis.round_style import build_round_styles
@@ -83,7 +87,64 @@ def map_names_from_file_names(matches):
     )
 
 
+STORE_DIR = DEFAULT_DATA_DIR / "cache"
+
+
+@functools.cache
+def code_version():
+    """Qualquer mudança no código invalida o que foi guardado em disco."""
+    digest = hashlib.sha256()
+    for path in sorted(Path(__file__).resolve().parents[1].rglob("*.py")):
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+@functools.lru_cache(maxsize=4)
+def stored_version(signature):
+    """Conteúdo dos dados e código atual. A data dos arquivos fica de fora porque muda num clone novo."""
+    return hashlib.sha256(f"{content_signature()}:{code_version()}".encode()).hexdigest()[:16]
+
+
+def default_match_ids(signature):
+    return tuple(sorted(load_quality(signature, False)[1]))
+
+
+def stored_on_disk(function):
+    """Guarda em disco o resultado dos filtros padrão, assim só quem muda um filtro espera o cálculo."""
+
+    @functools.wraps(function)
+    def wrapper(signature, *args):
+        match_ids = args[0] if args and isinstance(args[0], tuple) else None
+        if match_ids is not None and match_ids != default_match_ids(signature):
+            return function(signature, *args)
+        version = stored_version(signature)
+        key = hashlib.sha256(repr((function.__name__, args)).encode()).hexdigest()[:16]
+        path = STORE_DIR / f"{version}-{function.__name__}-{key}.pkl.gz"
+        try:
+            with gzip.open(path, "rb") as stream:
+                return pickle.load(stream)
+        except (OSError, pickle.UnpicklingError, EOFError, AttributeError, ImportError):
+            pass
+        result = function(signature, *args)
+        try:
+            STORE_DIR.mkdir(parents=True, exist_ok=True)
+            for old in STORE_DIR.glob("*.pkl.gz"):
+                if not old.name.startswith(version):
+                    old.unlink()
+            temporary = path.with_name(path.name + ".tmp")
+            with gzip.open(temporary, "wb", compresslevel=6) as stream:
+                pickle.dump(result, stream, protocol=pickle.HIGHEST_PROTOCOL)
+            temporary.replace(path)
+        except OSError:
+            # Um servidor sem escrita em disco continua funcionando, só sem o atalho.
+            pass
+        return result
+
+    return wrapper
+
+
 @st.cache_data(show_spinner=False)
+@stored_on_disk
 def load_inventory(signature):
     match_rows, player_rows, round_rows = ([], [], [])
     for match_file in find_match_files(DEFAULT_DATA_DIR):
@@ -101,6 +162,7 @@ def load_inventory(signature):
 
 
 @st.cache_data(show_spinner=False)
+@stored_on_disk
 def load_field_tables(signature, match_ids):
     paths = [
         path
@@ -116,6 +178,7 @@ def load_field_tables(signature, match_ids):
 
 
 @st.cache_data(show_spinner=False)
+@stored_on_disk
 def load_quality(signature, include_anomalous):
     return (dataset_quality(), eligible_match_ids(include_anomalous=include_anomalous))
 
@@ -126,6 +189,7 @@ def load_map_metadata(signature):
 
 
 @st.cache_data(show_spinner=False)
+@stored_on_disk
 def load_analysis_table(signature, match_ids, kind):
     ids = set(match_ids)
     if kind == "deaths":
@@ -178,6 +242,7 @@ def load_match_review(signature, match_ids, match):
 
 
 @st.cache_data(show_spinner=False)
+@stored_on_disk
 def load_research(signature, match_ids):
     from valorant.analysis.research import build_research_data
 
@@ -192,6 +257,7 @@ def load_research(signature, match_ids):
 
 
 @st.cache_data(show_spinner=False)
+@stored_on_disk
 def load_rank_comparison(signature, match_ids, tournament, minimum_matches, performance):
     from valorant.analysis.research import team_ranking
     from valorant.analysis.rank_comparison import bootstrap_comparison
