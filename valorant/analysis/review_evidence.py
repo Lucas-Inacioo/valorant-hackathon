@@ -26,15 +26,11 @@ def outcome_summary(frame, outcome):
 def first_death_comparison(data, match_ids):
     support = selected_rows(data.support_deaths, match_ids)
     support = support[support["dist_aliado_mais_proximo"].notna()]
-    support["isolated"] = support["dist_aliado_mais_proximo"].gt(1000)
-    rows, contrasts = [], []
-    for isolated, label in [(False, "Com aliado próximo"), (True, "Longe dos aliados")]:
-        group = support[support["isolated"].eq(isolated)]
-        for traded, trade_label in [(True, "Com troca"), (False, "Sem troca")]:
-            rows.append({"Primeira morte": label, "Resposta": trade_label,
-                         **outcome_summary(group[group["trocada"].eq(traded)], "venceu_round")})
-        contrasts.append((label, cluster_contrast(group, "trocada", "venceu_round", repetitions=500)))
-    return pd.DataFrame(rows), contrasts
+    table = pd.DataFrame([
+        {"Resposta": label, **outcome_summary(support[support["trocada"].eq(traded)], "venceu_round")}
+        for traded, label in [(True, "Com troca"), (False, "Sem troca")]
+    ])
+    return table, cluster_contrast(support, "trocada", "venceu_round", repetitions=500)
 
 
 def pattern_round_groups(data, match_ids, pattern_id):

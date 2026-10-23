@@ -229,8 +229,8 @@ class AppIntegrationTests(unittest.TestCase):
 
         def check_evidence_tables():
             tables = [frame.value for frame in app.dataframe]
-            trade = next(table for table in tables if "Primeira morte" in table)
-            self.assertEqual([907, 2065, 406, 3159], trade["Primeiras mortes"].tolist())
+            trade = next(table for table in tables if "Resposta" in table)
+            self.assertEqual([1313, 5224], trade["Primeiras mortes"].tolist())
             advantage = next(table for table in tables if "Situação" in table and "Ficou atrás depois de estar à frente" in table["Situação"].tolist())
             self.assertEqual([3320], advantage["Rounds de equipe"].tolist())
             self.assertEqual(838, advantage.iloc[0]["Vitórias"])
@@ -247,7 +247,7 @@ class AppIntegrationTests(unittest.TestCase):
         def check_scoped_evidence():
             check_dashboard(13, 7)
             tables = [frame.value for frame in app.dataframe]
-            for column in ["Primeira morte", "No instante do desarme", "Momento do plant"]:
+            for column in ["Resposta", "No instante do desarme", "Momento do plant"]:
                 table = next(table for table in tables if column in table)
                 self.assertTrue(table["Partidas"].le(13).all(), column)
 

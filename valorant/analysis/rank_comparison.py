@@ -54,6 +54,15 @@ def compare_rankings(ranking, performance="round_win_rate"):
     )
 
 
+def centered_interval(values, point, floor):
+    """Reamostrar partidas deixa as taxas das equipes mais ruidosas e puxa as correlações para baixo.
+    Por isso só a variação das reamostragens é usada, em volta do valor observado."""
+    if not values:
+        return math.nan, math.nan
+    low, high = np.quantile(values, [.025, .975]) - np.mean(values) + point
+    return max(floor, low), min(1, high)
+
+
 def bootstrap_comparison(team_matches, ranking, performance="round_win_rate", repetitions=500, seed=0):
     """Reamostra partidas inteiras, mantendo as duas equipes juntas e a coorte original.
 
@@ -90,8 +99,8 @@ def bootstrap_comparison(team_matches, ranking, performance="round_win_rate", re
             correlations.append(correlation)
         if np.isfinite(concordance):
             concordances.append(concordance)
-    low, high = np.quantile(correlations, [.025, .975]) if correlations else (math.nan, math.nan)
-    c_low, c_high = np.quantile(concordances, [.025, .975]) if concordances else (math.nan, math.nan)
+    low, high = centered_interval(correlations, point.spearman, -1)
+    c_low, c_high = centered_interval(concordances, point.concordance, 0)
     return RankComparison(
         point.spearman, point.concordance, point.comparable_pairs, point.performance_ties,
         point.review_ties, point.teams, float(low), float(high), float(c_low), float(c_high),

@@ -36,17 +36,14 @@ def show_review_comparisons(data, match_ids):
     )
     trades, collapses, advantage = st.tabs(["Primeira morte e troca", "Sequências sem resposta", "Vantagem numérica"])
     with trades:
-        table, contrasts = first_death_comparison(data, match_ids)
+        table, contrast = first_death_comparison(data, match_ids)
         display_table(table.drop(columns="Com resultado").rename(columns={"Casos": "Primeiras mortes"}), hide_index=True,
                       percentage_columns=["Vitória da equipe"])
         st.write(
             "A chance de vitória considerada é da equipe que sofreu a primeira morte. A troca acontece quando "
-            "ela abate o autor dessa morte em até cinco segundos e há um aliado próximo quando a distância "
-            "registrada é de até 1000 unidades do jogo."
+            "ela abate o autor dessa morte em até cinco segundos."
         )
-        for label, contrast in contrasts:
-            show_contrast(contrast, f"{label}, a diferença de vitórias entre com troca e sem troca foi de")
-        st.caption("A proximidade não verifica paredes ou linha de tiro.")
+        show_contrast(contrast, "A diferença de vitórias entre com troca e sem troca foi de")
     with collapses:
         table, contrast = pattern_round_comparison(data, match_ids, "collapse")
         display_table(table.drop(columns="Com resultado").rename(columns={"Casos": "Rounds de equipe"}), hide_index=True,
