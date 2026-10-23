@@ -78,12 +78,12 @@ class NavigationTests(unittest.TestCase):
         self.assertEqual("Dashboard", app.radio(key="navigation_area").value)
 
     def test_tab_callback_updates_route_and_remembers_it_without_a_widget(self):
-        state = {"exploratory_tabs": "Qualidade dos dados"}
+        state = {"exploratory_tabs": "Explorar dados"}
         with patch("valorant.ui.navigation.st", SimpleNamespace(session_state=state)):
             select_exploratory_tab()
-            self.assertEqual("Qualidade dos dados", state["section"])
+            self.assertEqual("Explorar dados", state["section"])
             navigate(POST_MATCH)
-            self.assertEqual("Qualidade dos dados", state["last_exploratory_section"])
+            self.assertEqual("Explorar dados", state["last_exploratory_section"])
 
 
 if __name__ == "__main__":

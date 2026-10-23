@@ -10,20 +10,14 @@ from valorant.ui.presentation import display_table
 def render(context: AppContext) -> None:
     st.header("Explorar dados")
     st.markdown(
-        "Aqui ficam outras consultas sobre dano ao longo do round. Você também pode ver os números dos jogadores e os campos presentes nos arquivos."
+        "Aqui ficam outras consultas sobre dano ao longo do round e metadados"
     )
     fights = context.data.fights()[
         context.data.fights()["match_id"].isin(context.selected_match_ids)
     ]
     st.subheader("Dano recebido e causado ao longo do round")
-    st.caption(
-        "Categorias pelo dano recebido de adversários ao longo do round, independentemente de assistência. Não identificam foco simultâneo ou reação naquela luta."
-    )
     display_table(fight_class_summary(fights, ["lado"]), width="content", container=st)
     st.subheader("Abates, mortes e pontuação dos jogadores")
-    st.caption(
-        "Abates por morte divide os abates pelas mortes. A pontuação média por round usa o score registrado pelo jogo, sem criar uma nota para o jogador."
-    )
     display_table(players_summary(context.selected_players), hide_index=True, container=st)
     st.subheader("Campos dos arquivos de partida")
     relevant_fields, irrelevant_fields = context.data.fields()

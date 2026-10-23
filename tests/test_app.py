@@ -276,9 +276,9 @@ class AppIntegrationTests(unittest.TestCase):
             sections = list(SECTIONS)
             self.assertEqual(list(MAIN_AREAS), app.radio(key="navigation_area").options)
             self.assertEqual("Dashboard", app.radio(key="navigation_area").value)
-            self.assertEqual(8, len(EXPLORATORY_SECTIONS))
+            self.assertEqual(7, len(EXPLORATORY_SECTIONS))
             self.assertFalse(any(item.key == "section" for item in app.selectbox))
-            self.assertEqual(10, len(sections))
+            self.assertEqual(9, len(sections))
             report.append(f"Torneios disponíveis: {all_tournaments}")
             check_dashboard()
             check_evidence_tables()
@@ -286,7 +286,7 @@ class AppIntegrationTests(unittest.TestCase):
                 lambda: app.button(key="dashboard_go_post_match").click(), check_team_summary)
             run("Menu principal retorna da ferramenta ao dashboard",
                 lambda: app.radio(key="navigation_area").set_value("Dashboard"), check_dashboard)
-            run("Acesso exploratório abre apenas as oito abas de apoio",
+            run("Acesso exploratório abre apenas as sete abas de apoio",
                 lambda: app.button(key="dashboard_go_exploratory").click(),
                 lambda: self.assertEqual(list(EXPLORATORY_SECTIONS), [tab.label for tab in app.tabs]))
             run("Menu principal retorna das análises ao dashboard",
