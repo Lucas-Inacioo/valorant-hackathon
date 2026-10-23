@@ -64,7 +64,6 @@ CARD_ORDER = [
     "isolated_opening_untraded",
     "collapse",
     "numerical_advantage_lost",
-    "away_from_group",
 ]
 
 
