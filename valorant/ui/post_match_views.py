@@ -61,7 +61,7 @@ def _show_pattern_table(summary):
 CARD_ORDER = [
     "untraded_with_nearby_ally",
     "nearby_ally_without_trade",
-    "isolated_opening_untraded",
+    "opening_untraded",
     "collapse",
     "numerical_advantage_lost",
 ]
