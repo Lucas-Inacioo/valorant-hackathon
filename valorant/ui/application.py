@@ -4,12 +4,13 @@ import streamlit as st
 
 from valorant.data.quality import data_signature
 from valorant.ui.context import AppContext
-from valorant.ui.data import AnalysisData, load_inventory, load_quality
+from valorant.ui.data import AnalysisData, code_version, load_inventory, load_quality
 from valorant.ui.navigation import render_content, render_navigation
 
 
 def build_context() -> AppContext | None:
-    data_version = data_signature()
+    # O código entra na chave para a memória do Streamlit não servir resultados do cálculo anterior.
+    data_version = f"{data_signature()}:{code_version()}"
     matches, players, rounds = load_inventory(data_version)
     if matches.empty:
         st.info("Ainda não há partidas. Veja no README como baixar os arquivos.")
