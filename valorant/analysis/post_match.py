@@ -44,7 +44,7 @@ class ReviewPattern:
 
 PATTERNS = {
     "isolated_opening_untraded": ReviewPattern(
-        "Primeira morte longe do apoio e sem troca",
+        "Primeira morte sem troca",
         "O autor do primeiro abate do round eliminou um jogador que estava longe dos aliados e não morreu em até 5 segundos.",
         "Como preparar esse primeiro contato para que haja apoio ou uma saída?",
         "Primeiras mortes individuais com aliado vivo e posição disponível",
