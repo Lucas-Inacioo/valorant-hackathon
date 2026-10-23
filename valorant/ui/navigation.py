@@ -17,7 +17,6 @@ SECTIONS = {
     "Colapso e estilo": "round_patterns",
     "Economia": "economy",
     "Plant e defuse": "spike",
-    "Conclusões": "conclusions",
     "Explorar dados": "exploration",
 }
 EXPLORATORY_SECTIONS = {name: module for name, module in SECTIONS.items() if name not in {DASHBOARD, POST_MATCH}}
