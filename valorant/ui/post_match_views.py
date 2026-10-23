@@ -59,6 +59,8 @@ def _show_pattern_table(summary):
 
 
 CARD_ORDER = [
+    "untraded_with_nearby_ally",
+    "nearby_ally_without_trade",
     "isolated_opening_untraded",
     "collapse",
     "numerical_advantage_lost",
@@ -72,7 +74,13 @@ def show_training_points(selection: PostMatchSelection, player_id=ALL_PLAYERS):
         selection.team_id, None if player_id == ALL_PLAYERS else player_id
     )
     observed = summary[summary["occurrences"] > 0]
-    points = observed[~observed["positive"] & ~observed["context_only"]]
+    # A troca que não aconteceu vira card, mas segue fora da contagem de lances do dashboard.
+    carded_context = {"untraded_with_nearby_ally"}
+    if player_id != ALL_PLAYERS:
+        # Na visão da equipe, este card repetiria o anterior pelo lado do colega.
+        carded_context.add("nearby_ally_without_trade")
+    carded = observed["pattern_id"].isin(carded_context)
+    points = observed[(~observed["positive"] & ~observed["context_only"]) | carded]
     # A troca é o sinal mais forte nos dados, a distância sozinha não muda a vitória.
     points = points.sort_values("pattern_id", key=lambda ids: ids.map(lambda key: CARD_ORDER.index(key) if key in CARD_ORDER else len(CARD_ORDER)), kind="stable")
     st.subheader("Pontos para rever")
@@ -110,7 +118,7 @@ def show_training_points(selection: PostMatchSelection, player_id=ALL_PLAYERS):
                 on_click=jump_to_evidence,
                 args=(selection, row.pattern_id, player_id),
             )
-    contexts = observed[observed["context_only"]]
+    contexts = observed[observed["context_only"] & ~carded]
     with st.expander("Contexto dos rounds"):
         _show_pattern_table(contexts)
         st.caption(

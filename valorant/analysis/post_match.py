@@ -70,6 +70,7 @@ PATTERNS = {
         "O aliado tinha visão e condições de trocar ou a posição apenas parecia próxima no mapa?",
         "Mortes com aliado vivo e proximidade e direção conhecidas",
         context_only=True,
+        summary="{occurrences} de {opportunities} mortes não foram trocadas em até 5 segundos, mesmo com um aliado a até 2000 unidades do autor do abate e olhando para ele.",
     ),
     "nearby_ally_without_trade": ReviewPattern(
         "Aliado próximo de uma morte sem troca",
@@ -77,6 +78,7 @@ PATTERNS = {
         "O jogador tinha condições de ajudar o colega ou a posição parecia próxima apenas nas coordenadas?",
         "Mortes de colegas com o jogador vivo e posições e direção conhecidas",
         context_only=True,
+        summary="Em {occurrences} de {opportunities} mortes de colegas, este jogador estava a até 2000 unidades do autor do abate e olhando para ele, sem troca em até 5 segundos.",
     ),
     "trade_kill": ReviewPattern(
         "Abate que trocou um colega",

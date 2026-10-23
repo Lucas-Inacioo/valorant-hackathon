@@ -42,6 +42,18 @@ def data_signature(data_dir=DEFAULT_DATA_DIR):
     return hashlib.sha256(json.dumps(records, ensure_ascii=False).encode()).hexdigest()
 
 
+def content_signature(data_dir=DEFAULT_DATA_DIR):
+    """Como data_signature, mas sem a data dos arquivos, que muda num clone novo do repositório."""
+    root = Path(data_dir)
+    records = []
+    for path in sorted(root.rglob("*.json")):
+        stat = path.stat()
+        records.append(
+            (str(path.relative_to(root)), _file_hash(str(path.resolve()), stat.st_size, stat.st_mtime_ns))
+        )
+    return hashlib.sha256(json.dumps(records, ensure_ascii=False).encode()).hexdigest()
+
+
 def iter_selected_matches(data_dir=DEFAULT_DATA_DIR, match_ids=None):
     """Itera (caminho, partida), sem recalibrar referências em partidas excluídas."""
     selected = None if match_ids is None else set(match_ids)

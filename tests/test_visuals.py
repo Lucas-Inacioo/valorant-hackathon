@@ -71,6 +71,26 @@ class VisualRegressionTests(unittest.TestCase):
             self.assertGreater(len(output.getvalue()), 100)
         self.assertEqual(set(plt.get_fignums()), before)
 
+    def test_look_lines_cover_the_actor_and_the_victim_allies_near_the_actor(self):
+        event = {
+            "kind": "kill",
+            "actor": "a",
+            "victim": "b",
+            "locations": [
+                {"puuid": "a", "location": {"x": 0, "y": 0}, "viewRadians": 0.5},
+                {"puuid": "c", "location": {"x": 1500, "y": 0}, "viewRadians": 3.1},
+                {"puuid": "d", "location": {"x": 5000, "y": 0}, "viewRadians": 3.1},
+                {"puuid": "e", "location": {"x": 100, "y": 0}, "viewRadians": 1.0},
+                {"puuid": "f", "location": {"x": 200, "y": 0}, "viewRadians": None},
+            ],
+        }
+        teams = {"a": "Blue", "e": "Blue", "b": "Red", "c": "Red", "d": "Red", "f": "Red"}
+        self.assertEqual(["a", "c"], [puuid for puuid, _, _ in round_map.looking_players(event, teams)])
+        plant = {"kind": "plant", "actor": "e", "locations": event["locations"]}
+        self.assertEqual(["e"], [puuid for puuid, _, _ in round_map.looking_players(plant, teams)])
+        figure = round_map.draw_round_map(self.meta, [dict(event, time_ms=1000, victim_location={"x": 10, "y": 0})], 0, "a", teams, {})
+        self.assertEqual(2, len(figure.axes[0].lines))
+
     def test_round_map_has_no_player_labels_and_legend_stays_outside_map(self):
         events = [
             {
