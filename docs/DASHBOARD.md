@@ -14,7 +14,7 @@ Os filtros laterais continuam compartilhados pelas três áreas. Os atalhos de e
 
 O dashboard reutiliza `build_match_review`, a mesma função da análise pós-jogo. Entram os três padrões de revisão que descrevem ações ou sequências observadas. Acertos e condições classificadas como contexto ficam fora.
 
-Os padrões são primeira morte longe do apoio e sem troca, vantagem numérica invertida e três mortes sem resposta em até dez segundos.
+Os padrões são primeira morte sem troca, vantagem numérica invertida e três mortes sem resposta em até dez segundos.
 
 Um lance corresponde a uma partida, equipe, round e evento. Quando vários padrões apontam esse mesmo evento, ele conta uma vez. O resultado do round não decide se o lance entra na contagem. Entram rounds vencidos e perdidos.
 
