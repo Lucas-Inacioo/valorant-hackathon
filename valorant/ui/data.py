@@ -90,7 +90,7 @@ def map_names_from_file_names(matches):
 STORE_DIR = DEFAULT_DATA_DIR / "cache"
 
 
-@functools.cache
+# Sem memória, porque o servidor publicado troca o código sem reiniciar o processo.
 def code_version():
     """Mudanças no código que calcula as tabelas invalidam o que foi guardado. Telas e gráficos não entram."""
     package = Path(__file__).resolve().parents[1]
